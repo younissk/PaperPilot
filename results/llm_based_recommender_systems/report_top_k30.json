@@ -1,0 +1,598 @@
+{
+  "query": "LLM Based Recommender systems",
+  "generated_at": "2026-01-25T13:32:40.916907",
+  "total_papers_used": 30,
+  "introduction": "The rapid advancement of large language models (LLMs) has opened new avenues for enhancing recommender systems, which are critical for personalizing user experiences across various domains, including e-commerce, content streaming, and social media. The integration of LLMs into recommendation frameworks promises to improve the accuracy and relevance of suggestions by leveraging their ability to understand and generate human-like text, thereby capturing nuanced user preferences and contextual information. As the demand for more sophisticated and adaptive recommendation systems grows, understanding the capabilities and limitations of LLM-based approaches becomes increasingly important.\n\nThis survey aims to explore the emerging landscape of LLM-based recommender systems, highlighting key methodologies and frameworks that have been proposed in recent literature. We will examine various approaches, including the integration of user history with LLMs (S2:60f8a7ac53585aa2c173219e97507d6d963864e7), the use of LLMs as ranking models (S2:f4e723958a93762befb4d4a039b44a7d752f9917), and the development of interactive and explainable systems (S2:0cfdd655100055f234fd23ebecd915504b8e00e3). Additionally, we will discuss frameworks that enhance personalization through memory and reasoning (W7092283700) and those that leverage collaborative embeddings (S2:8f3b6a299098eb2e615e344b2f76a23dfca4d9ca). By synthesizing these contributions, this survey aims to provide a comprehensive overview of the current state of LLM-based recommender systems and identify future research directions in this dynamic field.",
+  "current_research": [
+    {
+      "title": "LLM-based Recommender System Frameworks",
+      "summary": "Recent advancements in recommender systems have increasingly leveraged Large Language Models (LLMs) to enhance personalization and user experience. One notable framework is PALR, which integrates user history with LLMs to provide tailored recommendations. This approach emphasizes the importance of combining user behavior data with LLM capabilities, thereby improving the relevance of recommendations [S2:60f8a7ac53585aa2c173219e97507d6d963864e7]. The integration of user history allows for a more nuanced understanding of user preferences, which is crucial for effective personalization in recommendation tasks [S2:60f8a7ac53585aa2c173219e97507d6d963864e7]. Another significant contribution to this field is LLMRec, which serves as a benchmarking framework for evaluating the performance of LLMs in recommendation tasks. This framework highlights the application of LLMs in the recommendation domain, providing a structured approach to assess their effectiveness and efficiency [S2:85722b13631d9846866d45ff2bfc2a2fe1026ac8]. By establishing benchmarks, LLMRec facilitates the comparison of various LLM-based approaches, thus driving further research and development in personalized recommendation systems [S2:85722b13631d9846866d45ff2bfc2a2fe1026ac8]. In addition to enhancing personalization, novel paradigms such as Chat-Rec focus on improving interactivity and explainability in LLM-augmented recommender systems. Chat-Rec addresses the challenges of poor interactivity and explainability that often accompany traditional recommendation systems [S2:0cfdd655100055f234fd23ebecd915504b8e00e3]. By fostering a more interactive dialogue between users and the system, Chat-Rec aims to provide users with clearer insights into the reasoning behind recommendations, thereby enhancing user trust and satisfaction [S2:0cfdd655100055f234fd23ebecd915504b8e00e3]. Furthermore, frameworks like MR.Rec synergize memory and reasoning capabilities to deliver deep personalization and intelligent reasoning in recommendations using LLMs. This approach seeks to overcome limitations associated with context windows and single-turn reasoning, thereby offering a more comprehensive recommendation experience [W7092283700]. The integration of memory and reasoning not only enriches the personalization aspect but also contributes to the overall effectiveness of LLM-based recommender systems [W7092283700].",
+      "paper_ids": [
+        "S2:60f8a7ac53585aa2c173219e97507d6d963864e7",
+        "W7092283700",
+        "S2:85722b13631d9846866d45ff2bfc2a2fe1026ac8",
+        "S2:0cfdd655100055f234fd23ebecd915504b8e00e3"
+      ]
+    },
+    {
+      "title": "Generative Approaches in Recommendations",
+      "summary": "Recent advancements in generative methods utilizing large language models (LLMs) have opened new avenues for creating personalized recommendations [S2:0383e049e98c9eedbc61be728d4ef037300bbedf]. One notable approach is the paradigm of treating recommendation as instruction following, which allows LLMs to interpret user preferences and contexts more effectively. This innovative perspective enhances the interaction between users and recommendation systems, making the process more intuitive and aligned with user needs [S2:0383e049e98c9eedbc61be728d4ef037300bbedf]. By framing recommendations in this manner, systems can potentially deliver more relevant suggestions that resonate with individual users [S2:0383e049e98c9eedbc61be728d4ef037300bbedf]. Moreover, the integration of user-generated textual data into recommendation frameworks has shown significant promise in enhancing personalization [W4407806925]. The PURE framework, for instance, leverages LLMs to incorporate such data, thereby addressing the limitations of traditional recommendation systems that often overlook valuable user insights [W4407806925]. This incorporation not only enriches the recommendation process but also allows for a more nuanced understanding of user preferences, ultimately leading to improved engagement and satisfaction [W4407806925]. In addition to personalization, the need for interactivity and explainability in recommendation systems has become increasingly important [S2:0cfdd655100055f234fd23ebecd915504b8e00e3]. The Chat-Rec framework addresses these challenges by augmenting LLMs to create interactive and explainable recommendations [S2:0cfdd655100055f234fd23ebecd915504b8e00e3]. This approach mitigates issues related to poor interactivity and explainability, fostering a more engaging user experience [S2:0cfdd655100055f234fd23ebecd915504b8e00e3]. By enabling users to understand the rationale behind recommendations, systems can enhance trust and encourage more active participation in the recommendation process [S2:0cfdd655100055f234fd23ebecd915504b8e00e3]. Overall, the exploration of generative approaches in recommendations highlights the transformative potential of LLMs in personalizing user experiences [S2:0383e049e98c9eedbc61be728d4ef037300bbedf]. By embracing instruction-following paradigms and integrating user-generated content, these systems can significantly improve user engagement and satisfaction, paving the way for future advancements in the field [W4407806925].",
+      "paper_ids": [
+        "W4407806925",
+        "S2:0383e049e98c9eedbc61be728d4ef037300bbedf",
+        "S2:0cfdd655100055f234fd23ebecd915504b8e00e3"
+      ]
+    },
+    {
+      "title": "Evaluation and Benchmarking of LLMs in Recommendations",
+      "summary": "The evaluation of LLM-based recommender systems necessitates robust methodologies that can accurately assess their performance across various tasks. Recent research highlights the potential of large language models (LLMs) as effective ranking models for recommendation systems, indicating their capability to perform well even in zero-shot scenarios [S2:f4e723958a93762befb4d4a039b44a7d752f9917]. This suggests that LLMs can be evaluated not only on traditional metrics but also through their general-purpose task-solving abilities, which may redefine how we approach performance assessment in recommendation contexts. To facilitate this evaluation, the introduction of benchmarks specifically designed for LLMs in recommendation tasks is crucial. The LLMRec framework has been proposed to benchmark LLMs effectively, focusing on their application within the recommendation domain [S2:85722b13631d9846866d45ff2bfc2a2fe1026ac8]. This benchmark aims to provide a standardized way to measure the effectiveness of LLMs, allowing researchers to compare different models and approaches systematically. Such benchmarks are essential for advancing the field and ensuring that new methodologies are grounded in empirical evidence. Furthermore, the development of personalized recommendation systems has been significantly influenced by the advancements in LLMs. A recent benchmark specifically targeting personalized recommendation assistants emphasizes how LLMs can enhance user experience through tailored suggestions [W4415102543]. This highlights the transformative potential of LLMs in creating more engaging and relevant recommendation systems, which can be quantitatively assessed through established benchmarks [S2:85722b13631d9846866d45ff2bfc2a2fe1026ac8]. The ongoing evolution of these methodologies and benchmarks will be pivotal in shaping future research and applications in the field of recommender systems.",
+      "paper_ids": [
+        "W4415102543",
+        "S2:f4e723958a93762befb4d4a039b44a7d752f9917",
+        "S2:85722b13631d9846866d45ff2bfc2a2fe1026ac8"
+      ]
+    },
+    {
+      "title": "Representation and Reasoning Techniques",
+      "summary": "Representation learning techniques have become increasingly vital in enhancing the capabilities of large language models (LLMs) for recommendation systems [S2:8f3b6a299098eb2e615e344b2f76a23dfca4d9ca]. One notable approach is CoLLM, which integrates collaborative embeddings into LLMRec, addressing a significant limitation in existing models that often overlook collaborative information from user-item interactions. By incorporating this collaborative data, CoLLM aims to improve the quality of recommendations, thereby making the system more effective in understanding user preferences [S2:8f3b6a299098eb2e615e344b2f76a23dfca4d9ca]. This integration highlights the importance of representation learning in capturing nuanced user behaviors that traditional methods may miss [S2:8f3b6a299098eb2e615e344b2f76a23dfca4d9ca]. In addition to representation techniques, reasoning methods play a crucial role in enhancing the interpretability of recommendation systems [W4404343192]. The ReasoningRec framework exemplifies this by bridging personalized recommendations with human-interpretable explanations through the use of LLMs. This approach not only improves the transparency of recommendations but also aligns them more closely with user expectations, thereby fostering trust and satisfaction [W4404343192]. By focusing on the interpretability of the reasoning process, this method addresses a critical need for users to understand the rationale behind recommendations, which can significantly impact user engagement [W4404343192]. Furthermore, the application of LLMs in personalized recommendations is explored through the LLM-Rec framework, which utilizes prompting techniques to generate tailored suggestions [S2:006aa1580fae5968417538c7acb4662c7b58088f]. This method emphasizes the versatility of text-based recommendations, showcasing their potential across various practical applications [S2:006aa1580fae5968417538c7acb4662c7b58088f]. By leveraging the strengths of LLMs, LLM-Rec contributes to the ongoing evolution of recommendation systems, highlighting the importance of both representation and reasoning in creating effective and user-friendly solutions [S2:006aa1580fae5968417538c7acb4662c7b58088f].",
+      "paper_ids": [
+        "S2:006aa1580fae5968417538c7acb4662c7b58088f",
+        "W4404343192",
+        "S2:8f3b6a299098eb2e615e344b2f76a23dfca4d9ca"
+      ]
+    },
+    {
+      "title": "Challenges and Limitations in LLM-based Recommendations",
+      "summary": "The integration of large language models (LLMs) into recommendation systems has highlighted several challenges, particularly concerning long-tail user and item problems. These challenges arise when a significant portion of users or items receive little interaction, leading to difficulties in generating accurate recommendations [S2:46d382ef09f6da85e6d56b96bf48502990cf4fd2]. The paper discusses how LLMs can enhance sequential recommendation systems by addressing these long-tail challenges, emphasizing the need for models that can effectively manage both long-tail users and items [S2:46d382ef09f6da85e6d56b96bf48502990cf4fd2]. This is crucial as traditional deep neural network (DNN)-based systems often struggle to generalize effectively in such scenarios, limiting their overall performance [S2:a35f1315e91513ff0bec0c488fe175214fd9636c]. In addition to the long-tail issues, fairness and interpretability present significant limitations in LLM-based recommendations. The FairEval framework offers a novel approach to assessing fairness by incorporating personality traits and demographic attributes, allowing for a more nuanced understanding of user-level bias within recommendations [W6891779303]. This is essential as biases in recommendation systems can lead to unequal treatment of users, which undermines the ethical deployment of these technologies [W6891779303]. The ability to systematically assess fairness is a critical step toward ensuring that LLMs operate equitably across diverse user groups [W6891779303]. Moreover, the interpretability of LLM-based recommendations remains a pressing concern. Users and stakeholders often require insights into how recommendations are generated to trust and effectively utilize these systems [S2:a35f1315e91513ff0bec0c488fe175214fd9636c]. The limitations of DNN-based systems in capturing textual information further exacerbate this issue, as they may not provide clear explanations for their recommendations [S2:a35f1315e91513ff0bec0c488fe175214fd9636c]. Enhancing interpretability is vital for fostering user trust and ensuring that recommendations align with user expectations and preferences, particularly in sensitive contexts where fairness is paramount [W6891779303].",
+      "paper_ids": [
+        "S2:46d382ef09f6da85e6d56b96bf48502990cf4fd2",
+        "S2:a35f1315e91513ff0bec0c488fe175214fd9636c",
+        "W6891779303"
+      ]
+    }
+  ],
+  "open_problems": [
+    {
+      "title": "Limitation from CoLLM: Integrating Collaborati...",
+      "text": "Existing LLMRec approaches overlook collaborative information.",
+      "paper_ids": [
+        "S2:8f3b6a299098eb2e615e344b2f76a23dfca4d9ca"
+      ]
+    },
+    {
+      "title": "Limitation from MR.Rec: Synergizing Memory and...",
+      "text": "Limited context windows and single-turn reasoning.",
+      "paper_ids": [
+        "W7092283700"
+      ]
+    },
+    {
+      "title": "Limitation from Large Language Models meet Col...",
+      "text": "They struggle under cold scenarios with sparse user-item interactions.",
+      "paper_ids": [
+        "S2:91d70c7f8c114d3b9056835316ffaee527fc4f53"
+      ]
+    },
+    {
+      "title": "Limitation from TALLRec: An Effective and Effi...",
+      "text": "The performance of LLMs in recommendation tasks remains suboptimal.",
+      "paper_ids": [
+        "S2:3487c12512fa41d3a4d64f00cb842525a8590ad3"
+      ]
+    },
+    {
+      "title": "Limitation from Recommender Systems in the Era...",
+      "text": "Inferior capabilities to effectively capture textual side information.",
+      "paper_ids": [
+        "S2:a35f1315e91513ff0bec0c488fe175214fd9636c"
+      ]
+    }
+  ],
+  "conclusion": "In this survey, we have explored the evolving landscape of LLM-based recommender systems, highlighting key frameworks, generative approaches, evaluation methodologies, representation techniques, and the inherent challenges faced by these systems. The findings indicate that while LLMs offer promising avenues for enhancing recommendation quality through advanced language understanding and generation capabilities, significant limitations persist. Notably, existing approaches often neglect collaborative filtering aspects, struggle with limited context windows, and exhibit suboptimal performance in cold-start scenarios. Furthermore, the ability of LLMs to leverage textual side information effectively remains inadequate, which hampers their overall efficacy in recommendation tasks.\n\nLooking ahead, addressing these challenges will be crucial for the advancement of LLM-based recommender systems. Future research should focus on integrating collaborative information more effectively, expanding context windows for multi-turn reasoning, and developing strategies to mitigate cold-start issues. Additionally, enhancing the models' capacity to capture and utilize textual side information could significantly improve their performance. By tackling these open challenges, researchers can pave the way for more robust and effective LLM-based recommendation systems that better serve diverse user needs and preferences.",
+  "paper_cards": [
+    {
+      "id": "S2:60f8a7ac53585aa2c173219e97507d6d963864e7",
+      "title": "PALR: Personalization Aware LLMs for Recommendation",
+      "claim": "We propose a novel framework, PALR, to integrate user history with LLMs for recommendations.",
+      "paradigm_tags": [
+        "application",
+        "generative"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "combine user history behaviors with LLMs",
+      "year": 2023,
+      "citation_count": 151,
+      "elo_rating": null
+    },
+    {
+      "id": "S2:f4e723958a93762befb4d4a039b44a7d752f9917",
+      "title": "Large Language Models are Zero-Shot Rankers for Recommender Systems",
+      "claim": "This work investigates the capacity of LLMs as ranking models for recommender systems.",
+      "paradigm_tags": [
+        "inference",
+        "application",
+        "evaluation"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "LLMs have demonstrated impressive general-purpose task-solving abilities",
+      "year": 2023,
+      "citation_count": 461,
+      "elo_rating": null
+    },
+    {
+      "id": "S2:85722b13631d9846866d45ff2bfc2a2fe1026ac8",
+      "title": "LLMRec: Benchmarking Large Language Models on Recommendation Task",
+      "claim": "We propose LLMRec, a LLM-based recommender system for benchmarking LLMs on recommendation tasks.",
+      "paradigm_tags": [
+        "benchmark",
+        "evaluation",
+        "application"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "the application of LLMs in the recommendation domain",
+      "year": 2023,
+      "citation_count": 49,
+      "elo_rating": null
+    },
+    {
+      "id": "S2:8f3b6a299098eb2e615e344b2f76a23dfca4d9ca",
+      "title": "CoLLM: Integrating Collaborative Embeddings Into Large Language Models for Recommendation",
+      "claim": "The paper introduces CoLLM, which integrates collaborative embeddings into LLMRec for improved recommendations.",
+      "paradigm_tags": [
+        "representation",
+        "application"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": "Existing LLMRec approaches overlook collaborative information.",
+      "key_quote": "incorporating collaborative information from user-item interactions",
+      "year": 2023,
+      "citation_count": 143,
+      "elo_rating": null
+    },
+    {
+      "id": "S2:0cfdd655100055f234fd23ebecd915504b8e00e3",
+      "title": "Chat-REC: Towards Interactive and Explainable LLMs-Augmented Recommender System",
+      "claim": "This paper proposes Chat-Rec, a novel paradigm that enhances LLMs for interactive and explainable recommender systems.",
+      "paradigm_tags": [
+        "application",
+        "generative",
+        "reasoning"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "poor interactivity and explainability",
+      "year": 2023,
+      "citation_count": 400,
+      "elo_rating": null
+    },
+    {
+      "id": "W7092283700",
+      "title": "MR.Rec: Synergizing Memory and Reasoning for Personalized Recommendation Assistant with LLMs",
+      "claim": "MR.Rec is a novel framework that synergizes memory and reasoning for enhanced personalized recommendations using LLMs.",
+      "paradigm_tags": [
+        "reasoning",
+        "application"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": "Limited context windows and single-turn reasoning.",
+      "key_quote": "deep personalization and intelligent reasoning",
+      "year": 2025,
+      "citation_count": 0,
+      "elo_rating": null
+    },
+    {
+      "id": "S2:006aa1580fae5968417538c7acb4662c7b58088f",
+      "title": "LLM-Rec: Personalized Recommendation via Prompting Large Language Models",
+      "claim": "This study presents LLM-Rec, a method for personalized recommendation using large language models.",
+      "paradigm_tags": [
+        "prompting",
+        "reasoning",
+        "application"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "text-based recommendation holds a wide range of practical applications",
+      "year": 2023,
+      "citation_count": 124,
+      "elo_rating": null
+    },
+    {
+      "id": "W4404343192",
+      "title": "ReasoningRec: Bridging Personalized Recommendations and Human-Interpretable Explanations through LLM Reasoning",
+      "claim": "ReasoningRec bridges personalized recommendations and human-interpretable explanations using LLMs.",
+      "paradigm_tags": [
+        "reasoning",
+        "generative",
+        "application"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "bridging the gap between recommendations and human-interpretable explanations",
+      "year": 2024,
+      "citation_count": 0,
+      "elo_rating": null
+    },
+    {
+      "id": "W6929462687",
+      "title": "AgentRecBench: Benchmarking LLM Agent-based Personalized Recommender Systems",
+      "claim": "Agentic recommender systems leverage LLMs for autonomous, adaptive decision-making in personalized recommendations.",
+      "paradigm_tags": [
+        "agents",
+        "reasoning",
+        "benchmark"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "paradigm shift in personalized recommendations",
+      "year": 2025,
+      "citation_count": 0,
+      "elo_rating": null
+    },
+    {
+      "id": "S2:b486982fa7c68a8a08df1111ba9607119419c488",
+      "title": "A survey on large language models for recommendation",
+      "claim": "Large Language Models enhance recommendation systems through effective transfer techniques.",
+      "paradigm_tags": [
+        "fine-tuning",
+        "prompting",
+        "survey"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "remarkable success in learning universal representations",
+      "year": 2023,
+      "citation_count": 651,
+      "elo_rating": null
+    },
+    {
+      "id": "S2:91d70c7f8c114d3b9056835316ffaee527fc4f53",
+      "title": "Large Language Models meet Collaborative Filtering: An Efficient All-round LLM-based Recommender System",
+      "claim": "The paper presents an efficient LLM-based recommender system that enhances user experience in cold scenarios.",
+      "paradigm_tags": [
+        "multimodal",
+        "efficiency",
+        "application"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": "They struggle under cold scenarios with sparse user-item interactions.",
+      "key_quote": "CF-RecSys struggles under cold scenarios with sparse user-item interactions",
+      "year": 2024,
+      "citation_count": 94,
+      "elo_rating": null
+    },
+    {
+      "id": "S2:3487c12512fa41d3a4d64f00cb842525a8590ad3",
+      "title": "TALLRec: An Effective and Efficient Tuning Framework to Align Large Language Model with Recommendation",
+      "claim": "TALLRec is a tuning framework that enhances the alignment of large language models with recommendation systems.",
+      "paradigm_tags": [
+        "prompting",
+        "fine-tuning",
+        "application"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": "The performance of LLMs in recommendation tasks remains suboptimal.",
+      "key_quote": "performance of LLMs in recommendation tasks remains suboptimal",
+      "year": 2023,
+      "citation_count": 580,
+      "elo_rating": null
+    },
+    {
+      "id": "W6891788864",
+      "title": "RLHF Fine-Tuning of LLMs for Alignment with Implicit User Feedback in Conversational Recommenders",
+      "claim": "We propose a fine-tuning solution using RLHF to enhance user alignment in conversational recommenders.",
+      "paradigm_tags": [
+        "fine-tuning",
+        "training",
+        "application"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "maximize implied user feedback in a multi-turn",
+      "year": 2025,
+      "citation_count": 0,
+      "elo_rating": null
+    },
+    {
+      "id": "S2:ef0679f8b3114c339bdf5a0c202403a08d160a88",
+      "title": "ONCE: Boosting Content-based Recommendation with Both Open- and Closed-source Large Language Models",
+      "claim": "The paper enhances content-based recommendation systems using both open- and closed-source large language models.",
+      "paradigm_tags": [
+        "application",
+        "knowledge",
+        "representation"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "indispensable tools for users to navigate through vast content",
+      "year": 2023,
+      "citation_count": 107,
+      "elo_rating": null
+    },
+    {
+      "id": "W4407632341",
+      "title": "A Survey on LLM-based News Recommender Systems",
+      "claim": "The paper surveys the use of large language models in enhancing news recommender systems.",
+      "paradigm_tags": [
+        "survey",
+        "application",
+        "fairness"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "mitigating the information overload problem",
+      "year": 2025,
+      "citation_count": 1,
+      "elo_rating": null
+    },
+    {
+      "id": "S2:0383e049e98c9eedbc61be728d4ef037300bbedf",
+      "title": "Recommendation as Instruction Following: A Large Language Model Empowered Recommendation Approach",
+      "claim": "We develop a different recommendation paradigm, considering recommendation as instruction following.",
+      "paradigm_tags": [
+        "generative",
+        "application"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "recommendation as instruction following",
+      "year": 2023,
+      "citation_count": 301,
+      "elo_rating": null
+    },
+    {
+      "id": "W4407806925",
+      "title": "LLM-based User Profile Management for Recommender System",
+      "claim": "We propose PURE, a novel LLM-based recommendation framework that incorporates user-generated textual data for improved recommendations.",
+      "paradigm_tags": [
+        "generative",
+        "application",
+        "representation"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "significant room for improvement by incorporating user-generated textual data",
+      "year": 2025,
+      "citation_count": 0,
+      "elo_rating": null
+    },
+    {
+      "id": "S2:df602516e28a9ef0ef665ed0aef551984d8d770d",
+      "title": "Recommendation as Language Processing (RLP): A Unified Pretrain, Personalized Prompt & Predict Paradigm (P5)",
+      "claim": "We present a flexible and unified text-based approach for various recommendation tasks.",
+      "paradigm_tags": [
+        "representation",
+        "training",
+        "application"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "language grounding is a powerful medium",
+      "year": 2022,
+      "citation_count": 683,
+      "elo_rating": null
+    },
+    {
+      "id": "S2:a35f1315e91513ff0bec0c488fe175214fd9636c",
+      "title": "Recommender Systems in the Era of Large Language Models (LLMs)",
+      "claim": "The paper discusses the limitations of DNN-based recommender systems in capturing textual information and generalization.",
+      "paradigm_tags": [
+        "representation",
+        "application",
+        "evaluation"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": "Inferior capabilities to effectively capture textual side information.",
+      "key_quote": "Recommender Systems have become an indispensable and important component.",
+      "year": 2023,
+      "citation_count": 439,
+      "elo_rating": null
+    },
+    {
+      "id": "W4415102543",
+      "title": "Towards Next-Generation Recommender Systems: A Benchmark for Personalized Recommendation Assistant with LLMs",
+      "claim": "The paper presents a benchmark for enhancing personalized recommendation systems using large language models.",
+      "paradigm_tags": [
+        "benchmark",
+        "evaluation",
+        "generative"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "advancement of large language models (LLMs) has revolutionized",
+      "year": 2025,
+      "citation_count": 1,
+      "elo_rating": null
+    },
+    {
+      "id": "W4405354727",
+      "title": "MOPI-HFRS: A Multi-objective Personalized Health-aware Food Recommendation System with LLM-enhanced Interpretation",
+      "claim": "The paper presents a personalized health-aware food recommendation system that enhances interpretability using LLM.",
+      "paradigm_tags": [
+        "application",
+        "evaluation",
+        "reasoning"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": "Personalization based on specific health conditions remains under-explored.",
+      "key_quote": "personalization of such systems based on users' specific health conditions",
+      "year": 2024,
+      "citation_count": 4,
+      "elo_rating": null
+    },
+    {
+      "id": "S2:95840ec08ba2e30490ee02fd0518bbfc0e8a0f4c",
+      "title": "Prompt Engineering for Large Language Models",
+      "claim": "The paper discusses techniques for effectively engineering prompts for large language models.",
+      "paradigm_tags": [
+        "prompting",
+        "generative",
+        "evaluation"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": null,
+      "year": 2023,
+      "citation_count": 341,
+      "elo_rating": null
+    },
+    {
+      "id": "S2:b07493b1393f0b232872316f2b88fe0043b1ab02",
+      "title": "Enhancing Sequential Recommendation via LLM-based Semantic Embedding Learning",
+      "claim": "The paper enhances sequential recommendation systems using LLM-based semantic embedding learning.",
+      "paradigm_tags": [
+        "representation",
+        "training",
+        "application"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": "Directly extracting representations from an LLM has limitations.",
+      "key_quote": "significant promise in addressing intricate recommendation challenges",
+      "year": 2024,
+      "citation_count": 73,
+      "elo_rating": null
+    },
+    {
+      "id": "W4416284157",
+      "title": "A Language-Driven Framework for Improving Personalized Recommendations: Merging LLMs with Traditional Algorithms",
+      "claim": "This research proposes a novel framework that enhances personalized recommendations using LLMs based on user preferences expressed in text.",
+      "paradigm_tags": [
+        "application",
+        "generative",
+        "knowledge"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "mimics how a close friend would recommend items",
+      "year": 2025,
+      "citation_count": 0,
+      "elo_rating": null
+    },
+    {
+      "id": "W4416119106",
+      "title": "User Feedback Alignment for LLM-powered Exploration in Large-scale Recommendation Systems",
+      "claim": "The paper addresses the challenge of aligning LLMs with user preferences in large-scale recommendation systems.",
+      "paradigm_tags": [
+        "generative",
+        "reasoning",
+        "application"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "aligning LLMs with user preferences while preserving their knowledge",
+      "year": 2025,
+      "citation_count": 0,
+      "elo_rating": null
+    },
+    {
+      "id": "W4403851269",
+      "title": "A Prompting-Based Representation Learning Method for Recommendation with Large Language Models",
+      "claim": "This paper presents a prompting-based representation learning method for enhancing recommendation systems using large language models.",
+      "paradigm_tags": [
+        "prompting",
+        "representation",
+        "application"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "transformative shift with the advent of Large Language Models",
+      "year": 2024,
+      "citation_count": 0,
+      "elo_rating": null
+    },
+    {
+      "id": "W6891779303",
+      "title": "FairEval: Evaluating Fairness in LLM-Based Recommendations with Personality Awareness",
+      "claim": "FairEval is a novel framework for assessing fairness in LLM-based recommendations by integrating personality traits and demographic attributes.",
+      "paradigm_tags": [
+        "evaluation",
+        "fairness"
+      ],
+      "data_benchmark": null,
+      "measured": "user-level bias",
+      "limitation": null,
+      "key_quote": "systematically assess fairness in LLM-based recommendations",
+      "year": 2025,
+      "citation_count": 0,
+      "elo_rating": null
+    },
+    {
+      "id": "S2:46d382ef09f6da85e6d56b96bf48502990cf4fd2",
+      "title": "LLM-ESR: Large Language Models Enhancement for Long-tailed Sequential Recommendation",
+      "claim": "The paper addresses long-tail user and item challenges in sequential recommender systems using large language models.",
+      "paradigm_tags": [
+        "application",
+        "training",
+        "evaluation"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "long-tail user and long-tail item challenges",
+      "year": 2024,
+      "citation_count": 67,
+      "elo_rating": null
+    },
+    {
+      "id": "S2:f8df9546eafe207a777466ef40d548c707744c6d",
+      "title": "LLMRG: Improving Recommendations through Large Language Model Reasoning Graphs",
+      "claim": "We propose a novel approach that leverages large language models to construct personalized reasoning graphs for improved interpretability in recommendation systems.",
+      "paradigm_tags": [
+        "reasoning",
+        "representation",
+        "application"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "representing the user's interests in an interpretable way",
+      "year": 2024,
+      "citation_count": 44,
+      "elo_rating": null
+    },
+    {
+      "id": "S2:ca7bd64d372e3bcb3f4633ca4a20291ff57de3c3",
+      "title": "Is ChatGPT a Good Recommender? A Preliminary Study",
+      "claim": "This paper investigates the application of ChatGPT in recommendation systems.",
+      "paradigm_tags": [
+        "application",
+        "evaluation"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "the application of ChatGPT in the recommendation domain",
+      "year": 2023,
+      "citation_count": 348,
+      "elo_rating": null
+    }
+  ]
+}

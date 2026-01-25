@@ -172,7 +172,16 @@ async def _resolve_papers_to_openalex(
 
 
 def export_results(papers: List[AcceptedPaper], query: str, output_file: str) -> None:
-    """Export accepted papers to a JSON file for further analysis."""
+    """Export accepted papers to a JSON file for further analysis.
+    
+    Args:
+        papers: List of accepted papers
+        query: Research query string
+        output_file: Output file path (if empty string, skips file writing)
+    """
+    if not output_file:
+        return  # Skip export if output_file is empty
+    
     results = {
         "query": query,
         "total_accepted": len(papers),

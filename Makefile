@@ -1,4 +1,4 @@
-.PHONY: run search results install help
+.PHONY: run search results install help frontend dev-server
 
 # Install dependencies
 install:
@@ -19,6 +19,17 @@ run:
 # Run API server (use: make api PORT=8000)
 api:
 	uv run uvicorn paperpilot.api.main:app --reload --port $(or $(PORT),8000)
+
+frontend:
+	cd frontend && npm install && npm run dev
+
+dev-server:
+	@tmux has-session 2>/dev/null; if [ $$? -ne 0 ]; then tmux new-session -d -s paperpilot; fi
+	tmux new-window -t paperpilot: -n "dev" "bash"
+	tmux send-keys -t paperpilot:dev.0 "make frontend" C-m
+	tmux split-window -v -t paperpilot:dev
+	tmux send-keys -t paperpilot:dev.1 "make api" C-m
+	tmux attach-session -t paperpilot
 
 # Show help
 help:

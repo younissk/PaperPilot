@@ -8,11 +8,14 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks
 from paperpilot.api.schemas import SearchRequest, SearchResponse
 from paperpilot.core.service import run_search
 from paperpilot.core.models import AcceptedPaper
+from paperpilot.core.results import ResultsManager
 
 router = APIRouter(prefix="/api/search", tags=["search"])
 
 # In-memory job storage (in production, use a database)
 jobs: Dict[str, Dict] = {}
+
+results_manager = ResultsManager()
 
 
 def _paper_to_dict(paper: AcceptedPaper) -> dict:
@@ -36,18 +39,27 @@ async def _run_search_task(job_id: str, request: SearchRequest):
     try:
         jobs[job_id]["status"] = "running"
         
+        # Run search without output file - we'll save using ResultsManager
         papers = await run_search(
             query=request.query,
             num_results=request.num_results,
-            output_file=f"results_{job_id}.json",
+            output_file="",  # Empty string means don't save (we'll do it manually)
             max_iterations=request.max_iterations,
             max_accepted=request.max_accepted,
             top_n=request.top_n,
         )
         
+        # Save using ResultsManager
+        saved_path = results_manager.save_snowball(request.query, {
+            "query": request.query,
+            "total_accepted": len(papers),
+            "papers": [_paper_to_dict(p) for p in papers],
+        })
+        
         jobs[job_id]["status"] = "completed"
         jobs[job_id]["total_accepted"] = len(papers)
         jobs[job_id]["papers"] = [_paper_to_dict(p) for p in papers]
+        jobs[job_id]["result_path"] = str(saved_path.relative_to(results_manager.base_dir))
     except Exception as e:
         jobs[job_id]["status"] = "failed"
         jobs[job_id]["error"] = str(e)
@@ -80,6 +92,7 @@ async def start_search(
         query=request.query,
         total_accepted=0,
         papers=[],
+        result_path=None,
     )
 
 
@@ -101,4 +114,5 @@ async def get_search_results(job_id: str):
         query=job["query"],
         total_accepted=job["total_accepted"],
         papers=job["papers"],
+        result_path=job.get("result_path"),
     )

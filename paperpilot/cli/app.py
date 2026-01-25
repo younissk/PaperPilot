@@ -1272,7 +1272,7 @@ def everything(
         console.print("[bold cyan]1. Running Elo Ranking...[/bold cyan]")
         console.print()
         try:
-            await run_elo_ranking(
+            asyncio.run(run_elo_ranking(
                 papers=papers,
                 query=query,
                 n_matches=None,  # Auto
@@ -1283,7 +1283,7 @@ def everything(
                 tournament=False,
                 output_file="",  # Use ResultsManager
                 interactive=False,
-            )
+            ))
             # Get the generated file from metadata
             metadata = results_manager.get_metadata(query)
             if metadata and metadata.get("elo_file"):
@@ -1422,6 +1422,166 @@ def everything(
         raise typer.Exit(code=1)
     except Exception as e:
         print_error(f"Everything mode failed: {e}")
+        raise typer.Exit(code=1)
+
+
+@app.command()
+def report(
+    file: str = typer.Argument(
+        "snowball.json",
+        help="Snowball results file to generate report from",
+    ),
+    top_k: int = typer.Option(
+        30,
+        "-k", "--top-k",
+        help="Number of top papers to use (default: 30)",
+    ),
+    elo_file: str = typer.Option(
+        None,
+        "-e", "--elo",
+        help="Elo ranking file (auto-detected if not specified)",
+    ),
+    output: str = typer.Option(
+        None,
+        "-o", "--output",
+        help="Output file path (default: report.json in query folder)",
+    ),
+) -> None:
+    """Generate a structured research report from papers.
+    
+    This command creates a citation-safe research report by:
+    
+    1. Selecting top-k papers from elo ranking or snowball results
+    2. Building structured paper cards with claims and metadata
+    3. Generating a thematic outline based on research paradigms
+    4. Writing sections with enforced citations
+    5. Auditing citations for accuracy
+    
+    The report includes:
+    - Introduction to the research topic
+    - Current research themes with citations
+    - Open problems identified from limitations
+    - Conclusion with future directions
+    
+    Example:
+        paperpilot report snowball.json -k 30
+        paperpilot report snowball.json --elo elo_ranked.json -k 20
+        paperpilot report results/my_query/snowball.json -o my_report.json
+    """
+    from paperpilot.core.report.generator import generate_report, report_to_dict
+    
+    file_path = Path(file)
+    
+    if not file_path.exists():
+        print_error(f"Results file not found: {file}")
+        raise typer.Exit(code=1)
+    
+    # Initialize results manager
+    results_manager = ResultsManager()
+    
+    # Determine elo file path
+    elo_path = None
+    if elo_file:
+        elo_path = Path(elo_file)
+        if not elo_path.exists():
+            print_warning(f"Elo file not found: {elo_file}, will use snowball results")
+            elo_path = None
+    else:
+        # Try to auto-detect elo file in the same directory
+        parent_dir = file_path.parent
+        elo_candidates = list(parent_dir.glob("elo_ranked*.json"))
+        if elo_candidates:
+            # Use the most recent one
+            elo_path = max(elo_candidates, key=lambda p: p.stat().st_mtime)
+            console.print(f"[dim]Auto-detected elo file: {elo_path.name}[/dim]")
+    
+    # Load data to get query
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except json.JSONDecodeError as e:
+        print_error(f"Invalid JSON in results file: {e}")
+        raise typer.Exit(code=1)
+    
+    query = data.get("query", "Unknown query")
+    total_papers = len(data.get("papers", []))
+    
+    if total_papers == 0:
+        print_error("No papers in results file")
+        raise typer.Exit(code=1)
+    
+    print_header("Report Generation", "bold cyan")
+    console.print(f"[bold]Query:[/bold] {query}")
+    console.print(f"[bold]Available papers:[/bold] {total_papers}")
+    console.print(f"[bold]Using top-k:[/bold] {min(top_k, total_papers)}")
+    if elo_path:
+        console.print(f"[bold]Source:[/bold] Elo-ranked papers from {elo_path.name}")
+    else:
+        console.print("[bold]Source:[/bold] Snowball results (by citation count)")
+    console.print()
+    
+    async def run_report_generation():
+        try:
+            print_step(1, "Selecting top papers...")
+            console.print()
+            
+            print_step(2, "Generating paper cards...")
+            with create_spinner_progress() as progress:
+                task = progress.add_task("Processing papers...", total=None)
+                report_obj = await generate_report(
+                    snowball_file=file_path,
+                    elo_file=elo_path,
+                    top_k=top_k,
+                )
+            
+            print_success(f"Generated report with {len(report_obj.current_research)} sections")
+            console.print()
+            
+            # Convert to dict for saving
+            report_data = report_to_dict(report_obj)
+            
+            # Save the report
+            if output:
+                output_path = Path(output)
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(output_path, "w", encoding="utf-8") as f:
+                    json.dump(report_data, f, indent=2, ensure_ascii=False)
+                print_success(f"Report saved to: {output_path}")
+            else:
+                # Use ResultsManager to save in organized location
+                output_path = results_manager.save_report(
+                    query=query,
+                    report_data=report_data,
+                    top_k=top_k,
+                )
+                print_success(f"Report saved to: {output_path}")
+            
+            # Display summary
+            console.print()
+            print_header("Report Summary", "bold green")
+            console.print(f"[bold]Papers used:[/bold] {report_obj.total_papers_used}")
+            console.print(f"[bold]Sections:[/bold] {len(report_obj.current_research)}")
+            console.print(f"[bold]Open problems:[/bold] {len(report_obj.open_problems)}")
+            console.print()
+            
+            # Show section titles
+            console.print("[bold]Sections:[/bold]")
+            for i, section in enumerate(report_obj.current_research, 1):
+                citations = len(section.paper_ids)
+                console.print(f"  {i}. {section.title} ({citations} citations)")
+            
+            console.print()
+            
+        except Exception as e:
+            logger.exception("Report generation failed")
+            print_error(f"Report generation failed: {e}")
+            raise typer.Exit(code=1)
+    
+    try:
+        asyncio.run(run_report_generation())
+    except KeyboardInterrupt:
+        console.print()
+        print_error("Report generation interrupted by user")
         raise typer.Exit(code=1)
 
 

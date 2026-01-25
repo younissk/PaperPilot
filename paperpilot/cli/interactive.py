@@ -60,6 +60,14 @@ def show_main_menu() -> str:
     menu_text.append("4. ", style="bold cyan")
     menu_text.append("Cluster papers\n", style="white")
     menu_text.append("5. ", style="bold cyan")
+    menu_text.append("Create timeline\n", style="white")
+    menu_text.append("6. ", style="bold cyan")
+    menu_text.append("Build citation graph\n", style="white")
+    menu_text.append("7. ", style="bold cyan")
+    menu_text.append("Generate report\n", style="white")
+    menu_text.append("8. ", style="bold cyan")
+    menu_text.append("Run everything\n", style="white")
+    menu_text.append("9. ", style="bold cyan")
     menu_text.append("Exit\n", style="white")
     
     panel = Panel(
@@ -73,7 +81,7 @@ def show_main_menu() -> str:
     
     choice = Prompt.ask(
         "[bold cyan]What would you like to do?[/bold cyan]",
-        choices=["1", "2", "3", "4", "5"],
+        choices=["1", "2", "3", "4", "5", "6", "7", "8", "9"],
         default="1",
     )
     
@@ -277,6 +285,60 @@ def get_clustering_config() -> ClusteringConfig:
     )
 
 
+def get_report_config() -> dict:
+    """Get report generation configuration from user.
+    
+    Returns:
+        Dictionary with report configuration
+    """
+    console.print()
+    print_header("Report Generation Configuration", "bold cyan")
+    
+    top_k = IntPrompt.ask(
+        "[bold]Number of top papers to use[/bold]",
+        default=30,
+        show_default=True,
+    )
+    
+    use_elo = Confirm.ask(
+        "[bold]Use Elo ranking if available[/bold]",
+        default=True,
+    )
+    
+    return {
+        "top_k": top_k,
+        "use_elo": use_elo,
+    }
+
+
+def get_graph_config() -> dict:
+    """Get graph building configuration from user.
+    
+    Returns:
+        Dictionary with graph configuration
+    """
+    console.print()
+    print_header("Graph Building Configuration", "bold cyan")
+    
+    direction = Prompt.ask(
+        "[bold]Graph direction[/bold]",
+        choices=["both", "citations", "references"],
+        default="both",
+        show_default=True,
+    )
+    
+    limit = IntPrompt.ask(
+        "[bold]Maximum refs/cites per paper[/bold]",
+        default=100,
+        show_default=True,
+    )
+    
+    return {
+        "direction": direction,
+        "limit": limit,
+    }
+
+
 def run_interactive() -> None:
     """Run the interactive CLI menu loop."""
     results_manager = ResultsManager()
@@ -394,13 +456,125 @@ def run_interactive() -> None:
                     print_error(f"Clustering failed: {e}")
         
         elif choice == "5":
+            # Create timeline
+            file_path = select_results_file(results_manager)
+            if file_path:
+                try:
+                    console.print()
+                    print_success(f"Creating timeline for: {file_path}")
+                    console.print()
+                    
+                    from paperpilot.cli.app import timeline
+                    timeline(str(file_path))
+                except KeyboardInterrupt:
+                    console.print()
+                    print_error("Timeline creation cancelled by user")
+                except Exception as e:
+                    print_error(f"Timeline creation failed: {e}")
+        
+        elif choice == "6":
+            # Build citation graph
+            file_path = select_results_file(results_manager)
+            if file_path:
+                try:
+                    config = get_graph_config()
+                    console.print()
+                    print_success(f"Building graph for: {file_path}")
+                    console.print()
+                    
+                    from paperpilot.cli.app import graph
+                    graph(
+                        str(file_path),
+                        direction=config["direction"],
+                        limit=config["limit"],
+                    )
+                except KeyboardInterrupt:
+                    console.print()
+                    print_error("Graph building cancelled by user")
+                except Exception as e:
+                    print_error(f"Graph building failed: {e}")
+        
+        elif choice == "7":
+            # Generate report
+            file_path = select_results_file(results_manager)
+            if file_path:
+                try:
+                    config = get_report_config()
+                    console.print()
+                    print_success(f"Generating report for: {file_path}")
+                    console.print()
+                    
+                    import asyncio
+                    from paperpilot.core.report.generator import generate_report, report_to_dict
+                    import json
+                    
+                    # Determine elo file if requested
+                    elo_path = None
+                    if config["use_elo"]:
+                        parent_dir = file_path.parent
+                        elo_candidates = list(parent_dir.glob("elo_ranked*.json"))
+                        if elo_candidates:
+                            elo_path = max(elo_candidates, key=lambda p: p.stat().st_mtime)
+                            console.print(f"[dim]Using elo file: {elo_path.name}[/dim]")
+                    
+                    # Load query from file
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    query = data.get("query", "Unknown")
+                    
+                    # Generate report
+                    report_obj = asyncio.run(
+                        generate_report(
+                            snowball_file=file_path,
+                            elo_file=elo_path,
+                            top_k=config["top_k"],
+                        )
+                    )
+                    
+                    # Save report
+                    report_data = report_to_dict(report_obj)
+                    output_path = results_manager.save_report(
+                        query=query,
+                        report_data=report_data,
+                        top_k=config["top_k"],
+                    )
+                    
+                    console.print()
+                    print_success(f"Report saved to: {output_path}")
+                    console.print(f"[bold]Sections:[/bold] {len(report_obj.current_research)}")
+                    console.print(f"[bold]Open problems:[/bold] {len(report_obj.open_problems)}")
+                    
+                except KeyboardInterrupt:
+                    console.print()
+                    print_error("Report generation cancelled by user")
+                except Exception as e:
+                    print_error(f"Report generation failed: {e}")
+        
+        elif choice == "8":
+            # Run everything
+            file_path = select_results_file(results_manager)
+            if file_path:
+                try:
+                    console.print()
+                    print_success(f"Running all analysis features for: {file_path}")
+                    console.print()
+                    
+                    from paperpilot.cli.app import everything
+                    everything(str(file_path))
+                except KeyboardInterrupt:
+                    console.print()
+                    print_error("Everything mode cancelled by user")
+                except Exception as e:
+                    print_error(f"Everything mode failed: {e}")
+        
+        elif choice == "9":
             # Exit
             console.print()
             print_success("Goodbye!")
             break
         
         # Pause before showing menu again
-        if choice != "5":
+        if choice != "9":
             console.print()
             Prompt.ask("[dim]Press Enter to continue...[/dim]", default="")
 

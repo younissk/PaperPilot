@@ -405,6 +405,77 @@ class ResultsManager:
         
         return json_path, html_path
     
+    def save_report(
+        self,
+        query: str,
+        report_data: Dict[str, Any],
+        filename: str = "report.json",
+        top_k: Optional[int] = None,
+    ) -> Path:
+        """Save generated research report.
+        
+        Args:
+            query: Research query string
+            report_data: Report data dictionary
+            filename: Optional custom filename (default: "report.json")
+            top_k: Number of top papers used (for metadata)
+            
+        Returns:
+            Path to saved report file
+        """
+        query_dir = self.get_query_dir(query)
+        
+        # Generate parameterized filename if top_k provided
+        if top_k is not None and filename == "report.json":
+            filename = self._build_filename("report", {"top_k": top_k}, "json")
+        
+        output_file = query_dir / filename
+        
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(report_data, f, indent=2, ensure_ascii=False)
+        
+        # Update metadata
+        self.save_metadata(query, {
+            "report_file": filename,
+            "report_papers_used": report_data.get("total_papers_used", 0),
+            "report_sections": len(report_data.get("current_research", [])),
+            "report_generated_at": report_data.get("generated_at"),
+        })
+        
+        return output_file
+    
+    def get_latest_elo(self, query: str) -> Optional[Path]:
+        """Get path to latest elo ranking results for a query.
+        
+        Args:
+            query: Research query string
+            
+        Returns:
+            Path to elo file, or None if not found
+        """
+        query_dir = self.get_query_dir(query)
+        metadata_file = query_dir / "metadata.json"
+        
+        if metadata_file.exists():
+            try:
+                with open(metadata_file, "r", encoding="utf-8") as f:
+                    metadata = json.load(f)
+                    elo_file = metadata.get("elo_file")
+                    if elo_file:
+                        elo_path = query_dir / elo_file
+                        if elo_path.exists():
+                            return elo_path
+            except (json.JSONDecodeError, KeyError):
+                pass
+        
+        # Fallback: look for any elo_ranked*.json file
+        elo_files = list(query_dir.glob("elo_ranked*.json"))
+        if elo_files:
+            # Return the most recently modified one
+            return max(elo_files, key=lambda p: p.stat().st_mtime)
+        
+        return None
+    
     def list_queries(self) -> List[str]:
         """List all queries that have results.
         
