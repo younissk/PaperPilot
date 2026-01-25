@@ -1,0 +1,2147 @@
+{
+  "method": "dbscan",
+  "dim_reduction": "pca",
+  "n_clusters": 28,
+  "total_papers": 194,
+  "clusters": [
+    {
+      "id": -1,
+      "label": "Noise (unclustered)",
+      "count": 129,
+      "top_papers": [
+        {
+          "title": "ChatGPT: Bullshit spewer or the end of traditional assessments in higher education?",
+          "year": 2023,
+          "citations": 1542
+        },
+        {
+          "title": "ChatGPT: Bullshit spewer or the end of traditional assessments in higher education?",
+          "year": 2023,
+          "citations": 1443
+        },
+        {
+          "title": "What if the devil is my guardian angel: ChatGPT as a case study of using chatbots in education",
+          "year": 2023,
+          "citations": 1399
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "W4391835906",
+          "title": "Role-Playing Simulation Games using ChatGPT",
+          "year": 2024,
+          "citation_count": 5,
+          "x": -0.16334112558792235,
+          "y": 0.05454844715409041
+        },
+        {
+          "paper_id": "W4389421270",
+          "title": "ChatGPT in the Classroom: Boon or Bane for Physics Students' Academic Performance?",
+          "year": 2023,
+          "citation_count": 4,
+          "x": -0.04001404642532156,
+          "y": -0.151234223652637
+        },
+        {
+          "paper_id": "W4393212153",
+          "title": "Enhancing Programming Education with ChatGPT: A Case Study on Student Perceptions and Interactions in a Python Course",
+          "year": 2024,
+          "citation_count": 5,
+          "x": 0.06107112212100993,
+          "y": -0.10189302828302477
+        },
+        {
+          "paper_id": "W4396821565",
+          "title": "ChatGPT in Data Visualization Education: A Student Perspective",
+          "year": 2024,
+          "citation_count": 0,
+          "x": -0.019054687729945636,
+          "y": -0.005721154790550605
+        },
+        {
+          "paper_id": "W4377864948",
+          "title": "Distilling ChatGPT for Explainable Automated Student Answer Assessment",
+          "year": 2023,
+          "citation_count": 5,
+          "x": -0.12247082261288697,
+          "y": -0.06485484758360724
+        },
+        {
+          "paper_id": "W4406692390",
+          "title": "An Empirical Study to Understand How Students Use ChatGPT for Writing Essays",
+          "year": 2025,
+          "citation_count": 0,
+          "x": -0.12464831342092454,
+          "y": -0.20247222342328128
+        },
+        {
+          "paper_id": "W4294294916",
+          "title": "A Prescriptive Learning Analytics Framework: Beyond Predictive Modelling and onto Explainable AI with Prescriptive Analytics and ChatGPT",
+          "year": 2022,
+          "citation_count": 1,
+          "x": -0.09532141244011279,
+          "y": 0.1086602842523453
+        },
+        {
+          "paper_id": "W4406071697",
+          "title": "StuGPTViz: A Visual Analytics Approach to Understand Student-ChatGPT Interactions",
+          "year": 2024,
+          "citation_count": 0,
+          "x": -0.21630151272301543,
+          "y": -0.02284366675755731
+        },
+        {
+          "paper_id": "W4378942654",
+          "title": "Embrace Opportunities and Face Challenges: Using ChatGPT in Undergraduate Students' Collaborative Interdisciplinary Learning",
+          "year": 2023,
+          "citation_count": 23,
+          "x": 0.10190099379379688,
+          "y": -0.12117784902397565
+        },
+        {
+          "paper_id": "W4399026013",
+          "title": "An empirical study to understand how students use ChatGPT for writing essays and how it affects their ownership",
+          "year": 2024,
+          "citation_count": 1,
+          "x": -0.16108411048722104,
+          "y": -0.23587199072697132
+        },
+        {
+          "paper_id": "W4414809765",
+          "title": "ChatGPT in Introductory Programming: Counterbalanced Evaluation of Code Quality, Conceptual Learning, and Student Perceptions",
+          "year": 2025,
+          "citation_count": 0,
+          "x": -0.19564279352076866,
+          "y": -0.12008354168297197
+        },
+        {
+          "paper_id": "W4396606312",
+          "title": "Google or ChatGPT: Who is the Better Helper for University Students",
+          "year": 2024,
+          "citation_count": 2,
+          "x": 0.12545781709885334,
+          "y": -0.1291400171266829
+        },
+        {
+          "paper_id": "W4384261668",
+          "title": "Cases of EFL Secondary Students' Prompt Engineering Pathways to Complete a Writing Task with ChatGPT",
+          "year": 2023,
+          "citation_count": 4,
+          "x": -0.06548141036825716,
+          "y": -0.17162805533248232
+        },
+        {
+          "paper_id": "W4392781669",
+          "title": "Exploring the Impact of ChatGPT on Student Interactions in Computer-Supported Collaborative Learning",
+          "year": 2024,
+          "citation_count": 5,
+          "x": 0.0919169140616222,
+          "y": 0.00506653399820242
+        },
+        {
+          "paper_id": "W4391591594",
+          "title": "Integrating ChatGPT in a Computer Science Course: Students Perceptions and Suggestions",
+          "year": 2023,
+          "citation_count": 4,
+          "x": 0.09940901999784862,
+          "y": -0.05254012716406428
+        },
+        {
+          "paper_id": "W4388787779",
+          "title": "\"It's not like Jarvis, but it's pretty close!\" -- Examining ChatGPT's Usage among Undergraduate Students in Computer Science",
+          "year": 2023,
+          "citation_count": 3,
+          "x": -0.26976746953777386,
+          "y": -0.09533204328456807
+        },
+        {
+          "paper_id": "W4414433698",
+          "title": "Do Students Rely on AI? Analysis of Student-ChatGPT Conversations from a Field Study",
+          "year": 2025,
+          "citation_count": 0,
+          "x": 0.14900188883951637,
+          "y": -0.025167673430485715
+        },
+        {
+          "paper_id": "W4414566366",
+          "title": "The StudyChat Dataset: Student Dialogues With ChatGPT in an Artificial Intelligence Course",
+          "year": 2025,
+          "citation_count": 0,
+          "x": -0.041922164077613996,
+          "y": 0.01447144476206983
+        },
+        {
+          "paper_id": "W4392487993",
+          "title": "A Preliminary Exploration of the Disruption of a Generative AI Systems: Faculty/Staff and Student Perceptions of ChatGPT and its Capability of Completing Undergraduate Engineering Coursework",
+          "year": 2024,
+          "citation_count": 5,
+          "x": 0.12244827185812604,
+          "y": 0.0018710671093196626
+        },
+        {
+          "paper_id": "W4416848311",
+          "title": "ChatGPT produces more \"lazy\" thinkers: Evidence of cognitive engagement decline",
+          "year": 2025,
+          "citation_count": 0,
+          "x": -0.08494342739114748,
+          "y": 0.004491083599781603
+        },
+        {
+          "paper_id": "W4389157439",
+          "title": "Student Mastery or AI Deception? Analyzing ChatGPT's Assessment Proficiency and Evaluating Detection Strategies",
+          "year": 2023,
+          "citation_count": 0,
+          "x": 0.015843350815740426,
+          "y": 0.11817025531095325
+        },
+        {
+          "paper_id": "W4414682087",
+          "title": "Can AI support student engagement in classroom activities in higher education?",
+          "year": 2025,
+          "citation_count": 0,
+          "x": 0.042297308597527054,
+          "y": 0.07370114337998754
+        },
+        {
+          "paper_id": "W4399794870",
+          "title": "Beyond the Hype: A Cautionary Tale of ChatGPT in the Programming Classroom",
+          "year": 2024,
+          "citation_count": 3,
+          "x": -0.0999618400217478,
+          "y": 0.1311189777745693
+        },
+        {
+          "paper_id": "W6910635647",
+          "title": "ChatGPT in the classroom. Exploring its potential and limitations in a Functional Programming course",
+          "year": 2024,
+          "citation_count": 0,
+          "x": 0.03756729021379812,
+          "y": 0.09527555662614687
+        },
+        {
+          "paper_id": "W4398157104",
+          "title": "ChatGPT in Classrooms: Transforming Challenges into Opportunities in Education",
+          "year": 2024,
+          "citation_count": 1,
+          "x": 0.12248529884409147,
+          "y": 0.24495336329306727
+        },
+        {
+          "paper_id": "W4393335752",
+          "title": "The use of ChatGPT in higher education: The advantages and disadvantages",
+          "year": 2024,
+          "citation_count": 3,
+          "x": 0.17170265570675286,
+          "y": 0.06162945555356444
+        },
+        {
+          "paper_id": "W4391591647",
+          "title": "Using ChatGPT for Science Learning: A Study on Pre-service Teachers' Lesson Planning",
+          "year": 2024,
+          "citation_count": 9,
+          "x": 0.016690570376202453,
+          "y": -0.14464254740716384
+        },
+        {
+          "paper_id": "W4320342636",
+          "title": "Better by you, better than me, chatgpt3 as writing assistance in students essays",
+          "year": 2023,
+          "citation_count": 35,
+          "x": -0.01030279479782334,
+          "y": -0.3545588733436656
+        },
+        {
+          "paper_id": "W4414756883",
+          "title": "How Students (Really) Use ChatGPT: Uncovering Experiences Among Undergraduate Students",
+          "year": 2025,
+          "citation_count": 0,
+          "x": 0.01582004389622924,
+          "y": -0.24807290689685785
+        },
+        {
+          "paper_id": "W4414770320",
+          "title": "Investigating Middle School Students Question-Asking and Answer-Evaluation Skills When Using ChatGPT for Science Investigation",
+          "year": 2025,
+          "citation_count": 0,
+          "x": 0.13899038448595208,
+          "y": -0.011093111422389083
+        },
+        {
+          "paper_id": "W4389712680",
+          "title": "Can ChatGPT Play the Role of a Teaching Assistant in an Introductory Programming Course?",
+          "year": 2023,
+          "citation_count": 6,
+          "x": -0.1973308279156065,
+          "y": 0.021599141509919362
+        },
+        {
+          "paper_id": "W4406745624",
+          "title": "To Google or To ChatGPT? A Comparison of CS2 Students' Information Gathering Approaches and Outcomes",
+          "year": 2025,
+          "citation_count": 0,
+          "x": -0.036362111953070646,
+          "y": -0.1449598170572456
+        },
+        {
+          "paper_id": "W7106155292",
+          "title": "Exploring the Use of ChatGPT by Computer Science Students in Software Development: Applications, Ethical Considerations, and Insights for Engineering Education",
+          "year": 2025,
+          "citation_count": 0,
+          "x": 0.11218788312256048,
+          "y": -0.12966087707222823
+        },
+        {
+          "paper_id": "W4405768157",
+          "title": "Is ChatGPT Massively Used by Students Nowadays? A Survey on the Use of Large Language Models such as ChatGPT in Educational Settings",
+          "year": 2024,
+          "citation_count": 6,
+          "x": -0.12464361012400998,
+          "y": 0.061649144056637316
+        },
+        {
+          "paper_id": "W4387074871",
+          "title": "ChEDDAR: Student-ChatGPT Dialogue in EFL Writing Education",
+          "year": 2023,
+          "citation_count": 5,
+          "x": 0.010704723683460293,
+          "y": -0.03383249940970524
+        },
+        {
+          "paper_id": "W4416169529",
+          "title": "Assessing prompting frameworks for enhancing literature reviews among university students using ChatGPT",
+          "year": 2025,
+          "citation_count": 0,
+          "x": 0.05159358687670445,
+          "y": -0.07147086070075297
+        },
+        {
+          "paper_id": "W4399252034",
+          "title": "Designing Prompt Analytics Dashboards to Analyze Student-ChatGPT Interactions in EFL Writing",
+          "year": 2024,
+          "citation_count": 0,
+          "x": 0.016526761522431523,
+          "y": -0.051667129450994706
+        },
+        {
+          "paper_id": "W4392822474",
+          "title": "RECIPE4U: Student-ChatGPT Interaction Dataset in EFL Writing Education",
+          "year": 2024,
+          "citation_count": 3,
+          "x": -0.005608276363024283,
+          "y": -0.07621330411139492
+        },
+        {
+          "paper_id": "W7077853815",
+          "title": "Opportunities and Challenges of Integrating ChatGPT in Education: Sentiment Analysis and Topic Modeling",
+          "year": 2025,
+          "citation_count": 0,
+          "x": 0.03043060105328427,
+          "y": 0.02202913997886909
+        },
+        {
+          "paper_id": "W4416352644",
+          "title": "Educators on the Frontline: Philosophical and Realistic Perspectives on Integrating ChatGPT into the Learning Space",
+          "year": 2025,
+          "citation_count": 0,
+          "x": 0.13082039048170863,
+          "y": 0.19113819343756763
+        },
+        {
+          "paper_id": "W4400481199",
+          "title": "Integrating AI in College Education: Positive yet Mixed Experiences with ChatGPT",
+          "year": 2024,
+          "citation_count": 1,
+          "x": 0.1522695229893485,
+          "y": 0.093360676410052
+        },
+        {
+          "paper_id": "W6948413548",
+          "title": "RECIPE: How to Integrate ChatGPT into EFL Writing Education",
+          "year": 2023,
+          "citation_count": 2,
+          "x": 0.01687692666068738,
+          "y": -0.010271340064256939
+        },
+        {
+          "paper_id": "W4403585895",
+          "title": "ChatGPT and Its Educational Impact: Insights from a Software Development Competition",
+          "year": 2024,
+          "citation_count": 2,
+          "x": 0.029936070139536364,
+          "y": 0.023288271625128597
+        },
+        {
+          "paper_id": "W4389115728",
+          "title": "ChatGPT and Beyond: The Generative AI Revolution in Education",
+          "year": 2023,
+          "citation_count": 12,
+          "x": 0.10488236989633708,
+          "y": 0.21242320893539565
+        },
+        {
+          "paper_id": "W6948018881",
+          "title": "ChatGPT for Teaching and Learning: An Experience from Data Science Education",
+          "year": 2023,
+          "citation_count": 0,
+          "x": -0.1368386136901013,
+          "y": 0.07248361724718957
+        },
+        {
+          "paper_id": "W4388684445",
+          "title": "\"ChatGPT, a Friend or Foe for Education?\" Analyzing the User's Perspectives on the Latest AI Chatbot Via Reddit",
+          "year": 2023,
+          "citation_count": 0,
+          "x": 0.15721401008896066,
+          "y": 0.1355597790993363
+        },
+        {
+          "paper_id": "W4386561773",
+          "title": "Unreflected Acceptance -- Investigating the Negative Consequences of ChatGPT-Assisted Problem Solving in Physics Education",
+          "year": 2023,
+          "citation_count": 18,
+          "x": -0.18972222411365913,
+          "y": -0.08824114568748048
+        },
+        {
+          "paper_id": "W4407172847",
+          "title": "Higher education students’ perceptions of ChatGPT: A global study of early reactions",
+          "year": 2025,
+          "citation_count": 77,
+          "x": 0.09496968347250317,
+          "y": -0.28861950951534066
+        },
+        {
+          "paper_id": "S2:f6681d526def3a7a5cd7b960d3e60ac69a10dbd7",
+          "title": "What if the devil is my guardian angel: ChatGPT as a case study of using chatbots in education",
+          "year": 2023,
+          "citation_count": 1220,
+          "x": 0.1946346724305251,
+          "y": 0.1418417748521817
+        },
+        {
+          "paper_id": "S2:b867ec2add2a3ef26ab2c3080d5f7d4d400d8270",
+          "title": "The AI generation gap: Are Gen Z students more interested in adopting generative AI such as ChatGPT in teaching and learning than their Gen X and millennial generation teachers?",
+          "year": 2023,
+          "citation_count": 431,
+          "x": 0.18777402357586268,
+          "y": 0.05938111174169719
+        },
+        {
+          "paper_id": "S2:9460f9fbc532416c8ec39591577032a5fa4a79b3",
+          "title": "ChatGPT: Bullshit spewer or the end of traditional assessments in higher education?",
+          "year": 2023,
+          "citation_count": 1443,
+          "x": -0.12080358631509436,
+          "y": -0.11576366887523254
+        },
+        {
+          "paper_id": "S2:0df12990fcaf1973b29be716c15e179ee5efa485",
+          "title": "Unlocking the opportunities through ChatGPT Tool towards ameliorating the education system",
+          "year": 2023,
+          "citation_count": 455,
+          "x": 0.04646881927716647,
+          "y": 0.0011878429991040932
+        },
+        {
+          "paper_id": "W4385988359",
+          "title": "Summary of ChatGPT-Related research and perspective towards the future of large language models",
+          "year": 2023,
+          "citation_count": 663,
+          "x": -0.39094544732481357,
+          "y": 0.12677616347084356
+        },
+        {
+          "paper_id": "S2:51a0bba0c5fb4257e843040615bb23f712fed4e6",
+          "title": "Summary of ChatGPT-Related Research and Perspective Towards the Future of Large Language Models",
+          "year": 2023,
+          "citation_count": 672,
+          "x": -0.48247726812318187,
+          "y": 0.15533448397867672
+        },
+        {
+          "paper_id": "W4366989878",
+          "title": "War of the chatbots: Bard, Bing Chat, ChatGPT, Ernie and beyond. The new AI gold rush and its impact on higher education",
+          "year": 2023,
+          "citation_count": 380,
+          "x": 0.10999170055491843,
+          "y": 0.16815915838952536
+        },
+        {
+          "paper_id": "W4366422585",
+          "title": "What ChatGPT means for universities: Perceptions of scholars and students",
+          "year": 2023,
+          "citation_count": 378,
+          "x": 0.07800134327473421,
+          "y": -0.10095379880393962
+        },
+        {
+          "paper_id": "S2:cf5bfdb0bfbf2f3b42a131a40372212217eea3d3",
+          "title": "ChatGPT in education: A blessing or a curse? A qualitative study exploring early adopters’ utilization and perceptions",
+          "year": 2023,
+          "citation_count": 263,
+          "x": -0.024361814032051735,
+          "y": -0.18547386174363273
+        },
+        {
+          "paper_id": "S2:dedec25d6f287db59c8881d94b3bff3eb1e0ca98",
+          "title": "The application and challenges of ChatGPT in educational transformation: New demands for teachers' roles",
+          "year": 2024,
+          "citation_count": 172,
+          "x": 0.01264802095757977,
+          "y": 0.032135808721941765
+        },
+        {
+          "paper_id": "S2:fffdda51d038fcf7141e9c62739f8a292ce7ccfb",
+          "title": "ChatGPT and the Rise of Generative AI: Threat to Academic Integrity?",
+          "year": 2023,
+          "citation_count": 343,
+          "x": -0.06273502781433947,
+          "y": 0.18856080954276044
+        },
+        {
+          "paper_id": "S2:a1f3a5f16faf9670f948f1e4e84d12f08dfe353b",
+          "title": "From \"Ban It Till We Understand It\" to \"Resistance is Futile\": How University Programming Instructors Plan to Adapt as More Students Use AI Code Generation and Explanation Tools such as ChatGPT and GitHub Copilot",
+          "year": 2023,
+          "citation_count": 224,
+          "x": 0.0945365894408487,
+          "y": 0.1732701356799
+        },
+        {
+          "paper_id": "W4392169971",
+          "title": "Perceptions of Higher Education Students towards ChatGPT Usage",
+          "year": 2024,
+          "citation_count": 51,
+          "x": 0.2269984148334782,
+          "y": -0.12595413580110307
+        },
+        {
+          "paper_id": "W4318464200",
+          "title": "ChatGPT for Good? On Opportunities and Challenges of Large Language Models for Education",
+          "year": 2023,
+          "citation_count": 508,
+          "x": -0.4109123327722943,
+          "y": 0.2492937408735838
+        },
+        {
+          "paper_id": "W4327918021",
+          "title": "ChatGPT in higher education: Considerations for academic integrity and student learning",
+          "year": 2023,
+          "citation_count": 653,
+          "x": 0.15643720081976567,
+          "y": 0.09003409232531094
+        },
+        {
+          "paper_id": "W4321605350",
+          "title": "Academic Integrity considerations of AI Large Language Models in the post-pandemic era: ChatGPT and beyond",
+          "year": 2023,
+          "citation_count": 580,
+          "x": -0.1610336305759182,
+          "y": 0.12359579307923538
+        },
+        {
+          "paper_id": "W4392964630",
+          "title": "Incorporating AI in foreign language education: An investigation into ChatGPT’s effect on foreign language learners",
+          "year": 2024,
+          "citation_count": 149,
+          "x": 0.03744672491452282,
+          "y": 0.04538116755640774
+        },
+        {
+          "paper_id": "W4386739700",
+          "title": "The Perception by University Students of the Use of ChatGPT in Education",
+          "year": 2023,
+          "citation_count": 221,
+          "x": 0.07800811021922154,
+          "y": -0.09310616486553568
+        },
+        {
+          "paper_id": "W4390146370",
+          "title": "ChatGPT effects on cognitive skills of undergraduate students: Receiving instant responses from AI-based conversational large language models (LLMs)",
+          "year": 2023,
+          "citation_count": 197,
+          "x": -0.04565701097294984,
+          "y": -0.13183407711777223
+        },
+        {
+          "paper_id": "W4392820427",
+          "title": "Understanding the diffusion of AI-generative (ChatGPT) in higher education: Does students' integrity matter?",
+          "year": 2024,
+          "citation_count": 100,
+          "x": 0.09749747551242982,
+          "y": 0.09958664900862489
+        },
+        {
+          "paper_id": "W4317910584",
+          "title": "ChatGPT: Bullshit spewer or the end of traditional assessments in higher education?",
+          "year": 2023,
+          "citation_count": 1542,
+          "x": -0.004504403903039344,
+          "y": 0.06422712593279428
+        },
+        {
+          "paper_id": "W4361204578",
+          "title": "A SWOT analysis of ChatGPT: Implications for educational practice and research",
+          "year": 2023,
+          "citation_count": 1034,
+          "x": 0.11309997771765994,
+          "y": 0.05464692056582205
+        },
+        {
+          "paper_id": "W4319350602",
+          "title": "ChatGPT - Reshaping medical education and clinical management",
+          "year": 2023,
+          "citation_count": 613,
+          "x": 0.009176421498780176,
+          "y": 0.16902756760465346
+        },
+        {
+          "paper_id": "W4324130227",
+          "title": "The rise of <scp>ChatGPT</scp>: Exploring its potential in medical education",
+          "year": 2023,
+          "citation_count": 531,
+          "x": -0.024814451636918623,
+          "y": 0.14843977919553614
+        },
+        {
+          "paper_id": "W4378473491",
+          "title": "Unlocking the opportunities through ChatGPT Tool towards ameliorating the education system",
+          "year": 2023,
+          "citation_count": 465,
+          "x": 0.06154727677506379,
+          "y": 0.1787892686700016
+        },
+        {
+          "paper_id": "W4321499901",
+          "title": "What if the devil is my guardian angel: ChatGPT as a case study of using chatbots in education",
+          "year": 2023,
+          "citation_count": 1399,
+          "x": 0.09710111859231428,
+          "y": 0.007284605066456337
+        },
+        {
+          "paper_id": "W4318257512",
+          "title": "Education in the Era of Generative Artificial Intelligence (AI): Understanding the Potential Benefits of ChatGPT in Promoting Teaching and Learning",
+          "year": 2023,
+          "citation_count": 1129,
+          "x": 0.10888292184420378,
+          "y": 0.24944581681283692
+        },
+        {
+          "paper_id": "W4362581834",
+          "title": "Revolutionizing education with AI: Exploring the transformative potential of ChatGPT",
+          "year": 2023,
+          "citation_count": 749,
+          "x": 0.23764468196975844,
+          "y": 0.26221960663463756
+        },
+        {
+          "paper_id": "W4385422591",
+          "title": "Impact of the Implementation of ChatGPT in Education: A Systematic Review",
+          "year": 2023,
+          "citation_count": 421,
+          "x": 0.08245863245829632,
+          "y": -0.08852164929854274
+        },
+        {
+          "paper_id": "W4386544117",
+          "title": "The impact of ChatGPT on higher education",
+          "year": 2023,
+          "citation_count": 354,
+          "x": 0.23669121369676074,
+          "y": 0.09821739173001423
+        },
+        {
+          "paper_id": "W4398233424",
+          "title": "The impact of ChatGPT on foreign language teaching and learning: opportunities in education and research",
+          "year": 2023,
+          "citation_count": 323,
+          "x": -0.001969907476847376,
+          "y": 0.04427043516938249
+        },
+        {
+          "paper_id": "W4389454339",
+          "title": "Factors influencing students' intention to adopt and use ChatGPT in higher education: A study in the Vietnamese context",
+          "year": 2023,
+          "citation_count": 117,
+          "x": 0.08392643689876807,
+          "y": -0.3118578214193492
+        },
+        {
+          "paper_id": "W4391780419",
+          "title": "Impact of ChatGPT on ESL students’ academic writing skills: a mixed methods intervention study",
+          "year": 2024,
+          "citation_count": 211,
+          "x": 0.04250879246168636,
+          "y": -0.17213049927627777
+        },
+        {
+          "paper_id": "W4382560004",
+          "title": "Determinants of Intention to Use ChatGPT for Educational Purposes: Findings from PLS-SEM and fsQCA",
+          "year": 2023,
+          "citation_count": 315,
+          "x": 0.060430769821342364,
+          "y": -0.25225564507327
+        },
+        {
+          "paper_id": "W4391137578",
+          "title": "A multinational study on the factors influencing university students’ attitudes and usage of ChatGPT",
+          "year": 2024,
+          "citation_count": 190,
+          "x": 0.12041752218686913,
+          "y": -0.2615319463821983
+        },
+        {
+          "paper_id": "W4361282369",
+          "title": "ChatGPT applications in medical, dental, pharmacy, and public health education: A descriptive study highlighting the advantages and limitations",
+          "year": 2023,
+          "citation_count": 272,
+          "x": -0.023374054435819625,
+          "y": -0.07244799271538002
+        },
+        {
+          "paper_id": "W4313564799",
+          "title": "ChatGPT User Experience: Implications for Education",
+          "year": 2022,
+          "citation_count": 809,
+          "x": -0.07743201924502348,
+          "y": -0.1309910165779591
+        },
+        {
+          "paper_id": "W4390951664",
+          "title": "Economics students’ behavioural intention and usage of ChatGPT in higher education: a hybrid structural equation modelling-artificial neural network approach",
+          "year": 2024,
+          "citation_count": 65,
+          "x": 0.12579735533173061,
+          "y": -0.17799124082526976
+        },
+        {
+          "paper_id": "W4362721098",
+          "title": "Analysing the Role of ChatGPT in Improving Student Productivity in Higher Education",
+          "year": 2023,
+          "citation_count": 258,
+          "x": 0.12173201651149627,
+          "y": -0.23715075417967757
+        },
+        {
+          "paper_id": "W4390672571",
+          "title": "Higher Education Students’ Task Motivation in the Generative Artificial Intelligence Context: The Case of ChatGPT",
+          "year": 2024,
+          "citation_count": 104,
+          "x": 0.138855970387232,
+          "y": -0.003916516376661137
+        },
+        {
+          "paper_id": "W4389793309",
+          "title": "Enhancing academic writing skills and motivation: assessing the efficacy of ChatGPT in AI-assisted language learning for EFL students",
+          "year": 2023,
+          "citation_count": 424,
+          "x": -0.001139303264108246,
+          "y": -0.1438692506575413
+        },
+        {
+          "paper_id": "W4393902165",
+          "title": "Role of activity-based learning and ChatGPT on students' performance in education",
+          "year": 2024,
+          "citation_count": 130,
+          "x": 0.05338620324304271,
+          "y": -0.17036374321233932
+        },
+        {
+          "paper_id": "W4391062543",
+          "title": "Exploring EFL university teachers’ beliefs in integrating ChatGPT and other large language models in language education: a study in China",
+          "year": 2024,
+          "citation_count": 129,
+          "x": -0.26330597422936936,
+          "y": -0.0664270000416613
+        },
+        {
+          "paper_id": "W4391883919",
+          "title": "Understanding students’ adoption of the ChatGPT chatbot in higher education: the role of anthropomorphism, trust, design novelty and institutional policy",
+          "year": 2024,
+          "citation_count": 114,
+          "x": 0.15212817185649966,
+          "y": -0.1896256977422109
+        },
+        {
+          "paper_id": "W4392863142",
+          "title": "Opportunities, challenges, and future directions of large language models, including ChatGPT in medical education: a systematic scoping review",
+          "year": 2024,
+          "citation_count": 99,
+          "x": -0.3468695956896816,
+          "y": 0.15872872431445675
+        },
+        {
+          "paper_id": "W4386417345",
+          "title": "The impact of Generative AI (GenAI) on practices, policies and research direction in education: a case of ChatGPT and Midjourney",
+          "year": 2023,
+          "citation_count": 529,
+          "x": 0.16789416344690128,
+          "y": 0.24050541701433414
+        },
+        {
+          "paper_id": "W4360980141",
+          "title": "Examining Science Education in ChatGPT: An Exploratory Study of Generative Artificial Intelligence",
+          "year": 2023,
+          "citation_count": 1029,
+          "x": -0.005762852527280135,
+          "y": 0.09502657262128816
+        },
+        {
+          "paper_id": "W4318069287",
+          "title": "ChatGPT and Other Large Language Models Are Double-edged Swords",
+          "year": 2023,
+          "citation_count": 944,
+          "x": -0.5449466869546918,
+          "y": 0.1158101262836754
+        },
+        {
+          "paper_id": "W4366489368",
+          "title": "Unlocking the Power of ChatGPT: A Framework for Applying Generative AI in Education",
+          "year": 2023,
+          "citation_count": 488,
+          "x": 0.17055545127523208,
+          "y": 0.21557649809476156
+        },
+        {
+          "paper_id": "W4387684372",
+          "title": "Applying a modified technology acceptance model to explain higher education students’ usage of ChatGPT: A serial multiple mediation model with knowledge sharing as a moderator",
+          "year": 2023,
+          "citation_count": 145,
+          "x": 0.13568659429125815,
+          "y": -0.08692101448297204
+        },
+        {
+          "paper_id": "W4385293522",
+          "title": "Measuring EFL learners’ use of ChatGPT in informal digital learning of English based on the technology acceptance model",
+          "year": 2023,
+          "citation_count": 374,
+          "x": 0.02890603226537532,
+          "y": -0.17043160857269507
+        },
+        {
+          "paper_id": "W4385662142",
+          "title": "ChatGPT—A double‐edged sword for healthcare education? Implications for assessments of dental students",
+          "year": 2023,
+          "citation_count": 130,
+          "x": 0.01317148258783107,
+          "y": 0.07092434669254849
+        },
+        {
+          "paper_id": "W4327672398",
+          "title": "Speculative futures on ChatGPT and generative artificial intelligence (AI): A collective reflection from the educational landscape",
+          "year": 2023,
+          "citation_count": 315,
+          "x": 0.1132641358023166,
+          "y": 0.28416052143549675
+        },
+        {
+          "paper_id": "W4387169527",
+          "title": "ChatGPT and Generative AI: Possibilities for Its Contribution to Lesson Planning, Critical Thinking and Openness in Teacher Education",
+          "year": 2023,
+          "citation_count": 284,
+          "x": 0.13195700555434656,
+          "y": 0.2446559107641851
+        },
+        {
+          "paper_id": "W4388550908",
+          "title": "ChatGPT as an academic support tool on the academic performance among students: The mediating role of learning motivation",
+          "year": 2023,
+          "citation_count": 55,
+          "x": -0.00867687560827736,
+          "y": -0.33900726244770596
+        },
+        {
+          "paper_id": "W4365515834",
+          "title": "Can Large Language Models Provide Feedback to Students? A Case Study on ChatGPT",
+          "year": 2023,
+          "citation_count": 97,
+          "x": -0.30109463587179874,
+          "y": 0.05032081714688765
+        },
+        {
+          "paper_id": "W4400475545",
+          "title": "Exploring the potential of artificial intelligence to enhance the writing of english academic papers by non-native english-speaking medical students - the educational application of ChatGPT",
+          "year": 2024,
+          "citation_count": 63,
+          "x": -0.15773987955893726,
+          "y": -0.07136085177210932
+        },
+        {
+          "paper_id": "W4394677717",
+          "title": "Embracing ChatGPT for Medical Education: Exploring Its Impact on Doctors and Medical Students",
+          "year": 2024,
+          "citation_count": 57,
+          "x": -0.09053392418752634,
+          "y": 0.09515485829487685
+        },
+        {
+          "paper_id": "W4316671929",
+          "title": "Are ChatGPT’s knowledge and interpretation ability comparable to those of medical students in Korea for taking a parasitology examination?: a descriptive study",
+          "year": 2023,
+          "citation_count": 232,
+          "x": -0.18828276930204582,
+          "y": -0.14835656629300806
+        },
+        {
+          "paper_id": "W4402100300",
+          "title": "Artificial intelligence powering education: ChatGPT's impact on students' academic performance through the lens of technology-to-performance chain theory",
+          "year": 2024,
+          "citation_count": 20,
+          "x": 0.14822254652627836,
+          "y": -0.09772603185997274
+        },
+        {
+          "paper_id": "W4392911518",
+          "title": "Examining Students’ Acceptance and Use of ChatGPT in Saudi Arabian Higher Education",
+          "year": 2024,
+          "citation_count": 56,
+          "x": 0.1351884139116604,
+          "y": -0.33864790974911096
+        },
+        {
+          "paper_id": "W4401070736",
+          "title": "Graduate students’ use of ChatGPT for academic text revision: Behavioral, cognitive, and affective engagement",
+          "year": 2024,
+          "citation_count": 83,
+          "x": -0.03593152873343212,
+          "y": -0.29467702580278893
+        },
+        {
+          "paper_id": "W4396929982",
+          "title": "Is ChatGPT an evil or an angel for second language education and research? A phenomenographic study of research‐active EFL teachers’ perceptions",
+          "year": 2024,
+          "citation_count": 150,
+          "x": 0.04735899411545326,
+          "y": 0.04271434551992853
+        },
+        {
+          "paper_id": "W4390816686",
+          "title": "Investigating undergraduate students' perceptions and awareness of using ChatGPT as a regular assistance tool: A user acceptance perspective study",
+          "year": 2024,
+          "citation_count": 149,
+          "x": 0.10119380423153966,
+          "y": -0.259882316733127
+        },
+        {
+          "paper_id": "W4386711868",
+          "title": "An Exploratory Study of EFL Learners’ Use of ChatGPT for Language Learning Tasks: Experience and Perceptions",
+          "year": 2023,
+          "citation_count": 214,
+          "x": -0.0063510346240242075,
+          "y": -0.04359396134019422
+        },
+        {
+          "paper_id": "W4381277798",
+          "title": "Exploring the integration of ChatGPT in education: adapting for the future",
+          "year": 2023,
+          "citation_count": 207,
+          "x": 0.16075145372042696,
+          "y": 0.16609203604377798
+        },
+        {
+          "paper_id": "W4392639864",
+          "title": "Comparing the quality of human and ChatGPT feedback of students’ writing",
+          "year": 2024,
+          "citation_count": 246,
+          "x": 0.028499604392818227,
+          "y": -0.047375243917428846
+        },
+        {
+          "paper_id": "W4378469471",
+          "title": "ChatGPT versus engineering education assessment: a multidisciplinary and multi-institutional benchmarking and analysis of this generative artificial intelligence tool to investigate assessment integrity",
+          "year": 2023,
+          "citation_count": 252,
+          "x": 0.08739514097941511,
+          "y": 0.02575311936759337
+        },
+        {
+          "paper_id": "W4396759351",
+          "title": "The impact of ChatGPT on learners in English academic writing: opportunities and challenges in education",
+          "year": 2024,
+          "citation_count": 47,
+          "x": -0.0007617490501700218,
+          "y": -0.1756822457572696
+        },
+        {
+          "paper_id": "W4390114552",
+          "title": "Using ChatGPT for Clinical Practice and Medical Education: Cross-Sectional Survey of Medical Students’ and Physicians’ Perceptions",
+          "year": 2023,
+          "citation_count": 66,
+          "x": -0.06357886216812395,
+          "y": -0.12823440905452424
+        },
+        {
+          "paper_id": "W4406016228",
+          "title": "Assessing Familiarity, Usage Patterns, and Attitudes of Medical Students Toward ChatGPT and Other Chat-Based AI Apps in Medical Education: Cross-Sectional Questionnaire Study",
+          "year": 2025,
+          "citation_count": 19,
+          "x": 0.09650875425665498,
+          "y": -0.16821656659469184
+        },
+        {
+          "paper_id": "W4318899036",
+          "title": "Mathematical Capabilities of ChatGPT",
+          "year": 2023,
+          "citation_count": 296,
+          "x": -0.20156357270724928,
+          "y": 0.05844827936735347
+        },
+        {
+          "paper_id": "W4399665388",
+          "title": "Exploring Chinese EFL learners’ engagement with large language models: A self-determination theory perspective",
+          "year": 2024,
+          "citation_count": 104,
+          "x": -0.36070849913121344,
+          "y": -0.15104035764108628
+        },
+        {
+          "paper_id": "W4387378202",
+          "title": "Human-like intuitive behavior and reasoning biases emerged in large language models but disappeared in ChatGPT",
+          "year": 2023,
+          "citation_count": 160,
+          "x": -0.19726175075825228,
+          "y": 0.17705090603624057
+        },
+        {
+          "paper_id": "W4384457692",
+          "title": "Exploring Perceptions and Experiences of ChatGPT in Medical Education: A Qualitative Study Among Medical College Faculty and Students in Saudi Arabia",
+          "year": 2023,
+          "citation_count": 39,
+          "x": 0.10202369222312943,
+          "y": -0.09205736839673687
+        },
+        {
+          "paper_id": "W4390631601",
+          "title": "Artificial Intelligence in Medicine: Cross-Sectional Study Among Medical Students on Application, Education, and Ethical Aspects",
+          "year": 2024,
+          "citation_count": 97,
+          "x": 0.10124890996632839,
+          "y": 0.1585838355171881
+        },
+        {
+          "paper_id": "W4387722355",
+          "title": "Factors affecting accounting students’ misuse of chatgpt: an application of the fraud triangle theory",
+          "year": 2023,
+          "citation_count": 50,
+          "x": 0.03331059351673592,
+          "y": -0.20576922068323472
+        },
+        {
+          "paper_id": "W4400322967",
+          "title": "A Systematic Rapid Review of Empirical Research on Students’ Use of ChatGPT in Higher Education",
+          "year": 2024,
+          "citation_count": 7,
+          "x": 0.14584167972196102,
+          "y": -0.048740022864685616
+        },
+        {
+          "paper_id": "W4379193259",
+          "title": "The Utility of ChatGPT in Educational Research—Potential Opportunities and Pitfalls",
+          "year": 2023,
+          "citation_count": 31,
+          "x": 0.022786970211594645,
+          "y": 0.0726538254331907
+        },
+        {
+          "paper_id": "W4401821087",
+          "title": "Integration of ChatGPT Into a Course for Medical Students: Explorative Study on Teaching Scenarios, Students’ Perception, and Applications",
+          "year": 2024,
+          "citation_count": 20,
+          "x": 0.04766663590446205,
+          "y": 0.02830117743348716
+        },
+        {
+          "paper_id": "W4400764158",
+          "title": "Pharmacy student use of ChatGPT: A survey of students at a U.S. School of Pharmacy",
+          "year": 2024,
+          "citation_count": 19,
+          "x": 0.041020365470230136,
+          "y": -0.2822593189833633
+        }
+      ]
+    },
+    {
+      "id": 0,
+      "label": "Cluster 0",
+      "count": 2,
+      "top_papers": [
+        {
+          "title": "ChatGPT in education: A blessing or a curse? A qualitative study exploring early adopters’ utilization and perceptions",
+          "year": 2023,
+          "citations": 287
+        },
+        {
+          "title": "Exploring User Perspectives on ChatGPT: Applications, Perceptions, and Implications for AI-Integrated Education",
+          "year": 2023,
+          "citations": 61
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "W4377865152",
+          "title": "Exploring User Perspectives on ChatGPT: Applications, Perceptions, and Implications for AI-Integrated Education",
+          "year": 2023,
+          "citation_count": 61,
+          "x": 0.15065194317299396,
+          "y": 0.0021500348816194666
+        },
+        {
+          "paper_id": "W4388817859",
+          "title": "ChatGPT in education: A blessing or a curse? A qualitative study exploring early adopters’ utilization and perceptions",
+          "year": 2023,
+          "citation_count": 287,
+          "x": 0.11583576262768872,
+          "y": -0.01915694134033743
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "label": "Cluster 1",
+      "count": 4,
+      "top_papers": [
+        {
+          "title": "ChatGPT for Education and Research: Opportunities, Threats, and Strategies",
+          "year": 2023,
+          "citations": 816
+        },
+        {
+          "title": "ChatGPT for Education and Research: Opportunities, Threats, and Strategies",
+          "year": 2023,
+          "citations": 777
+        },
+        {
+          "title": "ChatGPT for Education and Research: A Review of Benefits and Risks",
+          "year": 2023,
+          "citations": 271
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "W4404403736",
+          "title": "ChatGPT in Research and Education: Exploring Benefits and Threats",
+          "year": 2024,
+          "citation_count": 1,
+          "x": 0.046648871860350785,
+          "y": 0.15115923444928386
+        },
+        {
+          "paper_id": "S2:3b69ec0fc17c5134c9b002bebe283e0189bfdae5",
+          "title": "ChatGPT for Education and Research: Opportunities, Threats, and Strategies",
+          "year": 2023,
+          "citation_count": 777,
+          "x": 0.010260483442262464,
+          "y": 0.2280529003287891
+        },
+        {
+          "paper_id": "S2:b9505b57bf41d127ab786fd0d6c0a0fae7e69f07",
+          "title": "ChatGPT for Education and Research: A Review of Benefits and Risks",
+          "year": 2023,
+          "citation_count": 271,
+          "x": 0.04378688960834304,
+          "y": 0.15250733803322655
+        },
+        {
+          "paper_id": "W4381982883",
+          "title": "ChatGPT for Education and Research: Opportunities, Threats, and Strategies",
+          "year": 2023,
+          "citation_count": 816,
+          "x": 0.010343706756855081,
+          "y": 0.22807124313751773
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "label": "Cluster 2",
+      "count": 2,
+      "top_papers": [
+        {
+          "title": "Transformative effects of ChatGPT on modern education: Emerging Era of AI Chatbots",
+          "year": 2023,
+          "citations": 400
+        },
+        {
+          "title": "Transformative Effects of ChatGPT on Modern Education: Emerging Era of AI Chatbots",
+          "year": 2023,
+          "citations": 35
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "W4379925138",
+          "title": "Transformative Effects of ChatGPT on Modern Education: Emerging Era of AI Chatbots",
+          "year": 2023,
+          "citation_count": 35,
+          "x": 0.1537003869875293,
+          "y": 0.16161485457542732
+        },
+        {
+          "paper_id": "W4381252082",
+          "title": "Transformative effects of ChatGPT on modern education: Emerging Era of AI Chatbots",
+          "year": 2023,
+          "citation_count": 400,
+          "x": 0.15346813244756202,
+          "y": 0.19740161869492365
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "label": "Cluster 3",
+      "count": 2,
+      "top_papers": [
+        {
+          "title": "ChatGPT and Software Testing Education: Promises & Perils",
+          "year": 2023,
+          "citations": 209
+        },
+        {
+          "title": "ChatGPT and Software Testing Education: Promises & Perils",
+          "year": 2023,
+          "citations": 28
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "W4319653629",
+          "title": "ChatGPT and Software Testing Education: Promises & Perils",
+          "year": 2023,
+          "citation_count": 28,
+          "x": -0.3548302359036931,
+          "y": 0.14927405989747125
+        },
+        {
+          "paper_id": "S2:c1014f86c8d801c93b37eed58311da5f9c9da2e4",
+          "title": "ChatGPT and Software Testing Education: Promises & Perils",
+          "year": 2023,
+          "citation_count": 209,
+          "x": -0.3495875509536127,
+          "y": 0.14139191679543606
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "label": "Cluster 4",
+      "count": 3,
+      "top_papers": [
+        {
+          "title": "On the Educational Impact of ChatGPT: Is Artificial Intelligence Ready to Obtain a University Degree?",
+          "year": 2023,
+          "citations": 243
+        },
+        {
+          "title": "On the Educational Impact of ChatGPT: Is Artificial Intelligence Ready to Obtain a University Degree?",
+          "year": 2023,
+          "citations": 227
+        },
+        {
+          "title": "On the Educational Impact of ChatGPT: Is Artificial Intelligence Ready to Obtain a University Degree?",
+          "year": 2023,
+          "citations": 43
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "W4353007409",
+          "title": "On the Educational Impact of ChatGPT: Is Artificial Intelligence Ready to Obtain a University Degree?",
+          "year": 2023,
+          "citation_count": 43,
+          "x": 0.11734514993342438,
+          "y": 0.17990329596617344
+        },
+        {
+          "paper_id": "W4382652828",
+          "title": "On the Educational Impact of ChatGPT: Is Artificial Intelligence Ready to Obtain a University Degree?",
+          "year": 2023,
+          "citation_count": 243,
+          "x": 0.11734514993342438,
+          "y": 0.17990329596617344
+        },
+        {
+          "paper_id": "S2:6d3f29545fa059f7d24e27aaa9351750636d12ce",
+          "title": "On the Educational Impact of ChatGPT: Is Artificial Intelligence Ready to Obtain a University Degree?",
+          "year": 2023,
+          "citation_count": 227,
+          "x": 0.11735300585509223,
+          "y": 0.17998049567846294
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "label": "Cluster 5",
+      "count": 2,
+      "top_papers": [
+        {
+          "title": "Large language models in education: A focus on the complementary relationship between human teachers and ChatGPT",
+          "year": 2023,
+          "citations": 530
+        },
+        {
+          "title": "Large language models in education: A focus on the complementary relationship between human teachers and ChatGPT",
+          "year": 2023,
+          "citations": 500
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "S2:d9b840da085a0d23abcca2142b5c796bc0f7f4b0",
+          "title": "Large language models in education: A focus on the complementary relationship between human teachers and ChatGPT",
+          "year": 2023,
+          "citation_count": 500,
+          "x": -0.2785573696322332,
+          "y": 0.12905646827770875
+        },
+        {
+          "paper_id": "W4367678106",
+          "title": "Large language models in education: A focus on the complementary relationship between human teachers and ChatGPT",
+          "year": 2023,
+          "citation_count": 530,
+          "x": -0.27863731067480013,
+          "y": 0.1290651065701779
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "label": "Cluster 6",
+      "count": 3,
+      "top_papers": [
+        {
+          "title": "ChatGPT for good? On opportunities and challenges of large language models for education",
+          "year": 2023,
+          "citations": 4167
+        },
+        {
+          "title": "ChatGPT for good? On opportunities and challenges of large language models for education",
+          "year": 2023,
+          "citations": 3906
+        },
+        {
+          "title": "ChatGPT and large language models in academia: opportunities and challenges",
+          "year": 2023,
+          "citations": 477
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "S2:a98862ffe4c18634a67a3df8a965a35e5e0d7ec8",
+          "title": "ChatGPT for good? On opportunities and challenges of large language models for education",
+          "year": 2023,
+          "citation_count": 4167,
+          "x": -0.4391099137895868,
+          "y": 0.13421737232774975
+        },
+        {
+          "paper_id": "W4323655724",
+          "title": "ChatGPT for good? On opportunities and challenges of large language models for education",
+          "year": 2023,
+          "citation_count": 3906,
+          "x": -0.4391099137895868,
+          "y": 0.13421737232774975
+        },
+        {
+          "paper_id": "W4384200891",
+          "title": "ChatGPT and large language models in academia: opportunities and challenges",
+          "year": 2023,
+          "citation_count": 477,
+          "x": -0.5094713647541323,
+          "y": 0.11531792442402401
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "label": "Cluster 7",
+      "count": 5,
+      "top_papers": [
+        {
+          "title": "Performance of ChatGPT on USMLE: Potential for AI-assisted medical education using large language models",
+          "year": 2023,
+          "citations": 3187
+        },
+        {
+          "title": "Performance of ChatGPT on USMLE: Potential for AI-assisted medical education using large language models",
+          "year": 2022,
+          "citations": 3037
+        },
+        {
+          "title": "How Does ChatGPT Perform on the United States Medical Licensing Examination (USMLE)? The Implications of Large Language Models for Medical Education and Knowledge Assessment",
+          "year": 2023,
+          "citations": 1859
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "W4313451803",
+          "title": "Performance of ChatGPT on USMLE: Potential for AI-Assisted Medical Education Using Large Language Models",
+          "year": 2022,
+          "citation_count": 613,
+          "x": -0.39670848125906716,
+          "y": 0.021700666686939558
+        },
+        {
+          "paper_id": "S2:cf1f26e7cbed3958b3c2870656568c299fece6e3",
+          "title": "Performance of ChatGPT on USMLE: Potential for AI-assisted medical education using large language models",
+          "year": 2022,
+          "citation_count": 3037,
+          "x": -0.38560045561155326,
+          "y": 0.031042385738831783
+        },
+        {
+          "paper_id": "W4319662928",
+          "title": "Performance of ChatGPT on USMLE: Potential for AI-assisted medical education using large language models",
+          "year": 2023,
+          "citation_count": 3187,
+          "x": -0.38560045561155326,
+          "y": 0.031042385738831783
+        },
+        {
+          "paper_id": "W4319460874",
+          "title": "How Does ChatGPT Perform on the United States Medical Licensing Examination (USMLE)? The Implications of Large Language Models for Medical Education and Knowledge Assessment",
+          "year": 2023,
+          "citation_count": 1859,
+          "x": -0.3311677503697544,
+          "y": -0.006702188440349296
+        },
+        {
+          "paper_id": "W4313232683",
+          "title": "How Does ChatGPT Perform on the Medical Licensing Exams? The Implications of Large Language Models for Medical Education and Knowledge Assessment",
+          "year": 2022,
+          "citation_count": 166,
+          "x": -0.3677495280915442,
+          "y": -0.013292121659631884
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "label": "Cluster 8",
+      "count": 2,
+      "top_papers": [
+        {
+          "title": "Shaping the Future of Education: Exploring the Potential and Consequences of AI and ChatGPT in Educational Settings",
+          "year": 2023,
+          "citations": 815
+        },
+        {
+          "title": "Shaping the Future of Education: Exploring the Potential and Consequences of AI and ChatGPT in Educational Settings",
+          "year": 2023,
+          "citations": 700
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "S2:d41e8815732f9644270ec4ff5eea5841e6275acb",
+          "title": "Shaping the Future of Education: Exploring the Potential and Consequences of AI and ChatGPT in Educational Settings",
+          "year": 2023,
+          "citation_count": 700,
+          "x": 0.12765058304783197,
+          "y": 0.3250743527759493
+        },
+        {
+          "paper_id": "W4383818129",
+          "title": "Shaping the Future of Education: Exploring the Potential and Consequences of AI and ChatGPT in Educational Settings",
+          "year": 2023,
+          "citation_count": 815,
+          "x": 0.12765790866551924,
+          "y": 0.3250413394906335
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "label": "Cluster 9",
+      "count": 2,
+      "top_papers": [
+        {
+          "title": "What Is the Impact of ChatGPT on Education? A Rapid Review of the Literature",
+          "year": 2023,
+          "citations": 1553
+        },
+        {
+          "title": "What Is the Impact of ChatGPT on Education? A Rapid Review of the Literature",
+          "year": 2023,
+          "citations": 1330
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "S2:2c1d7e6f485da3b7189012227fed0a1839af353e",
+          "title": "What Is the Impact of ChatGPT on Education? A Rapid Review of the Literature",
+          "year": 2023,
+          "citation_count": 1330,
+          "x": 0.12980334704421784,
+          "y": 0.09175130550783596
+        },
+        {
+          "paper_id": "W4366420437",
+          "title": "What Is the Impact of ChatGPT on Education? A Rapid Review of the Literature",
+          "year": 2023,
+          "citation_count": 1553,
+          "x": 0.12985349859370487,
+          "y": 0.09184089584054228
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "label": "Cluster 10",
+      "count": 2,
+      "top_papers": [
+        {
+          "title": "ChatGPT in education: Strategies for responsible implementation",
+          "year": 2023,
+          "citations": 532
+        },
+        {
+          "title": "ChatGPT in education: Strategies for responsible implementation",
+          "year": 2023,
+          "citations": 481
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "S2:2c924950d1ce9068117a83d34dab312f1ae2e0db",
+          "title": "ChatGPT in education: Strategies for responsible implementation",
+          "year": 2023,
+          "citation_count": 481,
+          "x": 0.07765925119804595,
+          "y": 0.005588074654376136
+        },
+        {
+          "paper_id": "W4323359867",
+          "title": "ChatGPT in education: Strategies for responsible implementation",
+          "year": 2023,
+          "citation_count": 532,
+          "x": 0.07765428557021951,
+          "y": 0.005572003542626168
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "label": "Cluster 11",
+      "count": 2,
+      "top_papers": [
+        {
+          "title": "ChatGPT Utility in Healthcare Education, Research, and Practice: Systematic Review on the Promising Perspectives and Valid Concerns",
+          "year": 2023,
+          "citations": 2468
+        },
+        {
+          "title": "ChatGPT Utility in Healthcare Education, Research, and Practice: Systematic Review on the Promising Perspectives and Valid Concerns",
+          "year": 2023,
+          "citations": 2232
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "S2:dfdf7ff01aa6f691831e663fd29bc71890be39e2",
+          "title": "ChatGPT Utility in Healthcare Education, Research, and Practice: Systematic Review on the Promising Perspectives and Valid Concerns",
+          "year": 2023,
+          "citation_count": 2232,
+          "x": -0.13132758244760323,
+          "y": 0.01896726044136793
+        },
+        {
+          "paper_id": "W4327946446",
+          "title": "ChatGPT Utility in Healthcare Education, Research, and Practice: Systematic Review on the Promising Perspectives and Valid Concerns",
+          "year": 2023,
+          "citation_count": 2468,
+          "x": -0.13128674791534295,
+          "y": 0.018981672591414207
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "label": "Cluster 12",
+      "count": 2,
+      "top_papers": [
+        {
+          "title": "Education in the Era of Generative Artificial Intelligence (AI): Understanding the Potential Benefits of ChatGPT in Promoting Teaching and Learning",
+          "year": 2023,
+          "citations": 2039
+        },
+        {
+          "title": "Education in the Era of Generative Artificial Intelligence (AI): Understanding the Potential Benefits of ChatGPT in Promoting Teaching and Learning",
+          "year": 2023,
+          "citations": 1336
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "S2:7b6a8c6d44e0f77bf930484e438d77b7465a69fb",
+          "title": "Education in the Era of Generative Artificial Intelligence (AI): Understanding the Potential Benefits of ChatGPT in Promoting Teaching and Learning",
+          "year": 2023,
+          "citation_count": 2039,
+          "x": 0.14975727586882948,
+          "y": 0.27578467704569537
+        },
+        {
+          "paper_id": "W4389437528",
+          "title": "Education in the Era of Generative Artificial Intelligence (AI): Understanding the Potential Benefits of ChatGPT in Promoting Teaching and Learning",
+          "year": 2023,
+          "citation_count": 1336,
+          "x": 0.14974182989224663,
+          "y": 0.27575464026078106
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "label": "Cluster 13",
+      "count": 3,
+      "top_papers": [
+        {
+          "title": "Open AI in Education, the Responsible and Ethical Use of ChatGPT Towards Lifelong Learning",
+          "year": 2023,
+          "citations": 490
+        },
+        {
+          "title": "Open AI in Education, the Responsible and Ethical Use of ChatGPT Towards Lifelong Learning",
+          "year": 2023,
+          "citations": 411
+        },
+        {
+          "title": "Open AI in Education, the Responsible and Ethical Use of ChatGPT Towards Lifelong Learning",
+          "year": 2023,
+          "citations": 245
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "S2:19da9b5c1cc03f869d6e46cf0f5e8dbe4679cb9d",
+          "title": "Open AI in Education, the Responsible and Ethical Use of ChatGPT Towards Lifelong Learning",
+          "year": 2023,
+          "citation_count": 490,
+          "x": 0.11937161634089435,
+          "y": 0.2201295024671005
+        },
+        {
+          "paper_id": "W4320488744",
+          "title": "Open AI in Education, the Responsible and Ethical Use of ChatGPT Towards Lifelong Learning",
+          "year": 2023,
+          "citation_count": 411,
+          "x": 0.11924830486753603,
+          "y": 0.22020517438850135
+        },
+        {
+          "paper_id": "W4385223296",
+          "title": "Open AI in Education, the Responsible and Ethical Use of ChatGPT Towards Lifelong Learning",
+          "year": 2023,
+          "citation_count": 245,
+          "x": 0.11924827916019677,
+          "y": 0.22014186898830448
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "label": "Cluster 14",
+      "count": 2,
+      "top_papers": [
+        {
+          "title": "Impact of ChatGPT on learners in a L2 writing practicum: An exploratory investigation",
+          "year": 2023,
+          "citations": 546
+        },
+        {
+          "title": "Impact of ChatGPT on learners in a L2 writing practicum: An exploratory investigation",
+          "year": 2023,
+          "citations": 492
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "S2:275347f5d91444d970fc5aa22577d31c97447f34",
+          "title": "Impact of ChatGPT on learners in a L2 writing practicum: An exploratory investigation",
+          "year": 2023,
+          "citation_count": 492,
+          "x": -0.11975939824598202,
+          "y": -0.300927476241122
+        },
+        {
+          "paper_id": "W4362585490",
+          "title": "Impact of ChatGPT on learners in a L2 writing practicum: An exploratory investigation",
+          "year": 2023,
+          "citation_count": 546,
+          "x": -0.11973898703385916,
+          "y": -0.3009699915890464
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "label": "Cluster 15",
+      "count": 2,
+      "top_papers": [
+        {
+          "title": "Exploring Students’ Perceptions of ChatGPT: Thematic Analysis and Follow-Up Survey",
+          "year": 2023,
+          "citations": 408
+        },
+        {
+          "title": "Exploring Students’ Perceptions of ChatGPT: Thematic Analysis and Follow-Up Survey",
+          "year": 2023,
+          "citations": 291
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "W4366377796",
+          "title": "Exploring Students’ Perceptions of ChatGPT: Thematic Analysis and Follow-Up Survey",
+          "year": 2023,
+          "citation_count": 408,
+          "x": 0.07326485839781709,
+          "y": -0.24921610847273143
+        },
+        {
+          "paper_id": "S2:587b50d31e99f37489e1a2b338d8ddb07026da0b",
+          "title": "Exploring Students’ Perceptions of ChatGPT: Thematic Analysis and Follow-Up Survey",
+          "year": 2023,
+          "citation_count": 291,
+          "x": 0.06527856056722532,
+          "y": -0.2427916352751641
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "label": "Cluster 16",
+      "count": 2,
+      "top_papers": [
+        {
+          "title": "Engineering Education in the Era of ChatGPT: Promise and Pitfalls of Generative AI for Education",
+          "year": 2023,
+          "citations": 646
+        },
+        {
+          "title": "Engineering Education in the Era of ChatGPT: Promise and Pitfalls of Generative AI for Education",
+          "year": 2023,
+          "citations": 539
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "S2:d553d008f643622e87e3ac061226865cad3b2928",
+          "title": "Engineering Education in the Era of ChatGPT: Promise and Pitfalls of Generative AI for Education",
+          "year": 2023,
+          "citation_count": 646,
+          "x": 0.16207504494210984,
+          "y": 0.23425859541723132
+        },
+        {
+          "paper_id": "W4377227441",
+          "title": "Engineering Education in the Era of ChatGPT: Promise and Pitfalls of Generative AI for Education",
+          "year": 2023,
+          "citation_count": 539,
+          "x": 0.16207504494210984,
+          "y": 0.23425859541723132
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "label": "Cluster 17",
+      "count": 2,
+      "top_papers": [
+        {
+          "title": "The opportunities and challenges of ChatGPT in education",
+          "year": 2023,
+          "citations": 389
+        },
+        {
+          "title": "The opportunities and challenges of ChatGPT in education",
+          "year": 2023,
+          "citations": 379
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "S2:2f656b588aefb576928b1a700a404b31fc4a0640",
+          "title": "The opportunities and challenges of ChatGPT in education",
+          "year": 2023,
+          "citation_count": 379,
+          "x": 0.01547104534263814,
+          "y": 0.15569612007188627
+        },
+        {
+          "paper_id": "W4386421370",
+          "title": "The opportunities and challenges of ChatGPT in education",
+          "year": 2023,
+          "citation_count": 389,
+          "x": 0.01595885802890395,
+          "y": 0.15553645863396473
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "label": "Cluster 18",
+      "count": 2,
+      "top_papers": [
+        {
+          "title": "ChatGPT as an Educational Tool: Opportunities, Challenges, and Recommendations for Communication, Business Writing, and Composition Courses",
+          "year": 2023,
+          "citations": 366
+        },
+        {
+          "title": "ChatGPT as an Educational Tool: Opportunities, Challenges, and Recommendations for Communication, Business Writing, and Composition Courses",
+          "year": 2023,
+          "citations": 354
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "S2:9e03740d21016a358065db2ba78567fdaac65ab1",
+          "title": "ChatGPT as an Educational Tool: Opportunities, Challenges, and Recommendations for Communication, Business Writing, and Composition Courses",
+          "year": 2023,
+          "citation_count": 354,
+          "x": -0.0010313586445251902,
+          "y": -0.12519871742426444
+        },
+        {
+          "paper_id": "W4323313947",
+          "title": "ChatGPT as an Educational Tool: Opportunities, Challenges, and Recommendations for Communication, Business Writing, and Composition Courses",
+          "year": 2023,
+          "citation_count": 366,
+          "x": -0.0010230985575756736,
+          "y": -0.12514451372736538
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "label": "Cluster 19",
+      "count": 2,
+      "top_papers": [
+        {
+          "title": "ChatGPT improves creative problem-solving performance in university students: An experimental study",
+          "year": 2024,
+          "citations": 211
+        },
+        {
+          "title": "ChatGPT improves creative problem-solving performance in university students: An experimental study",
+          "year": 2024,
+          "citations": 210
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "S2:df35c2ebe6f3a66f531ac4b9bf89a2377d23fe02",
+          "title": "ChatGPT improves creative problem-solving performance in university students: An experimental study",
+          "year": 2024,
+          "citation_count": 211,
+          "x": -0.10912712812823644,
+          "y": -0.3023083937352373
+        },
+        {
+          "paper_id": "W4392932744",
+          "title": "ChatGPT improves creative problem-solving performance in university students: An experimental study",
+          "year": 2024,
+          "citation_count": 210,
+          "x": -0.10913725805664125,
+          "y": -0.3023050011371008
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "label": "Cluster 20",
+      "count": 2,
+      "top_papers": [
+        {
+          "title": "Exploring Computer Science Students’ Perception of ChatGPT in Higher Education: A Descriptive and Correlation Study",
+          "year": 2023,
+          "citations": 120
+        },
+        {
+          "title": "Exploring Computer Science Students’ Perception of ChatGPT in Higher Education: A Descriptive and Correlation Study",
+          "year": 2023,
+          "citations": 115
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "S2:e787bd7c522cfe1e9a00c72d164404215aea5dc2",
+          "title": "Exploring Computer Science Students’ Perception of ChatGPT in Higher Education: A Descriptive and Correlation Study",
+          "year": 2023,
+          "citation_count": 115,
+          "x": 0.1223600267137277,
+          "y": -0.20486861754657515
+        },
+        {
+          "paper_id": "W4386608259",
+          "title": "Exploring Computer Science Students’ Perception of ChatGPT in Higher Education: A Descriptive and Correlation Study",
+          "year": 2023,
+          "citation_count": 120,
+          "x": 0.12232067392753534,
+          "y": -0.20491307880097498
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "label": "Cluster 21",
+      "count": 2,
+      "top_papers": [
+        {
+          "title": "The effect of ChatGPT on students’ learning performance, learning perception, and higher-order thinking: insights from a meta-analysis",
+          "year": 2025,
+          "citations": 135
+        },
+        {
+          "title": "The effect of ChatGPT on students’ learning performance, learning perception, and higher-order thinking: insights from a meta-analysis",
+          "year": 2025,
+          "citations": 105
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "S2:45606f671465c499d9299234e8c5a3f444556f1b",
+          "title": "The effect of ChatGPT on students’ learning performance, learning perception, and higher-order thinking: insights from a meta-analysis",
+          "year": 2025,
+          "citation_count": 135,
+          "x": 0.031840919012718814,
+          "y": -0.24228776655540443
+        },
+        {
+          "paper_id": "W4410129808",
+          "title": "The effect of ChatGPT on students’ learning performance, learning perception, and higher-order thinking: insights from a meta-analysis",
+          "year": 2025,
+          "citation_count": 105,
+          "x": 0.09717177141716378,
+          "y": -0.1195273986397153
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "label": "Cluster 22",
+      "count": 2,
+      "top_papers": [
+        {
+          "title": "Analyzing the role of ChatGPT as a writing assistant at higher education level: A systematic review of the literature",
+          "year": 2023,
+          "citations": 315
+        },
+        {
+          "title": "Analyzing the role of ChatGPT as a writing assistant at higher education level: A systematic review of the literature",
+          "year": 2023,
+          "citations": 296
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "S2:12d7f84baa7ecc258dbfb30914f18678b13dcfbf",
+          "title": "Analyzing the role of ChatGPT as a writing assistant at higher education level: A systematic review of the literature",
+          "year": 2023,
+          "citation_count": 296,
+          "x": 0.036718979406878086,
+          "y": -0.11559426395153367
+        },
+        {
+          "paper_id": "W4386072877",
+          "title": "Analyzing the role of ChatGPT as a writing assistant at higher education level: A systematic review of the literature",
+          "year": 2023,
+          "citation_count": 315,
+          "x": 0.036851413221147475,
+          "y": -0.11555133423696849
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "label": "Cluster 23",
+      "count": 3,
+      "top_papers": [
+        {
+          "title": "Chatting and cheating: Ensuring academic integrity in the era of ChatGPT",
+          "year": 2023,
+          "citations": 1696
+        },
+        {
+          "title": "Chatting and cheating: Ensuring academic integrity in the era of ChatGPT",
+          "year": 2023,
+          "citations": 1624
+        },
+        {
+          "title": "Chatting and Cheating. Ensuring academic integrity in the era of ChatGPT",
+          "year": 2023,
+          "citations": 448
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "S2:f94c58af515c4c9621762f2276adbe14ac1031d5",
+          "title": "Chatting and cheating: Ensuring academic integrity in the era of ChatGPT",
+          "year": 2023,
+          "citation_count": 1696,
+          "x": 0.19274423686691802,
+          "y": 0.04936802573883389
+        },
+        {
+          "paper_id": "W4315498228",
+          "title": "Chatting and Cheating. Ensuring academic integrity in the era of ChatGPT",
+          "year": 2023,
+          "citation_count": 448,
+          "x": 0.1887498937177328,
+          "y": 0.05168355639628479
+        },
+        {
+          "paper_id": "W4324046518",
+          "title": "Chatting and cheating: Ensuring academic integrity in the era of ChatGPT",
+          "year": 2023,
+          "citation_count": 1624,
+          "x": 0.1922159785272487,
+          "y": 0.04571109569914437
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "label": "Cluster 24",
+      "count": 2,
+      "top_papers": [
+        {
+          "title": "ChatGPT: Empowering lifelong learning in the digital age of higher education",
+          "year": 2023,
+          "citations": 241
+        },
+        {
+          "title": "ChatGPT: Empowering lifelong learning in the digital age of higher education",
+          "year": 2023,
+          "citations": 218
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "S2:e8afdec80b966f69325c248fcbf66d1ed70333be",
+          "title": "ChatGPT: Empowering lifelong learning in the digital age of higher education",
+          "year": 2023,
+          "citation_count": 218,
+          "x": -0.04589539617718722,
+          "y": -0.002525002089469105
+        },
+        {
+          "paper_id": "W4385702876",
+          "title": "ChatGPT: Empowering lifelong learning in the digital age of higher education",
+          "year": 2023,
+          "citation_count": 241,
+          "x": -0.0459942934018091,
+          "y": -0.0025058160417810054
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "label": "Cluster 25",
+      "count": 2,
+      "top_papers": [
+        {
+          "title": "To use or not to use ChatGPT in higher education? A study of students’ acceptance and use of technology",
+          "year": 2023,
+          "citations": 579
+        },
+        {
+          "title": "Students’ Acceptance of ChatGPT in Higher Education: An Extended Unified Theory of Acceptance and Use of Technology",
+          "year": 2023,
+          "citations": 279
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "W4375862891",
+          "title": "To use or not to use ChatGPT in higher education? A study of students’ acceptance and use of technology",
+          "year": 2023,
+          "citation_count": 579,
+          "x": 0.13748090868415117,
+          "y": -0.19835188923450692
+        },
+        {
+          "paper_id": "W4389203481",
+          "title": "Students’ Acceptance of ChatGPT in Higher Education: An Extended Unified Theory of Acceptance and Use of Technology",
+          "year": 2023,
+          "citation_count": 279,
+          "x": 0.17234193954688756,
+          "y": -0.19108248358644178
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "label": "Cluster 26",
+      "count": 2,
+      "top_papers": [
+        {
+          "title": "Challenges and Opportunities of Generative AI for Higher Education as Explained by ChatGPT",
+          "year": 2023,
+          "citations": 623
+        },
+        {
+          "title": "The role of ChatGPT in higher education: Benefits, challenges, and future research directions",
+          "year": 2023,
+          "citations": 484
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "W4376139682",
+          "title": "The role of ChatGPT in higher education: Benefits, challenges, and future research directions",
+          "year": 2023,
+          "citation_count": 484,
+          "x": 0.13614543194116907,
+          "y": 0.08801788957786318
+        },
+        {
+          "paper_id": "W4386098991",
+          "title": "Challenges and Opportunities of Generative AI for Higher Education as Explained by ChatGPT",
+          "year": 2023,
+          "citation_count": 623,
+          "x": 0.13555344778000486,
+          "y": 0.18519880266569502
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "label": "Cluster 27",
+      "count": 2,
+      "top_papers": [
+        {
+          "title": "From the Consumers’ Side: Determining Students’ Perception and Intention to Use ChatGPT in Ghanaian Higher Education",
+          "year": 2023,
+          "citations": 76
+        },
+        {
+          "title": "From the consumers’ side: Determining students’ perception and intention to use ChatGPT in Ghanaian higher education",
+          "year": 2023,
+          "citations": 42
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "W4378715452",
+          "title": "From the Consumers’ Side: Determining Students’ Perception and Intention to Use ChatGPT in Ghanaian Higher Education",
+          "year": 2023,
+          "citation_count": 76,
+          "x": 0.2205632646827912,
+          "y": -0.12131129583072867
+        },
+        {
+          "paper_id": "W4324131235",
+          "title": "From the consumers’ side: Determining students’ perception and intention to use ChatGPT in Ghanaian higher education",
+          "year": 2023,
+          "citation_count": 42,
+          "x": 0.2074811986755647,
+          "y": -0.10874704631612851
+        }
+      ]
+    }
+  ],
+  "query": "How chatgpt effects students"
+}

@@ -162,6 +162,77 @@ async def get_report_results(query: str):
         raise HTTPException(status_code=500, detail=f"Invalid JSON in report file: {e}")
 
 
+@router.get("/{query}/all")
+async def get_all_results(query: str):
+    """Get all available results for a query."""
+    results = {
+        "report": None,
+        "graph": None,
+        "timeline": None,
+        "clusters": None,
+        "snowball": None,
+    }
+    
+    # Check and load report
+    try:
+        metadata = results_manager.get_metadata(query)
+        if metadata and metadata.get("report_file"):
+            query_dir = results_manager.get_query_dir(query)
+            report_path = query_dir / metadata["report_file"]
+            if report_path.exists():
+                with open(report_path, "r", encoding="utf-8") as f:
+                    results["report"] = json.load(f)
+    except Exception:
+        pass
+    
+    # Check and load graph
+    try:
+        metadata = results_manager.get_metadata(query)
+        if metadata and metadata.get("graph_json"):
+            query_dir = results_manager.get_query_dir(query)
+            graph_path = query_dir / metadata["graph_json"]
+            if graph_path.exists():
+                with open(graph_path, "r", encoding="utf-8") as f:
+                    results["graph"] = json.load(f)
+    except Exception:
+        pass
+    
+    # Check and load timeline
+    try:
+        metadata = results_manager.get_metadata(query)
+        if metadata and metadata.get("timeline_json"):
+            query_dir = results_manager.get_query_dir(query)
+            timeline_path = query_dir / metadata["timeline_json"]
+            if timeline_path.exists():
+                with open(timeline_path, "r", encoding="utf-8") as f:
+                    results["timeline"] = json.load(f)
+    except Exception:
+        pass
+    
+    # Check and load clusters
+    try:
+        metadata = results_manager.get_metadata(query)
+        if metadata and metadata.get("clusters_json"):
+            query_dir = results_manager.get_query_dir(query)
+            clusters_path = query_dir / metadata["clusters_json"]
+            if clusters_path.exists():
+                with open(clusters_path, "r", encoding="utf-8") as f:
+                    results["clusters"] = json.load(f)
+    except Exception:
+        pass
+    
+    # Check and load snowball results
+    try:
+        snowball_path = results_manager.get_latest_snowball(query)
+        if snowball_path and snowball_path.exists():
+            with open(snowball_path, "r", encoding="utf-8") as f:
+                results["snowball"] = json.load(f)
+    except Exception:
+        pass
+    
+    return results
+
+
 @router.get("/{query}/files/{filename}")
 async def download_file(query: str, filename: str):
     """Download a specific file from a query's results directory."""

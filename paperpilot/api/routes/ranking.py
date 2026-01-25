@@ -1,7 +1,7 @@
 """Ranking API routes."""
 
 import json
-from typing import Dict
+from typing import Dict, List, Any
 import uuid
 from pathlib import Path
 
@@ -12,6 +12,7 @@ from paperpilot.core.elo_ranker import EloRanker, RankerConfig
 from paperpilot.core.profiler import generate_query_profile
 from paperpilot.core.models import SnowballCandidate, EdgeType
 from paperpilot.core.results import ResultsManager
+from paperpilot.core.elo_ranker.models import CandidateElo
 
 router = APIRouter(prefix="/api/ranking", tags=["ranking"])
 
@@ -19,6 +20,84 @@ router = APIRouter(prefix="/api/ranking", tags=["ranking"])
 jobs: Dict[str, Dict] = {}
 
 results_manager = ResultsManager()
+
+
+class ApiRankingEventHandler:
+    """Event handler that updates job state for live ranking updates."""
+    
+    def __init__(self, job_id: str, initial_elo: float = 1500.0):
+        self.job_id = job_id
+        self.initial_elo = initial_elo
+    
+    def _candidates_to_papers(self, candidates: List[CandidateElo]) -> List[Dict[str, Any]]:
+        """Convert CandidateElo objects to paper dicts for API response."""
+        # Sort by Elo rating (highest first)
+        sorted_candidates = sorted(candidates, key=lambda x: x.elo, reverse=True)
+        
+        ranked_papers = []
+        for i, ce in enumerate(sorted_candidates, 1):
+            ranked_papers.append({
+                "rank": i,
+                "elo": round(ce.elo, 1),
+                "elo_change": round(ce.elo - self.initial_elo, 1),
+                "wins": ce.wins,
+                "losses": ce.losses,
+                "draws": ce.draws,
+                "paper_id": ce.candidate.paper_id,
+                "title": ce.candidate.title,
+                "year": ce.candidate.year,
+                "citation_count": ce.candidate.citation_count,
+                "abstract": ce.candidate.abstract[:500] if ce.candidate.abstract else None,
+            })
+        return ranked_papers
+    
+    def on_elo_update(
+        self,
+        candidates: List[CandidateElo],
+        match_num: int,
+        total_matches: int,
+        **kwargs: Any
+    ) -> None:
+        """Update job state with current rankings."""
+        if self.job_id not in jobs:
+            return
+        
+        # Update job state with current rankings
+        jobs[self.job_id]["papers"] = self._candidates_to_papers(candidates)
+        jobs[self.job_id]["matches_played"] = match_num
+        jobs[self.job_id]["total_matches"] = total_matches
+    
+    def on_progress(self, *args: Any, **kwargs: Any) -> None:
+        """Handle progress updates."""
+        pass
+    
+    def on_match_complete(self, *args: Any, **kwargs: Any) -> None:
+        """Handle match completion."""
+        pass
+    
+    def on_match_start(self, *args: Any, **kwargs: Any) -> None:
+        """Handle match start."""
+        pass
+    
+    def on_paper_accepted(self, *args: Any, **kwargs: Any) -> None:
+        """Not used in ranking."""
+        pass
+    
+    def on_paper_rejected(self, *args: Any, **kwargs: Any) -> None:
+        """Not used in ranking."""
+        pass
+    
+    def on_iteration_start(self, *args: Any, **kwargs: Any) -> None:
+        """Not used in ranking."""
+        pass
+    
+    def on_iteration_complete(self, *args: Any, **kwargs: Any) -> None:
+        """Not used in ranking."""
+        pass
+    
+    def on_snowball_stop(self, *args: Any, **kwargs: Any) -> None:
+        """Not used in ranking."""
+        pass
 
 
 async def _run_ranking_task(job_id: str, request: RankingRequest):
@@ -86,12 +165,20 @@ async def _run_ranking_task(job_id: str, request: RankingRequest):
             interactive=False,  # No interactive display in API
         )
         
-        # Create and run Elo ranker (no event handler for API)
+        # Create event handler for live updates
+        event_handler = ApiRankingEventHandler(job_id=job_id, initial_elo=config.initial_elo)
+        
+        # Initialize job state with progress tracking
+        jobs[job_id]["matches_played"] = 0
+        jobs[job_id]["total_matches"] = config.max_matches or (len(candidates) * 3)
+        jobs[job_id]["papers"] = []  # Will be updated by event handler
+        
+        # Create and run Elo ranker with event handler
         ranker = EloRanker(
             profile=profile,
             candidates=candidates,
             config=config,
-            event_handler=None,
+            event_handler=event_handler,
         )
         
         ranked = await ranker.rank_candidates()
@@ -133,6 +220,8 @@ async def _run_ranking_task(job_id: str, request: RankingRequest):
         jobs[job_id]["status"] = "completed"
         jobs[job_id]["papers"] = ranked_papers
         jobs[job_id]["result_path"] = str(saved_path.relative_to(results_manager.base_dir))
+        jobs[job_id]["matches_played"] = len(ranker.match_history)
+        jobs[job_id]["total_matches"] = len(ranker.match_history)
         
     except Exception as e:
         jobs[job_id]["status"] = "failed"
@@ -155,6 +244,8 @@ async def start_ranking(
         "query": request.query,
         "papers": [],
         "result_path": None,
+        "matches_played": 0,
+        "total_matches": 0,
     }
     
     # Run ranking in background
@@ -187,4 +278,6 @@ async def get_ranking_results(job_id: str):
         query=job["query"],
         papers=job["papers"],
         result_path=job.get("result_path"),
+        matches_played=job.get("matches_played", 0),
+        total_matches=job.get("total_matches", 0),
     )

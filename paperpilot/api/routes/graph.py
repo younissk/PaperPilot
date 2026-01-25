@@ -55,6 +55,31 @@ async def _run_graph_task(job_id: str, request: GraphRequest):
         if request.direction not in ["both", "citations", "references"]:
             raise ValueError(f"Invalid direction: {request.direction}. Use 'both', 'citations', or 'references'")
         
+        # Check if graph already exists
+        query_dir = results_manager.get_query_dir(query)
+        params = {"direction": request.direction, "limit": request.limit}
+        json_filename = results_manager._build_filename("graph", params, "json")
+        html_filename = results_manager._build_filename("graph", params, "html")
+        existing_json_path = query_dir / json_filename
+        existing_html_path = query_dir / html_filename
+        
+        if existing_json_path.exists():
+            # Load existing graph
+            with open(existing_json_path, "r", encoding="utf-8") as f:
+                graph_data = json.load(f)
+            
+            html_content = None
+            if existing_html_path.exists():
+                with open(existing_html_path, "r", encoding="utf-8") as f:
+                    html_content = f.read()
+            
+            jobs[job_id]["status"] = "completed"
+            jobs[job_id]["graph_data"] = graph_data
+            jobs[job_id]["html_content"] = html_content
+            jobs[job_id]["graph_json_path"] = str(existing_json_path.relative_to(results_manager.base_dir))
+            jobs[job_id]["graph_html_path"] = str(existing_html_path.relative_to(results_manager.base_dir)) if html_content else None
+            return
+        
         # Build graph
         async with aiohttp.ClientSession() as session:
             graph_data = await build_citation_graph(
@@ -77,7 +102,7 @@ async def _run_graph_task(job_id: str, request: GraphRequest):
         
         os.unlink(tmp_html)
         
-        # Save using ResultsManager
+        # Save using ResultsManager (for persistence, but not exposed to frontend)
         json_path, html_path = results_manager.save_graph(
             query,
             graph_data,
@@ -87,6 +112,9 @@ async def _run_graph_task(job_id: str, request: GraphRequest):
         )
         
         jobs[job_id]["status"] = "completed"
+        jobs[job_id]["graph_data"] = graph_data
+        jobs[job_id]["html_content"] = html_content
+        # Keep paths for backward compatibility but not primary
         jobs[job_id]["graph_json_path"] = str(json_path.relative_to(results_manager.base_dir))
         jobs[job_id]["graph_html_path"] = str(html_path.relative_to(results_manager.base_dir)) if html_path else None
         
@@ -109,6 +137,8 @@ async def start_graph(
     jobs[job_id] = {
         "status": "queued",
         "query": request.query,
+        "graph_data": None,
+        "html_content": None,
         "graph_json_path": None,
         "graph_html_path": None,
     }
@@ -141,6 +171,8 @@ async def get_graph_results(job_id: str):
         job_id=job_id,
         status=job["status"],
         query=job["query"],
+        graph_data=job.get("graph_data"),
+        html_content=job.get("html_content"),
         graph_json_path=job.get("graph_json_path"),
         graph_html_path=job.get("graph_html_path"),
     )

@@ -1,7 +1,7 @@
 """Report API routes."""
 
 import json
-from typing import Dict
+from typing import Dict, Callable
 import uuid
 from pathlib import Path
 
@@ -17,6 +17,25 @@ router = APIRouter(prefix="/api/report", tags=["report"])
 jobs: Dict[str, Dict] = {}
 
 results_manager = ResultsManager()
+
+
+class ApiReportProgressHandler:
+    """Progress handler that updates job state for live report generation updates."""
+    
+    def __init__(self, job_id: str):
+        self.job_id = job_id
+    
+    def __call__(self, step: int, step_name: str, current: int, total: int, message: str) -> None:
+        """Update job state with current progress."""
+        if self.job_id not in jobs:
+            return
+        
+        # Update job state with current progress
+        jobs[self.job_id]["current_step"] = step
+        jobs[self.job_id]["step_name"] = step_name
+        jobs[self.job_id]["current_progress"] = current
+        jobs[self.job_id]["total_progress"] = total
+        jobs[self.job_id]["progress_message"] = message
 
 
 async def _run_report_task(job_id: str, request: ReportRequest):
@@ -41,6 +60,29 @@ async def _run_report_task(job_id: str, request: ReportRequest):
             data = json.load(f)
             query = data.get("query", request.query)
         
+        # Check if report already exists
+        query_dir = results_manager.get_query_dir(query)
+        if request.top_k is not None:
+            report_filename = results_manager._build_filename("report", {"top_k": request.top_k}, "json")
+        else:
+            report_filename = "report.json"
+        existing_report_path = query_dir / report_filename
+        
+        if existing_report_path.exists():
+            # Load existing report
+            with open(existing_report_path, "r", encoding="utf-8") as f:
+                report_data = json.load(f)
+            
+            jobs[job_id]["status"] = "completed"
+            jobs[job_id]["report_data"] = report_data
+            jobs[job_id]["report_path"] = str(existing_report_path.relative_to(results_manager.base_dir))
+            jobs[job_id]["current_step"] = 8
+            jobs[job_id]["step_name"] = "Completed (loaded from cache)"
+            jobs[job_id]["current_progress"] = 1
+            jobs[job_id]["total_progress"] = 1
+            jobs[job_id]["progress_message"] = "Report loaded from existing file"
+            return
+        
         # Determine elo file path
         elo_path = None
         if request.elo_file_path:
@@ -59,17 +101,28 @@ async def _run_report_task(job_id: str, request: ReportRequest):
                 # Use the most recent one
                 elo_path = max(elo_candidates, key=lambda p: p.stat().st_mtime)
         
-        # Generate report
+        # Create progress handler for live updates
+        progress_handler = ApiReportProgressHandler(job_id)
+        
+        # Initialize job state with progress tracking
+        jobs[job_id]["current_step"] = 0
+        jobs[job_id]["step_name"] = "Starting..."
+        jobs[job_id]["current_progress"] = 0
+        jobs[job_id]["total_progress"] = 0
+        jobs[job_id]["progress_message"] = "Initializing report generation..."
+        
+        # Generate report with progress callback
         report_obj = await generate_report(
             snowball_file=snowball_path,
             elo_file=elo_path,
             top_k=request.top_k,
+            progress_callback=progress_handler,
         )
         
         # Convert to dict for saving
         report_data = report_to_dict(report_obj)
         
-        # Save using ResultsManager
+        # Save using ResultsManager (for persistence, but not exposed to frontend)
         output_path = results_manager.save_report(
             query=query,
             report_data=report_data,
@@ -77,6 +130,8 @@ async def _run_report_task(job_id: str, request: ReportRequest):
         )
         
         jobs[job_id]["status"] = "completed"
+        jobs[job_id]["report_data"] = report_data
+        # Keep path for backward compatibility but not primary
         jobs[job_id]["report_path"] = str(output_path.relative_to(results_manager.base_dir))
         
     except Exception as e:
@@ -98,7 +153,13 @@ async def start_report(
     jobs[job_id] = {
         "status": "queued",
         "query": request.query,
+        "report_data": None,
         "report_path": None,
+        "current_step": 0,
+        "step_name": "",
+        "current_progress": 0,
+        "total_progress": 0,
+        "progress_message": "",
     }
     
     # Run report generation in background
@@ -128,5 +189,11 @@ async def get_report_results(job_id: str):
         job_id=job_id,
         status=job["status"],
         query=job["query"],
+        report_data=job.get("report_data"),
         report_path=job.get("report_path"),
+        current_step=job.get("current_step", 0),
+        step_name=job.get("step_name", ""),
+        current_progress=job.get("current_progress", 0),
+        total_progress=job.get("total_progress", 0),
+        progress_message=job.get("progress_message", ""),
     )

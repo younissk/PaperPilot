@@ -1,14 +1,12 @@
-/**
- * Search form component for starting paper searches.
- */
-
 import { useState, FormEvent } from 'react';
-import { startSearch, getSearchStatus, type SearchRequest } from '../services/api';
-import { useJobPolling } from '../hooks/useJobPolling';
+import { TextInput, NumberInput, Button, Stack, Alert, Badge, Group, Paper } from '@mantine/core';
+import { useSearchMutation, useSearchStatus } from '../hooks/queries/useSearch';
 import { DEFAULT_SEARCH_PARAMS } from '../config';
+import { showError, showSuccess } from '../utils/notifications';
+import type { Paper as PaperType } from '../services/api';
 
 interface SearchFormProps {
-  onSearchComplete?: (jobId: string, papers: unknown[]) => void;
+  onSearchComplete?: (jobId: string, papers: PaperType[]) => void;
 }
 
 export function SearchForm({ onSearchComplete }: SearchFormProps) {
@@ -18,43 +16,48 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
   const [maxAccepted, setMaxAccepted] = useState(DEFAULT_SEARCH_PARAMS.max_accepted);
   const [topN, setTopN] = useState(DEFAULT_SEARCH_PARAMS.top_n);
   const [jobId, setJobId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
-  const { status, data, error: pollingError } = useJobPolling({
-    pollFn: getSearchStatus,
-    jobId,
-    enabled: jobId !== null,
-    onComplete: (result) => {
-      if (onSearchComplete && result.papers) {
-        onSearchComplete(result.job_id, result.papers);
-      }
-    },
-  });
+  const searchMutation = useSearchMutation();
+  const { data: searchData, error: pollingError } = useSearchStatus(jobId, jobId !== null);
+
+  // Handle search completion
+  if (searchData?.status === 'completed' && searchData.papers && onSearchComplete) {
+    onSearchComplete(searchData.job_id, searchData.papers);
+    showSuccess(`Search completed! Found ${searchData.papers.length} papers.`);
+    setJobId(null);
+  }
+
+  // Handle search errors
+  if (searchData?.status === 'failed') {
+    showError('Search failed. Please try again.');
+    setJobId(null);
+  }
+
+  if (pollingError) {
+    showError(pollingError.message);
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setJobId(null);
 
     if (!query.trim()) {
-      setError('Please enter a search query');
+      showError('Please enter a search query');
       return;
     }
 
     try {
-      const request: SearchRequest = {
+      const response = await searchMutation.mutateAsync({
         query: query.trim(),
         num_results: numResults,
         max_iterations: maxIterations,
         max_accepted: maxAccepted,
         top_n: topN,
-      };
-
-      const response = await startSearch(request);
+      });
       setJobId(response.job_id);
+      showSuccess('Search started successfully!');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to start search';
-      setError(errorMessage);
+      showError(errorMessage);
     }
   };
 
@@ -65,127 +68,95 @@ export function SearchForm({ onSearchComplete }: SearchFormProps) {
     setMaxAccepted(DEFAULT_SEARCH_PARAMS.max_accepted);
     setTopN(DEFAULT_SEARCH_PARAMS.top_n);
     setJobId(null);
-    setError(null);
   };
 
-  const displayError = error || (pollingError ? pollingError.message : null);
-  const currentStatus = status || (data?.status ?? null);
-  const totalAccepted = data?.total_accepted ?? 0;
+  const currentStatus = searchData?.status || (searchMutation.isPending ? 'queued' : null);
+  const totalAccepted = searchData?.total_accepted ?? 0;
+  const isProcessing = currentStatus === 'running' || currentStatus === 'queued' || searchMutation.isPending;
 
   return (
-    <div className="search-form">
-      <h2>Start New Search</h2>
+    <Paper p="md" withBorder>
       <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="query">Research Query *</label>
-          <input
-            id="query"
-            type="text"
+        <Stack gap="md">
+          <TextInput
+            label="Research Query"
+            placeholder="e.g., LLM Based Recommendation Systems"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="e.g., LLM Based Recommendation Systems"
-            disabled={currentStatus === 'running' || currentStatus === 'queued'}
+            disabled={isProcessing}
             required
+            size="md"
           />
-        </div>
 
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="num_results">Results per Query</label>
-            <input
-              id="num_results"
-              type="number"
-              min="1"
-              max="100"
+          <Group grow>
+            <NumberInput
+              label="Results per Query"
               value={numResults}
-              onChange={(e) => setNumResults(parseInt(e.target.value) || DEFAULT_SEARCH_PARAMS.num_results)}
-              disabled={currentStatus === 'running' || currentStatus === 'queued'}
+              onChange={(value) => setNumResults(typeof value === 'number' ? value : DEFAULT_SEARCH_PARAMS.num_results)}
+              min={1}
+              max={100}
+              disabled={isProcessing}
             />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="max_iterations">Max Iterations</label>
-            <input
-              id="max_iterations"
-              type="number"
-              min="1"
-              max="20"
+            <NumberInput
+              label="Max Iterations"
               value={maxIterations}
-              onChange={(e) => setMaxIterations(parseInt(e.target.value) || DEFAULT_SEARCH_PARAMS.max_iterations)}
-              disabled={currentStatus === 'running' || currentStatus === 'queued'}
+              onChange={(value) => setMaxIterations(typeof value === 'number' ? value : DEFAULT_SEARCH_PARAMS.max_iterations)}
+              min={1}
+              max={20}
+              disabled={isProcessing}
             />
-          </div>
-        </div>
+          </Group>
 
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="max_accepted">Max Accepted Papers</label>
-            <input
-              id="max_accepted"
-              type="number"
-              min="10"
+          <Group grow>
+            <NumberInput
+              label="Max Accepted Papers"
               value={maxAccepted}
-              onChange={(e) => setMaxAccepted(parseInt(e.target.value) || DEFAULT_SEARCH_PARAMS.max_accepted)}
-              disabled={currentStatus === 'running' || currentStatus === 'queued'}
+              onChange={(value) => setMaxAccepted(typeof value === 'number' ? value : DEFAULT_SEARCH_PARAMS.max_accepted)}
+              min={10}
+              disabled={isProcessing}
             />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="top_n">Top N Candidates</label>
-            <input
-              id="top_n"
-              type="number"
-              min="5"
+            <NumberInput
+              label="Top N Candidates"
               value={topN}
-              onChange={(e) => setTopN(parseInt(e.target.value) || DEFAULT_SEARCH_PARAMS.top_n)}
-              disabled={currentStatus === 'running' || currentStatus === 'queued'}
+              onChange={(value) => setTopN(typeof value === 'number' ? value : DEFAULT_SEARCH_PARAMS.top_n)}
+              min={5}
+              disabled={isProcessing}
             />
-          </div>
-        </div>
+          </Group>
 
-        {displayError && (
-          <div className="error-message">
-            {displayError}
-          </div>
-        )}
-
-        {currentStatus && (
-          <div className="job-status">
-            <div className={`status-badge status-${currentStatus}`}>
-              {currentStatus.toUpperCase()}
-            </div>
-            {currentStatus === 'running' && totalAccepted > 0 && (
-              <div className="status-info">
-                Papers found: {totalAccepted}
-              </div>
-            )}
-            {currentStatus === 'completed' && (
-              <div className="status-info success">
-                Search completed! Found {totalAccepted} papers.
-              </div>
-            )}
-            {currentStatus === 'failed' && (
-              <div className="status-info error">
-                Search failed. Please try again.
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="form-actions">
-          <button
-            type="submit"
-            disabled={currentStatus === 'running' || currentStatus === 'queued'}
-          >
-            {currentStatus === 'running' || currentStatus === 'queued' ? 'Searching...' : 'Start Search'}
-          </button>
-          {(currentStatus === 'completed' || currentStatus === 'failed') && (
-            <button type="button" onClick={handleReset}>
-              New Search
-            </button>
+          {currentStatus && (
+            <Alert
+              color={currentStatus === 'completed' ? 'primary' : currentStatus === 'failed' ? 'error' : 'accent'}
+              title={currentStatus.toUpperCase()}
+            >
+              {currentStatus === 'running' && totalAccepted > 0 && (
+                <div>Papers found: {totalAccepted}</div>
+              )}
+              {currentStatus === 'completed' && (
+                <div>Search completed! Found {totalAccepted} papers.</div>
+              )}
+              {currentStatus === 'failed' && (
+                <div>Search failed. Please try again.</div>
+              )}
+            </Alert>
           )}
-        </div>
+
+          <Group>
+            <Button
+              type="submit"
+              disabled={isProcessing}
+              loading={isProcessing}
+            >
+              {isProcessing ? 'Searching...' : 'Start Search'}
+            </Button>
+            {(currentStatus === 'completed' || currentStatus === 'failed') && (
+              <Button variant="outline" onClick={handleReset}>
+                New Search
+              </Button>
+            )}
+          </Group>
+        </Stack>
       </form>
-    </div>
+    </Paper>
   );
 }

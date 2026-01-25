@@ -13,7 +13,7 @@ import json
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Callable
 
 from paperpilot.core.logging import get_logger
 from paperpilot.core.report.auditor import audit_all_sections, merge_citations
@@ -193,6 +193,7 @@ async def generate_report(
     snowball_file: Path,
     elo_file: Optional[Path] = None,
     top_k: int = 30,
+    progress_callback: Optional[Callable[[int, str, int, int, str], None]] = None,
 ) -> Report:
     """Generate a complete research report.
     
@@ -217,34 +218,66 @@ async def generate_report(
     if not papers:
         raise ValueError("No papers available for report generation")
     
+    if progress_callback:
+        progress_callback(0, "Selecting Top Papers", 1, 1, f"Selected {len(papers)} papers")
+    
     # Step 1: Generate paper cards
     log.info("step_1_card_generation", num_papers=len(papers))
-    cards = await generate_paper_cards(papers)
+    cards = await generate_paper_cards(papers, progress_callback=lambda current, total, msg: (
+        progress_callback(1, "Generating Paper Cards", current, total, msg) if progress_callback else None
+    ))
     
     if not cards:
         raise ValueError("Failed to generate any paper cards")
     
     log.info("cards_ready", count=len(cards))
     
+    if progress_callback:
+        progress_callback(1, "Generating Paper Cards", len(cards), len(cards), f"Generated {len(cards)} paper cards")
+    
     # Step 2: Generate outline
     log.info("step_2_outline_generation")
     outline = await generate_outline(query, cards)
     log.info("outline_ready", num_sections=len(outline.sections))
     
+    if progress_callback:
+        progress_callback(2, "Creating Report Outline", 1, 1, f"Created outline with {len(outline.sections)} sections")
+    
     # Step 3: Write sections
     log.info("step_3_section_writing")
-    written_sections = await write_all_sections(outline.sections, cards)
+    written_sections = await write_all_sections(
+        outline.sections, 
+        cards,
+        progress_callback=lambda current, total, msg: (
+            progress_callback(3, "Writing Sections", current, total, msg) if progress_callback else None
+        )
+    )
     log.info("sections_written", count=len(written_sections))
+    
+    if progress_callback:
+        progress_callback(3, "Writing Sections", len(written_sections), len(written_sections), f"Wrote {len(written_sections)} sections")
     
     # Step 4: Audit sections
     log.info("step_4_citation_audit")
-    audit_results = await audit_all_sections(written_sections, cards)
+    audit_results = await audit_all_sections(
+        written_sections, 
+        cards,
+        progress_callback=lambda current, total, msg: (
+            progress_callback(4, "Auditing Citations", current, total, msg) if progress_callback else None
+        )
+    )
     log.info("audit_complete", count=len(audit_results))
+    
+    if progress_callback:
+        progress_callback(4, "Auditing Citations", len(audit_results), len(audit_results), f"Audited {len(audit_results)} sections")
     
     # Step 5: Write introduction and conclusion
     log.info("step_5_intro_conclusion")
     introduction = await write_introduction(query, cards)
     conclusion = await write_conclusion(query, cards, written_sections)
+    
+    if progress_callback:
+        progress_callback(5, "Writing Introduction & Conclusion", 1, 1, "Completed introduction and conclusion")
     
     # Step 6: Assemble report with citation preservation
     log.info("step_6_assembly")
@@ -267,9 +300,15 @@ async def generate_report(
         paper_cards=cards,
     )
     
+    if progress_callback:
+        progress_callback(6, "Assembling Report", 1, 1, "Assembling final report")
+    
     # Step 7: Final citation quality check
     log.info("step_7_final_check")
     report, warnings = final_citation_check(report)
+    
+    if progress_callback:
+        progress_callback(7, "Final Quality Check", 1, 1, f"Quality check complete ({len(warnings)} warnings)")
     
     # Calculate statistics
     total_citations = sum(len(item.paper_ids) for item in current_research)

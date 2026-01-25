@@ -1,127 +1,150 @@
-/**
- * Component for displaying and managing previous search queries.
- */
-
-import { useEffect, useState } from 'react';
-import { listQueries, getQueryMetadata, getSnowballResults, type QueryListResponse, type QueryMetadataResponse, type Paper } from '../services/api';
+import { useState } from "react";
+import {
+  Card,
+  Stack,
+  Text,
+  Button,
+  Group,
+  Badge,
+  Loader,
+  Alert,
+  ScrollArea,
+} from "@mantine/core";
+import {
+  useQueriesList,
+  useQueryMetadata,
+  useSnowballResults,
+} from "../hooks/queries/useQueries";
+import { showError } from "../utils/notifications";
+import type { Paper } from "../services/api";
 
 interface QueryListProps {
   onSelectQuery?: (query: string, papers: Paper[]) => void;
 }
 
 export function QueryList({ onSelectQuery }: QueryListProps) {
-  const [queries, setQueries] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: queriesData, isLoading, error, refetch } = useQueriesList();
   const [selectedQuery, setSelectedQuery] = useState<string | null>(null);
-  const [metadata, setMetadata] = useState<Record<string, unknown> | null>(null);
-  const [loadingMetadata, setLoadingMetadata] = useState(false);
 
-  useEffect(() => {
-    loadQueries();
-  }, []);
+  const { data: metadataData } = useQueryMetadata(selectedQuery);
+  const { data: snowballData, isLoading: loadingSnowball } =
+    useSnowballResults(selectedQuery);
 
-  const loadQueries = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response: QueryListResponse = await listQueries();
-      setQueries(response.queries);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load queries';
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
+  const queries = queriesData?.queries || [];
+
+  const handleQueryClick = (query: string) => {
+    setSelectedQuery(query);
+    if (onSelectQuery && snowballData) {
+      onSelectQuery(query, snowballData.papers);
     }
   };
 
-  const handleQueryClick = async (query: string) => {
-    try {
-      setLoadingMetadata(true);
-      setSelectedQuery(query);
-      setError(null);
-
-      // Load metadata
-      const metadataResponse: QueryMetadataResponse = await getQueryMetadata(query);
-      setMetadata(metadataResponse.metadata);
-
-      // Load papers and notify parent
-      if (onSelectQuery) {
-        const snowballData = await getSnowballResults(query);
-        onSelectQuery(query, snowballData.papers);
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load query data';
-      setError(errorMessage);
-    } finally {
-      setLoadingMetadata(false);
-    }
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="query-list">
-        <h2>Previous Queries</h2>
-        <div className="loading-state">Loading queries...</div>
-      </div>
+      <Stack align="center" gap="md">
+        <Text size="lg" fw={500}>
+          Previous Queries
+        </Text>
+        <Loader />
+      </Stack>
     );
   }
 
-  if (error && queries.length === 0) {
+  if (error) {
     return (
-      <div className="query-list">
-        <h2>Previous Queries</h2>
-        <div className="error-message">{error}</div>
-        <button onClick={loadQueries}>Retry</button>
-      </div>
+      <Stack gap="md">
+        <Group justify="space-between">
+          <Text size="lg" fw={500}>
+            Previous Queries
+          </Text>
+          <Button onClick={() => refetch()}>Retry</Button>
+        </Group>
+        <Alert color="error" title="Error">
+          {error instanceof Error ? error.message : "Failed to load queries"}
+        </Alert>
+      </Stack>
+    );
+  }
+
+  if (queries.length === 0) {
+    return (
+      <Stack gap="md">
+        <Group justify="space-between">
+          <Text size="lg" fw={500}>
+            Previous Queries
+          </Text>
+          <Button variant="subtle" onClick={() => refetch()}>
+            Refresh
+          </Button>
+        </Group>
+        <Text c="dimmed">No previous queries found.</Text>
+      </Stack>
     );
   }
 
   return (
-    <div className="query-list">
-      <div className="query-list-header">
-        <h2>Previous Queries</h2>
-        <button onClick={loadQueries} className="refresh-btn" title="Refresh queries">
-          ↻
-        </button>
-      </div>
+    <Stack gap="md">
+      <Group justify="space-between">
+        <Text size="lg" fw={500}>
+          Previous Queries
+        </Text>
+        <Button variant="subtle" onClick={() => refetch()}>
+          Refresh
+        </Button>
+      </Group>
 
-      {error && (
-        <div className="error-message">{error}</div>
-      )}
-
-      {queries.length === 0 ? (
-        <div className="empty-state">
-          <p>No previous queries found.</p>
-        </div>
-      ) : (
-        <div className="queries-container">
+      <ScrollArea h={600}>
+        <Stack gap="md">
           {queries.map((query) => (
-            <div
+            <Card
               key={query}
-              className={`query-item ${selectedQuery === query ? 'selected' : ''}`}
+              shadow="sm"
+              padding="lg"
+              radius={0}
+              withBorder
+              style={{
+                cursor: "pointer",
+                borderColor:
+                  selectedQuery === query
+                    ? "var(--mantine-color-primary-6)"
+                    : undefined,
+                borderWidth: selectedQuery === query ? 2 : 1,
+              }}
               onClick={() => handleQueryClick(query)}
             >
-              <div className="query-text">{query}</div>
-              {loadingMetadata && selectedQuery === query && (
-                <div className="query-loading">Loading...</div>
-              )}
-              {metadata && selectedQuery === query && (
-                <div className="query-metadata">
-                  {Object.entries(metadata).map(([key, value]) => (
-                    <div key={key} className="metadata-item">
-                      <span className="metadata-key">{key}:</span>
-                      <span className="metadata-value">
-                        {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+              <Stack gap="sm">
+                <Text fw={500}>{query}</Text>
+                {loadingSnowball && selectedQuery === query && (
+                  <Group gap="xs">
+                    <Loader size="sm" />
+                    <Text size="sm" c="dimmed">
+                      Loading...
+                    </Text>
+                  </Group>
+                )}
+                {metadataData && selectedQuery === query && (
+                  <Stack gap="xs" mt="sm">
+                    {Object.entries(metadataData.metadata).map(
+                      ([key, value]) => (
+                        <Group key={key} gap="xs">
+                          <Text size="sm" fw={500} c="dimmed">
+                            {key}:
+                          </Text>
+                          <Text size="sm">
+                            {typeof value === "object"
+                              ? JSON.stringify(value)
+                              : String(value)}
+                          </Text>
+                        </Group>
+                      ),
+                    )}
+                  </Stack>
+                )}
+              </Stack>
+            </Card>
           ))}
-        </div>
-      )}
-    </div>
+        </Stack>
+      </ScrollArea>
+    </Stack>
   );
 }

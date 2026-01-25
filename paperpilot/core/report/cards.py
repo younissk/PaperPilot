@@ -8,7 +8,7 @@ import asyncio
 import json
 import os
 import time
-from typing import Optional
+from typing import Optional, Callable
 
 from openai import AsyncOpenAI
 
@@ -123,11 +123,15 @@ async def generate_paper_card(paper: dict) -> Optional[PaperCard]:
         return None
 
 
-async def generate_paper_cards(papers: list[dict]) -> list[PaperCard]:
+async def generate_paper_cards(
+    papers: list[dict],
+    progress_callback: Optional[Callable[[int, int, str], None]] = None
+) -> list[PaperCard]:
     """Generate paper cards for a batch of papers concurrently.
     
     Args:
         papers: List of paper dictionaries
+        progress_callback: Optional callback(current, total, message) for progress updates
         
     Returns:
         List of successfully generated PaperCards
@@ -139,6 +143,9 @@ async def generate_paper_cards(papers: list[dict]) -> list[PaperCard]:
     log.info("batch_card_generation_start", total_papers=len(papers))
     start_time = time.time()
     
+    if progress_callback:
+        progress_callback(0, len(papers), "Starting paper card generation...")
+    
     # Process all papers concurrently
     tasks = [generate_paper_card(paper) for paper in papers]
     results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -147,15 +154,21 @@ async def generate_paper_cards(papers: list[dict]) -> list[PaperCard]:
     cards: list[PaperCard] = []
     failed = 0
     
-    for result in results:
+    for i, result in enumerate(results):
         if isinstance(result, PaperCard):
             cards.append(result)
+            if progress_callback:
+                progress_callback(len(cards), len(papers), f"Generated card {len(cards)} of {len(papers)}")
         elif isinstance(result, Exception):
             log.error("card_task_exception", error=str(result))
             failed += 1
+            if progress_callback:
+                progress_callback(len(cards), len(papers), f"Processing... ({len(cards)}/{len(papers)} successful)")
         else:
             # None result from failed extraction
             failed += 1
+            if progress_callback:
+                progress_callback(len(cards), len(papers), f"Processing... ({len(cards)}/{len(papers)} successful)")
     
     duration = time.time() - start_time
     log.info(

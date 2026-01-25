@@ -1,0 +1,617 @@
+{
+  "method": "kmeans",
+  "dim_reduction": "pca",
+  "n_clusters": 3,
+  "total_papers": 67,
+  "clusters": [
+    {
+      "id": 0,
+      "label": "Cluster 0",
+      "count": 30,
+      "top_papers": [
+        {
+          "title": "Recommendation as Language Processing (RLP): A Unified Pretrain, Personalized Prompt & Predict Paradigm (P5)",
+          "year": 2022,
+          "citations": 683
+        },
+        {
+          "title": "Chat-REC: Towards Interactive and Explainable LLMs-Augmented Recommender System",
+          "year": 2023,
+          "citations": 400
+        },
+        {
+          "title": "Is ChatGPT Fair for Recommendation? Evaluating Fairness in Large Language Model Recommendation",
+          "year": 2023,
+          "citations": 221
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "W7078700161",
+          "title": "Revealing Potential Biases in LLM-Based Recommender Systems in the Cold Start Setting",
+          "year": 2025,
+          "citation_count": 0,
+          "x": -0.0826788668476955,
+          "y": 0.122867811381218
+        },
+        {
+          "paper_id": "W4404343192",
+          "title": "ReasoningRec: Bridging Personalized Recommendations and Human-Interpretable Explanations through LLM Reasoning",
+          "year": 2024,
+          "citation_count": 0,
+          "x": -0.05741083880500097,
+          "y": 0.1490630669688639
+        },
+        {
+          "paper_id": "W6967265803",
+          "title": "Behavior Alignment: A New Perspective of Evaluating LLM-based Conversational Recommender Systems",
+          "year": 2024,
+          "citation_count": 0,
+          "x": -0.09574233041968008,
+          "y": 0.16051293430331182
+        },
+        {
+          "paper_id": "W6891779303",
+          "title": "FairEval: Evaluating Fairness in LLM-Based Recommendations with Personality Awareness",
+          "year": 2025,
+          "citation_count": 0,
+          "x": -0.058535259631811117,
+          "y": 0.31100387113306643
+        },
+        {
+          "paper_id": "W4415935814",
+          "title": "Effectiveness of LLMs in Temporal User Profiling for Recommendation",
+          "year": 2025,
+          "citation_count": 0,
+          "x": -0.13005354853554518,
+          "y": 0.12931234305425643
+        },
+        {
+          "paper_id": "W4414879540",
+          "title": "Exploring the Potential of LLMs for Serendipity Evaluation in Recommender Systems",
+          "year": 2025,
+          "citation_count": 0,
+          "x": -0.08920990014054823,
+          "y": 0.2016186565535582
+        },
+        {
+          "paper_id": "W6967097542",
+          "title": "Consistent Explainers or Unreliable Narrators? Understanding LLM-generated Group Recommendations",
+          "year": 2025,
+          "citation_count": 0,
+          "x": -0.07222154808726731,
+          "y": 0.14442247541544032
+        },
+        {
+          "paper_id": "W4415102543",
+          "title": "Towards Next-Generation Recommender Systems: A Benchmark for Personalized Recommendation Assistant with LLMs",
+          "year": 2025,
+          "citation_count": 1,
+          "x": -0.028426415238337912,
+          "y": 0.11872638440998294
+        },
+        {
+          "paper_id": "W4401978522",
+          "title": "Leveraging LLM Reasoning Enhances Personalized Recommender Systems",
+          "year": 2024,
+          "citation_count": 0,
+          "x": -0.09851841628591017,
+          "y": 0.16245260238753126
+        },
+        {
+          "paper_id": "W4416011514",
+          "title": "Memory Assisted LLM for Personalized Recommendation System",
+          "year": 2025,
+          "citation_count": 0,
+          "x": -0.20080216083081842,
+          "y": 0.09110234904168756
+        },
+        {
+          "paper_id": "W4385681734",
+          "title": "Heterogeneous Knowledge Fusion: A Novel Approach for Personalized Recommendation via LLM",
+          "year": 2023,
+          "citation_count": 1,
+          "x": -0.07353568965815847,
+          "y": 0.24281749858810617
+        },
+        {
+          "paper_id": "W4405354727",
+          "title": "MOPI-HFRS: A Multi-objective Personalized Health-aware Food Recommendation System with LLM-enhanced Interpretation",
+          "year": 2024,
+          "citation_count": 4,
+          "x": 0.12408571973603426,
+          "y": 0.32258887502154165
+        },
+        {
+          "paper_id": "W4416284157",
+          "title": "A Language-Driven Framework for Improving Personalized Recommendations: Merging LLMs with Traditional Algorithms",
+          "year": 2025,
+          "citation_count": 0,
+          "x": -0.11281318765859617,
+          "y": 0.15371385722508782
+        },
+        {
+          "paper_id": "W7092283700",
+          "title": "MR.Rec: Synergizing Memory and Reasoning for Personalized Recommendation Assistant with LLMs",
+          "year": 2025,
+          "citation_count": 0,
+          "x": -0.0914587564735075,
+          "y": 0.13430992987122406
+        },
+        {
+          "paper_id": "W6929462687",
+          "title": "AgentRecBench: Benchmarking LLM Agent-based Personalized Recommender Systems",
+          "year": 2025,
+          "citation_count": 0,
+          "x": -0.020974089476891403,
+          "y": 0.1469086352001431
+        },
+        {
+          "paper_id": "W4386148472",
+          "title": "LKPNR: LLM and KG for Personalized News Recommendation Framework",
+          "year": 2023,
+          "citation_count": 7,
+          "x": 0.14619732378556924,
+          "y": 0.19946824193381335
+        },
+        {
+          "paper_id": "W6891788864",
+          "title": "RLHF Fine-Tuning of LLMs for Alignment with Implicit User Feedback in Conversational Recommenders",
+          "year": 2025,
+          "citation_count": 0,
+          "x": 0.01506767463855465,
+          "y": 0.2044496488609345
+        },
+        {
+          "paper_id": "W4416119106",
+          "title": "User Feedback Alignment for LLM-powered Exploration in Large-scale Recommendation Systems",
+          "year": 2025,
+          "citation_count": 0,
+          "x": -0.16135034113268665,
+          "y": 0.12475619901779894
+        },
+        {
+          "paper_id": "W4414691664",
+          "title": "What Matters in LLM-Based Feature Extractor for Recommender? A Systematic Analysis of Prompts, Models, and Adaptation",
+          "year": 2025,
+          "citation_count": 0,
+          "x": -0.09655200778101121,
+          "y": 0.05262341815210191
+        },
+        {
+          "paper_id": "W4398795244",
+          "title": "Lusifer: LLM-based User SImulated Feedback Environment for online Recommender systems",
+          "year": 2024,
+          "citation_count": 1,
+          "x": 0.10590548445306087,
+          "y": 0.23700904749390414
+        },
+        {
+          "paper_id": "W4415347986",
+          "title": "Heterogeneous User Modeling for LLM-based Recommendation",
+          "year": 2025,
+          "citation_count": 0,
+          "x": -0.16395656086834504,
+          "y": 0.07798516472263123
+        },
+        {
+          "paper_id": "W4407806925",
+          "title": "LLM-based User Profile Management for Recommender System",
+          "year": 2025,
+          "citation_count": 0,
+          "x": -0.11037271615823707,
+          "y": 0.16604378812684173
+        },
+        {
+          "paper_id": "W4407632341",
+          "title": "A Survey on LLM-based News Recommender Systems",
+          "year": 2025,
+          "citation_count": 1,
+          "x": -0.08472991175254074,
+          "y": 0.06993023148764878
+        },
+        {
+          "paper_id": "S2:2e92b3699668f920a8d692535622ebeaa53315e2",
+          "title": "Is ChatGPT Fair for Recommendation? Evaluating Fairness in Large Language Model Recommendation",
+          "year": 2023,
+          "citation_count": 221,
+          "x": -0.039721763293028324,
+          "y": 0.0800823728753801
+        },
+        {
+          "paper_id": "S2:0cfdd655100055f234fd23ebecd915504b8e00e3",
+          "title": "Chat-REC: Towards Interactive and Explainable LLMs-Augmented Recommender System",
+          "year": 2023,
+          "citation_count": 400,
+          "x": -0.02711423436685661,
+          "y": 0.05138508749489046
+        },
+        {
+          "paper_id": "S2:006aa1580fae5968417538c7acb4662c7b58088f",
+          "title": "LLM-Rec: Personalized Recommendation via Prompting Large Language Models",
+          "year": 2023,
+          "citation_count": 124,
+          "x": -0.14279178217575228,
+          "y": 0.01224677874564927
+        },
+        {
+          "paper_id": "S2:96b2902eba473d1be9e7b38b3c58c867bdca4f08",
+          "title": "Bias and Unfairness in Information Retrieval Systems: New Challenges in the LLM Era",
+          "year": 2024,
+          "citation_count": 171,
+          "x": -0.028360647061763354,
+          "y": 0.19846413116652034
+        },
+        {
+          "paper_id": "S2:60f8a7ac53585aa2c173219e97507d6d963864e7",
+          "title": "PALR: Personalization Aware LLMs for Recommendation",
+          "year": 2023,
+          "citation_count": 151,
+          "x": -0.15836477731090187,
+          "y": 0.0869600968164323
+        },
+        {
+          "paper_id": "S2:c589a3420ba335a05c248f525ea3c6e90215e42b",
+          "title": "Pre-train, Prompt, and Recommendation: A Comprehensive Survey of Language Modeling Paradigm Adaptations in Recommender Systems",
+          "year": 2023,
+          "citation_count": 106,
+          "x": 0.12084763602007713,
+          "y": -0.13536684257166567
+        },
+        {
+          "paper_id": "S2:df602516e28a9ef0ef665ed0aef551984d8d770d",
+          "title": "Recommendation as Language Processing (RLP): A Unified Pretrain, Personalized Prompt & Predict Paradigm (P5)",
+          "year": 2022,
+          "citation_count": 683,
+          "x": 0.2115699707765624,
+          "y": -0.12013562363145443
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "label": "Cluster 1",
+      "count": 9,
+      "top_papers": [
+        {
+          "title": "BERT4Rec: Sequential Recommendation with Bidirectional Encoder Representations from Transformer",
+          "year": 2019,
+          "citations": 2758
+        },
+        {
+          "title": "RWKV: Reinventing RNNs for the Transformer Era",
+          "year": 2023,
+          "citations": 859
+        },
+        {
+          "title": "Is ChatGPT a Good Recommender? A Preliminary Study",
+          "year": 2023,
+          "citations": 348
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "W4310514063",
+          "title": "Outfit Generation and Recommendation -- An Experimental Study",
+          "year": 2022,
+          "citation_count": 0,
+          "x": 0.4803630394020179,
+          "y": 0.12463595301541738
+        },
+        {
+          "paper_id": "W4414991285",
+          "title": "Research on Conversational Recommender System Considering Consumer Types",
+          "year": 2025,
+          "citation_count": 0,
+          "x": 0.41235673338693646,
+          "y": 0.23848272758106515
+        },
+        {
+          "paper_id": "W7083676386",
+          "title": "SynerGen: Contextualized Generative Recommender for Unified Search and Recommendation",
+          "year": 2025,
+          "citation_count": 0,
+          "x": 0.3948770371136683,
+          "y": 0.059668030574040326
+        },
+        {
+          "paper_id": "W4404313621",
+          "title": "Agentic Feedback Loop Modeling Improves Recommendation and User Simulation",
+          "year": 2024,
+          "citation_count": 0,
+          "x": 0.12936905941900645,
+          "y": -0.033523773800927865
+        },
+        {
+          "paper_id": "S2:ca7bd64d372e3bcb3f4633ca4a20291ff57de3c3",
+          "title": "Is ChatGPT a Good Recommender? A Preliminary Study",
+          "year": 2023,
+          "citation_count": 348,
+          "x": 0.4811467574806823,
+          "y": -0.01838787839131891
+        },
+        {
+          "paper_id": "S2:450b5490cc653478c272be50aa986798df828a20",
+          "title": "Uncovering ChatGPT’s Capabilities in Recommender Systems",
+          "year": 2023,
+          "citation_count": 322,
+          "x": 0.4509426346190469,
+          "y": -0.010411633315975553
+        },
+        {
+          "paper_id": "S2:690edf44e8739fd80bdfb76f40c9a4a222f3bba8",
+          "title": "BERT4Rec: Sequential Recommendation with Bidirectional Encoder Representations from Transformer",
+          "year": 2019,
+          "citation_count": 2758,
+          "x": 0.41306569519925923,
+          "y": -0.076657351784622
+        },
+        {
+          "paper_id": "S2:026b3396a63ed5772329708b7580d633bb86bec9",
+          "title": "RWKV: Reinventing RNNs for the Transformer Era",
+          "year": 2023,
+          "citation_count": 859,
+          "x": 0.4022276833281821,
+          "y": -0.34577151084323143
+        },
+        {
+          "paper_id": "S2:11628f656257e75e46447ac21cdaa86c4b340a0a",
+          "title": "Where to Go Next for Recommender Systems? ID- vs. Modality-based Recommender Models Revisited",
+          "year": 2023,
+          "citation_count": 274,
+          "x": 0.3635304141870177,
+          "y": -0.008989650752118786
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "label": "Cluster 2",
+      "count": 28,
+      "top_papers": [
+        {
+          "title": "A survey on large language models for recommendation",
+          "year": 2023,
+          "citations": 651
+        },
+        {
+          "title": "TALLRec: An Effective and Efficient Tuning Framework to Align Large Language Model with Recommendation",
+          "year": 2023,
+          "citations": 580
+        },
+        {
+          "title": "Large Language Models are Zero-Shot Rankers for Recommender Systems",
+          "year": 2023,
+          "citations": 461
+        }
+      ],
+      "papers": [
+        {
+          "paper_id": "W4403851269",
+          "title": "A Prompting-Based Representation Learning Method for Recommendation with Large Language Models",
+          "year": 2024,
+          "citation_count": 0,
+          "x": -0.1280414704431401,
+          "y": -0.248622461139988
+        },
+        {
+          "paper_id": "W6929268638",
+          "title": "M2TRec: Metadata-aware Multi-task Transformer for Large-scale and Cold-start free Session-based Recommendations",
+          "year": 2022,
+          "citation_count": 0,
+          "x": 0.291114401295541,
+          "y": -0.18159078733157336
+        },
+        {
+          "paper_id": "W7106248926",
+          "title": "Music Recommendation with Large Language Models: Challenges, Opportunities, and Evaluation",
+          "year": 2025,
+          "citation_count": 0,
+          "x": -0.13548847940424624,
+          "y": -0.09521164077716532
+        },
+        {
+          "paper_id": "S2:a35f1315e91513ff0bec0c488fe175214fd9636c",
+          "title": "Recommender Systems in the Era of Large Language Models (LLMs)",
+          "year": 2023,
+          "citation_count": 439,
+          "x": -0.08060695241543475,
+          "y": -0.04350758916078287
+        },
+        {
+          "paper_id": "S2:91d70c7f8c114d3b9056835316ffaee527fc4f53",
+          "title": "Large Language Models meet Collaborative Filtering: An Efficient All-round LLM-based Recommender System",
+          "year": 2024,
+          "citation_count": 94,
+          "x": -0.06589219974849445,
+          "y": 0.019762511318879874
+        },
+        {
+          "paper_id": "S2:5aa3b1009955ce2c8f896e0d5e94e06155ef1e43",
+          "title": "LLMRec: Large Language Models with Graph Augmentation for Recommendation",
+          "year": 2023,
+          "citation_count": 330,
+          "x": -0.19692068796435547,
+          "y": -0.16301690524854448
+        },
+        {
+          "paper_id": "S2:3487c12512fa41d3a4d64f00cb842525a8590ad3",
+          "title": "TALLRec: An Effective and Efficient Tuning Framework to Align Large Language Model with Recommendation",
+          "year": 2023,
+          "citation_count": 580,
+          "x": -0.1888311337885363,
+          "y": -0.12104913833103811
+        },
+        {
+          "paper_id": "S2:f4e723958a93762befb4d4a039b44a7d752f9917",
+          "title": "Large Language Models are Zero-Shot Rankers for Recommender Systems",
+          "year": 2023,
+          "citation_count": 461,
+          "x": -0.11039507472131896,
+          "y": -0.1734482144570355
+        },
+        {
+          "paper_id": "S2:b486982fa7c68a8a08df1111ba9607119419c488",
+          "title": "A survey on large language models for recommendation",
+          "year": 2023,
+          "citation_count": 651,
+          "x": -0.19123347617573463,
+          "y": -0.1862604337883635
+        },
+        {
+          "paper_id": "S2:8f3b6a299098eb2e615e344b2f76a23dfca4d9ca",
+          "title": "CoLLM: Integrating Collaborative Embeddings Into Large Language Models for Recommendation",
+          "year": 2023,
+          "citation_count": 143,
+          "x": -0.12887315039715333,
+          "y": -0.0679993581973733
+        },
+        {
+          "paper_id": "S2:4829b73a47be18f73e9e8d90f3c23c8f84d0fccb",
+          "title": "Representation Learning with Large Language Models for Recommendation",
+          "year": 2023,
+          "citation_count": 309,
+          "x": -0.02524993292502805,
+          "y": -0.23981955367953928
+        },
+        {
+          "paper_id": "S2:0383e049e98c9eedbc61be728d4ef037300bbedf",
+          "title": "Recommendation as Instruction Following: A Large Language Model Empowered Recommendation Approach",
+          "year": 2023,
+          "citation_count": 301,
+          "x": -0.09079151424690816,
+          "y": -0.17156413772971965
+        },
+        {
+          "paper_id": "S2:b230b3c043b0671985bd56fcb0b23f3e9e29c762",
+          "title": "HLLM: Enhancing Sequential Recommendations via Hierarchical Large Language Models for Item and User Modeling",
+          "year": 2024,
+          "citation_count": 70,
+          "x": -0.20555487546950613,
+          "y": -0.06079833540113415
+        },
+        {
+          "paper_id": "S2:46d382ef09f6da85e6d56b96bf48502990cf4fd2",
+          "title": "LLM-ESR: Large Language Models Enhancement for Long-tailed Sequential Recommendation",
+          "year": 2024,
+          "citation_count": 67,
+          "x": -0.055530512666217634,
+          "y": -0.03657345437189953
+        },
+        {
+          "paper_id": "S2:79395f4ef32b925381f7ec9a824b05bdb982fd33",
+          "title": "Large Language Models as Zero-Shot Conversational Recommenders",
+          "year": 2023,
+          "citation_count": 218,
+          "x": 0.05797071506179674,
+          "y": -0.24356486730296428
+        },
+        {
+          "paper_id": "S2:009f64d890d8402cae8739b63bc0c3d06d62ed06",
+          "title": "NoteLLM: A Retrievable Large Language Model for Note Recommendation",
+          "year": 2024,
+          "citation_count": 53,
+          "x": -0.02832808114114603,
+          "y": -0.16144434818689035
+        },
+        {
+          "paper_id": "S2:f8df9546eafe207a777466ef40d548c707744c6d",
+          "title": "LLMRG: Improving Recommendations through Large Language Model Reasoning Graphs",
+          "year": 2024,
+          "citation_count": 44,
+          "x": -0.1541102984335427,
+          "y": 0.021616665977042853
+        },
+        {
+          "paper_id": "S2:13965d8d68217308ff8c7e738ced637739c6a1b8",
+          "title": "Bridging Language and Items for Retrieval and Recommendation",
+          "year": 2024,
+          "citation_count": 297,
+          "x": 0.29209673811549697,
+          "y": -0.07665799839264353
+        },
+        {
+          "paper_id": "S2:26059f871eea2ef9aeeda228ebd40a69b61ab65c",
+          "title": "RecMind: Large Language Model Powered Agent For Recommendation",
+          "year": 2023,
+          "citation_count": 151,
+          "x": -0.0019298877384308325,
+          "y": -0.13548897386764355
+        },
+        {
+          "paper_id": "S2:fede400a1f7e75169987270d602e4e2f691818bd",
+          "title": "Harnessing Large Language Models for Text-Rich Sequential Recommendation",
+          "year": 2024,
+          "citation_count": 94,
+          "x": -0.12370416873023338,
+          "y": -0.1385022283303927
+        },
+        {
+          "paper_id": "S2:429e6c09eeadf54e2b245b8f2cddfbf157f9da4c",
+          "title": "ReLLa: Retrieval-enhanced Large Language Models for Lifelong Sequential Behavior Comprehension in Recommendation",
+          "year": 2023,
+          "citation_count": 136,
+          "x": -0.1865206451947339,
+          "y": -0.11453017494591672
+        },
+        {
+          "paper_id": "S2:85722b13631d9846866d45ff2bfc2a2fe1026ac8",
+          "title": "LLMRec: Benchmarking Large Language Models on Recommendation Task",
+          "year": 2023,
+          "citation_count": 49,
+          "x": -0.09436922680485191,
+          "y": -0.042776785747255505
+        },
+        {
+          "paper_id": "S2:aae1d88c70cf18ef6aa23693a4dce8204e22d087",
+          "title": "A Bi-Step Grounding Paradigm for Large Language Models in Recommendation Systems",
+          "year": 2023,
+          "citation_count": 133,
+          "x": -0.14243000717312018,
+          "y": -0.10704394171733075
+        },
+        {
+          "paper_id": "S2:c5481668f78ab0c8ef2de9230f2fc1ce27eea6e4",
+          "title": "Towards Open-World Recommendation with Knowledge Augmentation from Large Language Models",
+          "year": 2023,
+          "citation_count": 132,
+          "x": -0.10060928399994612,
+          "y": -0.12404771936671063
+        },
+        {
+          "paper_id": "S2:95840ec08ba2e30490ee02fd0518bbfc0e8a0f4c",
+          "title": "Prompt Engineering for Large Language Models",
+          "year": 2023,
+          "citation_count": 341,
+          "x": 0.020819414390343283,
+          "y": -0.4934849096950848
+        },
+        {
+          "paper_id": "S2:b07493b1393f0b232872316f2b88fe0043b1ab02",
+          "title": "Enhancing Sequential Recommendation via LLM-based Semantic Embedding Learning",
+          "year": 2024,
+          "citation_count": 73,
+          "x": -0.03964023759008463,
+          "y": -0.03946973652495852
+        },
+        {
+          "paper_id": "S2:ef0679f8b3114c339bdf5a0c202403a08d160a88",
+          "title": "ONCE: Boosting Content-based Recommendation with Both Open- and Closed-source Large Language Models",
+          "year": 2023,
+          "citation_count": 107,
+          "x": -0.06826997787826822,
+          "y": -0.0657331789665189
+        },
+        {
+          "paper_id": "S2:c3a59e1e405e7c28319e5a1c5b5241f9b340cf63",
+          "title": "MemoryBank: Enhancing Large Language Models with Long-Term Memory",
+          "year": 2023,
+          "citation_count": 278,
+          "x": -0.14453710736752967,
+          "y": -0.33554024816622885
+        }
+      ]
+    }
+  ],
+  "query": "LLM Based Recommender systems"
+}

@@ -75,6 +75,36 @@ async def _run_clustering_task(job_id: str, request: ClusteringRequest):
         if cluster_method == "hdbscan" and not features["hdbscan"]:
             cluster_method = "dbscan"
         
+        # Check if clustering already exists
+        query_dir = results_manager.get_query_dir(query)
+        params = {
+            "dim_reduction": dim_method,
+            "method": cluster_method,
+        }
+        if cluster_method == "kmeans" and request.n_clusters is not None:
+            params["n_clusters"] = request.n_clusters
+        json_filename = results_manager._build_filename("clusters", params, "json")
+        html_filename = results_manager._build_filename("clusters", params, "html")
+        existing_json_path = query_dir / json_filename
+        existing_html_path = query_dir / html_filename
+        
+        if existing_json_path.exists():
+            # Load existing clustering
+            with open(existing_json_path, "r", encoding="utf-8") as f:
+                json_data = json.load(f)
+            
+            html_content = None
+            if existing_html_path.exists():
+                with open(existing_html_path, "r", encoding="utf-8") as f:
+                    html_content = f.read()
+            
+            jobs[job_id]["status"] = "completed"
+            jobs[job_id]["clusters_data"] = json_data
+            jobs[job_id]["html_content"] = html_content
+            jobs[job_id]["clusters_json_path"] = str(existing_json_path.relative_to(results_manager.base_dir))
+            jobs[job_id]["clusters_html_path"] = str(existing_html_path.relative_to(results_manager.base_dir)) if html_content else None
+            return
+        
         # Step 1: Embed papers
         embeddings = engine.embed_papers(papers)
         
@@ -121,7 +151,7 @@ async def _run_clustering_task(job_id: str, request: ClusteringRequest):
         
         os.unlink(tmp_html)
         
-        # Save using ResultsManager
+        # Save using ResultsManager (for persistence, but not exposed to frontend)
         json_path, html_path = results_manager.save_clusters(
             query,
             json_data,
@@ -132,6 +162,9 @@ async def _run_clustering_task(job_id: str, request: ClusteringRequest):
         )
         
         jobs[job_id]["status"] = "completed"
+        jobs[job_id]["clusters_data"] = json_data
+        jobs[job_id]["html_content"] = html_content
+        # Keep paths for backward compatibility but not primary
         jobs[job_id]["clusters_json_path"] = str(json_path.relative_to(results_manager.base_dir))
         jobs[job_id]["clusters_html_path"] = str(html_path.relative_to(results_manager.base_dir)) if html_path else None
         
@@ -154,6 +187,8 @@ async def start_clustering(
     jobs[job_id] = {
         "status": "queued",
         "query": request.query,
+        "clusters_data": None,
+        "html_content": None,
         "clusters_json_path": None,
         "clusters_html_path": None,
     }
@@ -186,6 +221,8 @@ async def get_clustering_results(job_id: str):
         job_id=job_id,
         status=job["status"],
         query=job["query"],
+        clusters_data=job.get("clusters_data"),
+        html_content=job.get("html_content"),
         clusters_json_path=job.get("clusters_json_path"),
         clusters_html_path=job.get("clusters_html_path"),
     )

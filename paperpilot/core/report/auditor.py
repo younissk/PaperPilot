@@ -8,7 +8,7 @@ It also ensures citations are preserved and added where missing.
 import json
 import os
 import re
-from typing import Optional
+from typing import Optional, Callable
 
 from openai import AsyncOpenAI
 
@@ -253,6 +253,7 @@ async def audit_section(
 async def audit_all_sections(
     sections: list[WrittenSection],
     all_cards: list[PaperCard],
+    progress_callback: Optional[Callable[[int, int, str], None]] = None,
 ) -> list[AuditResult]:
     """Audit all written sections.
     
@@ -275,8 +276,12 @@ async def audit_all_sections(
     results = []
     total_supported = 0
     total_unsupported = 0
+    total_sections = len(sections)
     
-    for section in sections:
+    if progress_callback:
+        progress_callback(0, total_sections, f"Starting to audit {total_sections} sections...")
+    
+    for i, section in enumerate(sections):
         # Get cards that were used in this section
         section_cards = [
             card_lookup[pid]
@@ -288,11 +293,17 @@ async def audit_all_sections(
         if not section_cards:
             section_cards = all_cards
         
+        if progress_callback:
+            progress_callback(i, total_sections, f"Auditing section {i+1}/{total_sections}: {section.title}")
+        
         result = await audit_section(section, section_cards)
         results.append(result)
         
         total_supported += result.supported_count
         total_unsupported += result.unsupported_count
+        
+        if progress_callback:
+            progress_callback(i + 1, total_sections, f"Completed audit {i+1}/{total_sections}: {section.title}")
     
     log.info(
         "batch_audit_complete",

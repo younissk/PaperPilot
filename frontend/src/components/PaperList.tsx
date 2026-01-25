@@ -1,48 +1,48 @@
-/**
- * Component for displaying a list of papers.
- */
-
-import { useState } from 'react';
-import { type Paper } from '../services/api';
+import { useState } from "react";
+import {
+  Title,
+  Stack,
+  Group,
+  Select,
+  Button,
+  Card,
+  Badge,
+  Text,
+  ActionIcon,
+  Modal,
+} from "@mantine/core";
+import type { Paper } from "../services/api";
 
 interface PaperListProps {
   papers: Paper[];
   title?: string;
 }
 
-export function PaperList({ papers, title = 'Papers' }: PaperListProps) {
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [sortBy, setSortBy] = useState<'year' | 'citations' | 'confidence' | 'depth'>('citations');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-
-  const toggleExpand = (paperId: string) => {
-    const newExpanded = new Set(expandedIds);
-    if (newExpanded.has(paperId)) {
-      newExpanded.delete(paperId);
-    } else {
-      newExpanded.add(paperId);
-    }
-    setExpandedIds(newExpanded);
-  };
+export function PaperList({ papers, title = "Papers" }: PaperListProps) {
+  const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null);
+  const [sortBy, setSortBy] = useState<
+    "year" | "citations" | "confidence" | "depth"
+  >("citations");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const sortedPapers = [...papers].sort((a, b) => {
     let aVal: number;
     let bVal: number;
 
     switch (sortBy) {
-      case 'year':
+      case "year":
         aVal = a.year ?? 0;
         bVal = b.year ?? 0;
         break;
-      case 'citations':
+      case "citations":
         aVal = a.citation_count;
         bVal = b.citation_count;
         break;
-      case 'confidence':
+      case "confidence":
         aVal = a.judge_confidence;
         bVal = b.judge_confidence;
         break;
-      case 'depth':
+      case "depth":
         aVal = a.depth;
         bVal = b.depth;
         break;
@@ -50,7 +50,7 @@ export function PaperList({ papers, title = 'Papers' }: PaperListProps) {
         return 0;
     }
 
-    if (sortOrder === 'asc') {
+    if (sortOrder === "asc") {
       return aVal - bVal;
     } else {
       return bVal - aVal;
@@ -59,97 +59,144 @@ export function PaperList({ papers, title = 'Papers' }: PaperListProps) {
 
   if (papers.length === 0) {
     return (
-      <div className="paper-list">
-        <h2>{title}</h2>
-        <div className="empty-state">
-          <p>No papers to display.</p>
-        </div>
-      </div>
+      <Stack gap="md">
+        <Title order={2}>{title}</Title>
+        <Text c="dimmed">No papers to display.</Text>
+      </Stack>
     );
   }
 
   return (
-    <div className="paper-list">
-      <div className="paper-list-header">
-        <h2>{title} ({papers.length})</h2>
-        <div className="sort-controls">
-          <label>
-            Sort by:
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-            >
-              <option value="citations">Citations</option>
-              <option value="year">Year</option>
-              <option value="confidence">Confidence</option>
-              <option value="depth">Depth</option>
-            </select>
-          </label>
-          <button
-            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-            className="sort-order-btn"
-            title={`Sort ${sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+    <Stack gap="md">
+      <Group justify="space-between" align="center">
+        <Title order={2}>
+          {title} ({papers.length})
+        </Title>
+        <Group gap="xs">
+          <Select
+            value={sortBy}
+            onChange={(value) => setSortBy(value as typeof sortBy)}
+            data={[
+              { value: "citations", label: "Citations" },
+              { value: "year", label: "Year" },
+              { value: "confidence", label: "Confidence" },
+              { value: "depth", label: "Depth" },
+            ]}
+            w={150}
+          />
+          <ActionIcon
+            variant="light"
+            onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+            title={`Sort ${sortOrder === "asc" ? "descending" : "ascending"}`}
           >
-            {sortOrder === 'asc' ? '↑' : '↓'}
-          </button>
-        </div>
-      </div>
+            {sortOrder === "asc" ? "↑" : "↓"}
+          </ActionIcon>
+        </Group>
+      </Group>
 
-      <div className="papers-container">
+      <Stack gap="md">
         {sortedPapers.map((paper) => {
-          const isExpanded = expandedIds.has(paper.paper_id);
-          const abstract = paper.abstract || 'No abstract available';
-          const shouldTruncate = abstract.length > 300;
+          const abstract = paper.abstract || "No abstract available";
+          const abstractPreview =
+            abstract.length > 150
+              ? `${abstract.substring(0, 150)}...`
+              : abstract;
 
           return (
-            <div key={paper.paper_id} className="paper-card">
-              <div className="paper-header">
-                <h3 className="paper-title">{paper.title}</h3>
-                <div className="paper-meta">
-                  {paper.year && <span className="meta-badge year">{paper.year}</span>}
-                  <span className="meta-badge citations">
-                    {paper.citation_count} citations
-                  </span>
-                  <span className="meta-badge depth">Depth: {paper.depth}</span>
-                  <span className="meta-badge confidence">
-                    {(paper.judge_confidence * 100).toFixed(1)}% confidence
-                  </span>
-                </div>
-              </div>
-
-              {shouldTruncate ? (
-                <div className="paper-abstract">
-                  {isExpanded ? abstract : `${abstract.substring(0, 300)}...`}
-                  <button
-                    className="expand-btn"
-                    onClick={() => toggleExpand(paper.paper_id)}
-                  >
-                    {isExpanded ? 'Show less' : 'Show more'}
-                  </button>
-                </div>
-              ) : (
-                <div className="paper-abstract">{abstract}</div>
-              )}
-
-              <div className="paper-footer">
-                <div className="paper-discovery">
-                  <span className="discovery-label">Edge type:</span>
-                  <span className="discovery-value">{paper.edge_type}</span>
-                  {paper.discovered_from && (
-                    <>
-                      <span className="discovery-label">From:</span>
-                      <span className="discovery-value">{paper.discovered_from}</span>
-                    </>
+            <Card
+              key={paper.paper_id}
+              shadow="sm"
+              padding="lg"
+              radius={0}
+              withBorder
+            >
+              <Stack gap="sm">
+                <Title order={4}>{paper.title}</Title>
+                <Group gap="xs">
+                  {paper.year && (
+                    <Badge color="accent" radius={0}>
+                      {paper.year}
+                    </Badge>
                   )}
-                </div>
-                <div className="paper-reason">
-                  <strong>Reason:</strong> {paper.judge_reason}
-                </div>
-              </div>
-            </div>
+                  <Badge color="primary" radius={0}>
+                    {paper.citation_count} citations
+                  </Badge>
+                </Group>
+                <Text size="sm" c="dimmed">
+                  {abstractPreview}
+                </Text>
+                <Button
+                  variant="light"
+                  size="xs"
+                  onClick={() => setSelectedPaper(paper)}
+                  radius={0}
+                >
+                  View Details
+                </Button>
+              </Stack>
+            </Card>
           );
         })}
-      </div>
-    </div>
+      </Stack>
+
+      <Modal
+        opened={selectedPaper !== null}
+        onClose={() => setSelectedPaper(null)}
+        title={selectedPaper?.title}
+        size="lg"
+        radius={0}
+      >
+        {selectedPaper && (
+          <Stack gap="md">
+            <Group gap="xs">
+              {selectedPaper.year && (
+                <Badge color="accent" radius={0}>
+                  {selectedPaper.year}
+                </Badge>
+              )}
+              <Badge color="primary" radius={0}>
+                {selectedPaper.citation_count} citations
+              </Badge>
+              <Badge variant="outline" radius={0}>
+                Depth: {selectedPaper.depth}
+              </Badge>
+              <Badge variant="outline" radius={0}>
+                {(selectedPaper.judge_confidence * 100).toFixed(1)}% confidence
+              </Badge>
+            </Group>
+
+            <Text size="sm" fw={500}>
+              Abstract:
+            </Text>
+            <Text size="sm" c="dimmed">
+              {selectedPaper.abstract || "No abstract available"}
+            </Text>
+
+            <Group gap="xs">
+              <Text size="sm" fw={500}>
+                Edge type:
+              </Text>
+              <Text size="sm" c="primary">
+                {selectedPaper.edge_type}
+              </Text>
+              {selectedPaper.discovered_from && (
+                <>
+                  <Text size="sm" fw={500}>
+                    From:
+                  </Text>
+                  <Text size="sm" c="primary">
+                    {selectedPaper.discovered_from}
+                  </Text>
+                </>
+              )}
+            </Group>
+
+            <Text size="sm" c="dimmed" fs="italic">
+              <strong>Reason:</strong> {selectedPaper.judge_reason}
+            </Text>
+          </Stack>
+        )}
+      </Modal>
+    </Stack>
   );
 }

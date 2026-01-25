@@ -6,7 +6,7 @@ enforcement to prevent hallucinations and ensure traceability.
 
 import os
 import re
-from typing import Optional
+from typing import Optional, Callable
 
 from openai import AsyncOpenAI
 
@@ -311,6 +311,7 @@ async def validate_and_rewrite_if_needed(
 async def write_all_sections(
     outline_sections: list[SectionPlan],
     all_cards: list[PaperCard],
+    progress_callback: Optional[Callable[[int, int, str], None]] = None,
 ) -> list[WrittenSection]:
     """Write all sections from the outline.
     
@@ -331,8 +332,12 @@ async def write_all_sections(
     # Write sections sequentially to maintain coherence
     # (Could parallelize if needed, but sections may reference each other)
     written_sections = []
+    total_sections = len(outline_sections)
     
-    for section in outline_sections:
+    if progress_callback:
+        progress_callback(0, total_sections, f"Starting to write {total_sections} sections...")
+    
+    for i, section in enumerate(outline_sections):
         # Get cards for this section
         section_cards = [
             card_lookup[pid] 
@@ -345,12 +350,18 @@ async def write_all_sections(
             section_cards = all_cards
             log.debug("using_all_cards_for_section", section=section.title)
         
+        if progress_callback:
+            progress_callback(i, total_sections, f"Writing section {i+1}/{total_sections}: {section.title}")
+        
         written = await write_section(section, section_cards)
         
         # Validate and rewrite if citation density is too low
         written = await validate_and_rewrite_if_needed(written, section_cards)
         
         written_sections.append(written)
+        
+        if progress_callback:
+            progress_callback(i + 1, total_sections, f"Completed section {i+1}/{total_sections}: {section.title}")
     
     return written_sections
 

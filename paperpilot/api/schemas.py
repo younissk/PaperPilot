@@ -64,6 +64,8 @@ class RankingResponse(BaseModel):
     query: str = Field(..., description="The search query")
     papers: List[dict] = Field(default_factory=list, description="List of ranked papers")
     result_path: Optional[str] = Field(None, description="Path to saved ranking file")
+    matches_played: int = Field(0, description="Number of matches completed so far")
+    total_matches: int = Field(0, description="Total number of matches expected")
 
 
 # Clustering schemas
@@ -83,8 +85,10 @@ class ClusteringResponse(BaseModel):
     job_id: str = Field(..., description="Unique job identifier")
     status: str = Field(..., description="Job status: 'queued', 'running', 'completed', 'failed'")
     query: str = Field(..., description="The search query")
-    clusters_json_path: Optional[str] = Field(None, description="Path to clusters JSON file")
-    clusters_html_path: Optional[str] = Field(None, description="Path to clusters HTML visualization")
+    clusters_data: Optional[Dict[str, Any]] = Field(None, description="Clustering JSON data")
+    html_content: Optional[str] = Field(None, description="HTML visualization content")
+    clusters_json_path: Optional[str] = Field(None, description="Path to clusters JSON file (deprecated)")
+    clusters_html_path: Optional[str] = Field(None, description="Path to clusters HTML visualization (deprecated)")
 
 
 # Timeline schemas
@@ -99,8 +103,10 @@ class TimelineResponse(BaseModel):
     job_id: str = Field(..., description="Unique job identifier")
     status: str = Field(..., description="Job status: 'queued', 'running', 'completed', 'failed'")
     query: str = Field(..., description="The search query")
-    timeline_json_path: Optional[str] = Field(None, description="Path to timeline JSON file")
-    timeline_html_path: Optional[str] = Field(None, description="Path to timeline HTML visualization")
+    timeline_data: Optional[Dict[str, Any]] = Field(None, description="Timeline JSON data")
+    html_content: Optional[str] = Field(None, description="HTML visualization content")
+    timeline_json_path: Optional[str] = Field(None, description="Path to timeline JSON file (deprecated)")
+    timeline_html_path: Optional[str] = Field(None, description="Path to timeline HTML visualization (deprecated)")
 
 
 # Graph schemas
@@ -117,8 +123,10 @@ class GraphResponse(BaseModel):
     job_id: str = Field(..., description="Unique job identifier")
     status: str = Field(..., description="Job status: 'queued', 'running', 'completed', 'failed'")
     query: str = Field(..., description="The search query")
-    graph_json_path: Optional[str] = Field(None, description="Path to graph JSON file")
-    graph_html_path: Optional[str] = Field(None, description="Path to graph HTML visualization")
+    graph_data: Optional[Dict[str, Any]] = Field(None, description="Graph JSON data (nodes, edges)")
+    html_content: Optional[str] = Field(None, description="HTML visualization content")
+    graph_json_path: Optional[str] = Field(None, description="Path to graph JSON file (deprecated)")
+    graph_html_path: Optional[str] = Field(None, description="Path to graph HTML visualization (deprecated)")
 
 
 # Report schemas
@@ -135,7 +143,13 @@ class ReportResponse(BaseModel):
     job_id: str = Field(..., description="Unique job identifier")
     status: str = Field(..., description="Job status: 'queued', 'running', 'completed', 'failed'")
     query: str = Field(..., description="The search query")
-    report_path: Optional[str] = Field(None, description="Path to generated report file")
+    report_data: Optional[Dict[str, Any]] = Field(None, description="Report JSON data")
+    report_path: Optional[str] = Field(None, description="Path to generated report file (deprecated)")
+    current_step: int = Field(0, description="Current step number (0-7)")
+    step_name: str = Field("", description="Human-readable name of current step")
+    current_progress: int = Field(0, description="Current progress value (e.g., papers processed)")
+    total_progress: int = Field(0, description="Total progress value (e.g., total papers)")
+    progress_message: str = Field("", description="Descriptive progress message")
 
 
 # Everything schemas
