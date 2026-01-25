@@ -10,6 +10,7 @@ from paperpilot.api.routes.clustering import router as clustering_router
 from paperpilot.api.routes.timeline import router as timeline_router
 from paperpilot.api.routes.graph import router as graph_router
 from paperpilot.api.routes.report import router as report_router
+from paperpilot.api.routes.pipeline import router as pipeline_router
 from paperpilot.api.routes.everything import router as everything_router
 from paperpilot.api.schemas import HealthResponse
 
@@ -36,6 +37,7 @@ app.include_router(clustering_router)
 app.include_router(timeline_router)
 app.include_router(graph_router)
 app.include_router(report_router)
+app.include_router(pipeline_router)
 app.include_router(everything_router)
 
 

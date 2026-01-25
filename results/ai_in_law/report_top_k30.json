@@ -1,0 +1,596 @@
+{
+  "query": "AI in Law",
+  "generated_at": "2026-01-25T22:16:24.001947",
+  "total_papers_used": 30,
+  "introduction": "The integration of artificial intelligence (AI) into the legal domain has emerged as a transformative force, reshaping traditional practices and enhancing the efficiency of legal services. As legal professionals increasingly adopt advanced technologies, particularly large language models (LLMs), the potential for AI to streamline processes such as contract review, legal research, and case retrieval becomes evident. The significance of this evolution is underscored by foundational works that explore the intersection of AI and law, including studies on the application of natural language processing (NLP) to improve legal tasks (LegalAI, [W3035668167]) and the development of specialized datasets for legal document analysis (CUAD, [W3135190223]).\n\nThis survey aims to provide a comprehensive overview of the current landscape of AI applications in law, highlighting key advancements and methodologies that have emerged in recent years. We will examine various aspects, including the reliability of AI-driven legal services through innovative models like Chatlaw ([W4382618722]), the fine-tuning of NLP frameworks such as BERT for legal contexts ([W2983841094]), and the introduction of structure-aware models for enhanced case retrieval ([W4366999416]). Additionally, we will address critical challenges, such as the phenomenon of hallucinations in public-facing LLMs ([W4400047099]), which pose significant implications for the trustworthiness of AI in legal practice. Through this survey, we aim to illuminate the transformative potential of AI in law while acknowledging the complexities and limitations that accompany its implementation.",
+  "current_research": [
+    {
+      "title": "Applications of AI in Law",
+      "summary": "The integration of artificial intelligence (AI), particularly large language models (LLMs), into the legal domain is reshaping the legal landscape by enhancing various aspects of legal practice. LLMs have shown significant promise in automating tasks such as document review, legal research, and contract analysis, thereby improving efficiency and accuracy in legal services [W4406754779]. The transformative potential of these technologies is underscored by their ability to streamline workflows and reduce the burden of repetitive tasks on legal professionals, allowing them to focus on more complex legal issues [W2734994265]. Specific tools like Chatlaw and LegalAI exemplify the practical applications of AI in law. Chatlaw employs a Mixture-of-Experts model within a multi-agent system to enhance the reliability and accuracy of AI-driven legal services [W4382618722]. This approach addresses the 'hallucination problem,' which poses potential legal risks by ensuring that the information provided by AI systems is both accurate and contextually relevant [W4382618722]. Similarly, LegalAI leverages natural language processing to liberate legal professionals from the overwhelming amount of paperwork, thereby improving overall efficiency in legal processes [W3035668167]. The emergence of AI technologies in legal analytics further illustrates their transformative impact on legal practice [W2734994265]. By connecting computational models of legal reasoning with traditional legal frameworks, AI tools are beginning to create new applications that enhance decision-making and predictive capabilities within the legal field [W2734994265]. As these technologies continue to evolve, they promise to not only improve the efficiency of legal services but also to redefine the roles and responsibilities of legal professionals in the digital age [W2885101771].",
+      "paper_ids": [
+        "W2734994265",
+        "W4382618722",
+        "W4406754779",
+        "W3035668167",
+        "W2885101771"
+      ]
+    },
+    {
+      "title": "Evaluation and Benchmarking of AI Systems",
+      "summary": "The effectiveness of AI models in legal reasoning and decision-making tasks has garnered significant attention, particularly with the advent of specialized datasets. For instance, the CUAD dataset, which comprises over 13,000 expert-annotated entries, serves as a critical resource for evaluating AI performance in legal contract review [W3135190223]. This dataset enables researchers to benchmark various AI models against a robust set of legal scenarios, thereby facilitating a deeper understanding of their capabilities in real-world applications. In addition to CUAD, the CAIL2018 dataset represents a significant advancement in judgment prediction within the Chinese legal context. As the first large-scale Chinese legal dataset for this purpose, CAIL2018 provides a unique opportunity to assess AI models' effectiveness in predicting legal outcomes based on diverse legal texts [W2858159822]. Such datasets are essential for training and evaluating AI systems, as they allow for the exploration of model performance across different legal frameworks and cultural contexts. Despite these advancements, current AI models face notable challenges, particularly concerning hallucinations and multilingual reasoning. Research has highlighted the presence of 'hallucinations' in large language models (LLMs), where the generated text may not align with established legal facts, posing risks in high-stakes legal environments [W4400047099]. Furthermore, evaluations of models like LLaMA and Gemini indicate that their performance in multilingual and jurisdictionally diverse contexts remains insufficiently explored, underscoring the need for further research in these critical areas [W7083708304]. The exploration of prompt engineering techniques, such as Chain-of-Thought prompts, has shown promise in enhancing legal reasoning tasks. Studies indicate that these techniques can lead to significant improvements in tasks requiring arithmetic and common-sense reasoning, thereby potentially increasing the reliability of AI systems in legal applications [W4385570658]. However, the ongoing challenges of hallucinations and multilingual reasoning highlight the necessity for continuous evaluation and refinement of AI models to ensure their effectiveness and reliability in legal contexts.",
+      "paper_ids": [
+        "W4400047099",
+        "W2858159822",
+        "W4385570658",
+        "W7083708304",
+        "W3135190223"
+      ]
+    },
+    {
+      "title": "Training and Fine-tuning Techniques",
+      "summary": "Training methodologies for legal AI have evolved significantly, with a focus on fine-tuning pre-trained models like BERT to enhance performance in legal tasks. Fine-tuning BERT on legal documents has been shown to yield 'valuable improvements on NLP tasks in the legal domain' [W2983841094]. The integration of domain-specific knowledge during the fine-tuning process is crucial for adapting general-purpose models to the nuances of legal language and context [W2983841094]. In addition to fine-tuning existing models, the development of structure-aware models represents a novel approach to improving legal AI applications. The SAILER model, for instance, introduces effective pre-training strategies specifically designed for legal case retrieval, highlighting the importance of structural awareness in processing legal texts [W4366999416]. Such advancements underscore the necessity of tailoring training methodologies to the unique characteristics of legal language [W4366999416]. Domain-specific pre-training is further emphasized in the context of document classification and named entity recognition (NER) tasks. A deep learning framework presented for multi-label legal document classification utilizes label-attention mechanisms alongside domain-specific pre-training, demonstrating improved classification outcomes [W3121217868]. Similarly, the introduction of a new corpus of annotated legal named entities has revealed that 'Named Entities in legal texts are slightly different and more fine-grained,' indicating the need for specialized models to accurately capture these distinctions [W4308615104]. These insights suggest that targeted pre-training and innovative model architectures are essential for advancing the capabilities of legal AI in handling complex legal documents.",
+      "paper_ids": [
+        "W4308615104",
+        "W2983841094",
+        "W3121217868",
+        "W4366999416"
+      ]
+    },
+    {
+      "title": "Data and Datasets in Legal AI Research",
+      "summary": "The development of datasets for legal AI applications has become increasingly important, particularly in enhancing the capabilities of natural language processing (NLP) within the legal domain. One notable example is CUAD, which is an expert-annotated dataset specifically designed for legal contract review, containing over 13,000 annotations [W3135190223]. Such expert-annotated datasets are crucial as they provide high-quality training data that can significantly improve the performance of AI models in understanding and processing legal texts. Data quality and representation play a pivotal role in training effective AI models, especially in the legal field where precision is paramount. The introduction of the CAIL2018 dataset, which is the first large-scale Chinese legal dataset for judgment prediction, highlights the importance of having comprehensive datasets that reflect specific legal contexts [W2858159822]. High-quality datasets not only enhance model accuracy but also ensure that the AI systems are capable of making informed predictions based on the nuances of different legal systems. Creating comprehensive legal datasets that accurately reflect diverse legal systems presents several challenges. For instance, the corpus for automatic structuring of legal documents introduces a new corpus segmented into topical parts with annotated rhetorical roles, which is essential for understanding the structure of legal texts [W4226275564]. However, the complexity and variability of legal systems across jurisdictions can complicate the creation of datasets that are both representative and comprehensive. Additionally, the introduction of a corpus containing 46,545 annotated legal named entities mapped to 14 legal entity types emphasizes the need for fine-grained annotations to capture the intricacies of legal language [W4308615104]. This aspect remains unclear from available abstracts.",
+      "paper_ids": [
+        "W4308615104",
+        "W2858159822",
+        "W4226275564",
+        "W3135190223"
+      ]
+    },
+    {
+      "title": "Limitations and Open Problems in AI for Law",
+      "summary": "The integration of artificial intelligence (AI) into the legal field presents several limitations, particularly concerning fairness and reliability. A critical issue is the phenomenon of 'hallucinations' in large language models (LLMs), where the generated text may not align with established legal facts. This inconsistency raises concerns about the reliability of AI outputs in legal contexts, as highlighted by the systematic evidence of such hallucinations across various legal scenarios [W4400047099]. Furthermore, the ability of AI to accurately reason about legal problems is still under scrutiny, as it struggles to distinguish between competent and debatable questions, which can lead to misinterpretations in legal reasoning [W2123761774]. The advent of generative AI introduces significant implications for existing legal frameworks, particularly in areas such as liability, privacy, and intellectual property [W4403714226]. The complexities surrounding these issues necessitate a reevaluation of current laws to accommodate the unique challenges posed by generative AI technologies [W4403714226]. For instance, the exploration of liability in the context of generative AI highlights the need for clear guidelines to address potential legal ramifications [W4403714226]. Additionally, the intersection of generative AI with privacy concerns raises ethical considerations that must be addressed to ensure compliance with legal standards and protect individual rights [W4392456872]. Future research directions must focus on addressing these existing challenges to enhance AI's role in the legal domain [W4392456872]. Investigating the mechanisms that lead to hallucinations in LLMs could provide insights into improving their reliability and accuracy in legal applications [W4400047099]. Moreover, developing frameworks that incorporate ethical considerations into the deployment of generative AI in legal contexts is essential for fostering trust and accountability within the justice system [W4392456872]. By prioritizing these research avenues, the legal field can better harness the potential of AI while mitigating its risks [W4392456872].",
+      "paper_ids": [
+        "W4400047099",
+        "W4392456872",
+        "W4403714226",
+        "W2123761774"
+      ]
+    }
+  ],
+  "open_problems": [
+    {
+      "title": "Limitation from BERT Goes to Law School: Quant...",
+      "text": "Obtaining large legal corpora is challenging due to their confidential nature.",
+      "paper_ids": [
+        "W2983841094"
+      ]
+    },
+    {
+      "title": "Limitation from Evaluating the Limits of Large...",
+      "text": "Performance in multilingual, jurisdictionally diverse, and adversarial contexts remains insufficiently explored.",
+      "paper_ids": [
+        "W7083708304"
+      ]
+    },
+    {
+      "title": "Limitation from Can GPT-4 Support Analysis of ...",
+      "text": "minor decrease in performance for batch predictions",
+      "paper_ids": [
+        "W4382319715"
+      ]
+    },
+    {
+      "title": "Limitation from Traditional Machine Learning a...",
+      "text": "Very little text classification work in the law domain for Turkish language.",
+      "paper_ids": [
+        "W4296886339"
+      ]
+    }
+  ],
+  "conclusion": "In this survey, we have explored the multifaceted role of artificial intelligence in the legal domain, highlighting its diverse applications, evaluation methodologies, training techniques, and the critical datasets that underpin this research. The findings underscore the significant advancements made in leveraging AI for tasks such as legal research, contract analysis, and predictive analytics. However, the evaluation and benchmarking of these systems reveal a pressing need for standardized metrics that can adequately capture their performance across varied legal contexts. Furthermore, the training and fine-tuning techniques discussed indicate a growing sophistication in model development, yet they also expose gaps in multilingual capabilities and domain-specific adaptations, particularly in less-researched languages like Turkish.\n\nLooking ahead, several key challenges remain that warrant further investigation. The difficulty in obtaining large, representative legal corpora due to confidentiality issues poses a significant barrier to the development of robust AI systems. Additionally, the performance of AI in multilingual and jurisdictionally diverse settings remains underexplored, suggesting a need for targeted research in these areas. As the legal landscape continues to evolve, addressing these limitations will be crucial for the effective integration of AI technologies in law, paving the way for future innovations that can enhance legal practice and access to justice.",
+  "paper_cards": [
+    {
+      "id": "W4406754779",
+      "title": "Exploring LLMs Applications in Law: A Literature Review on Current Legal NLP Approaches",
+      "claim": "The paper reviews the current applications of LLMs in the legal domain and their transformative potential.",
+      "paradigm_tags": [
+        "application",
+        "survey"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "AI is reshaping the legal landscape",
+      "year": 2025,
+      "citation_count": 39,
+      "elo_rating": null
+    },
+    {
+      "id": "W4382618722",
+      "title": "Chatlaw: A Multi-Agent Collaborative Legal Assistant with Knowledge Graph Enhanced Mixture-of-Experts Large Language Model",
+      "claim": "Chatlaw enhances the reliability and accuracy of AI-driven legal services using a Mixture-of-Experts model and multi-agent system.",
+      "paradigm_tags": [
+        "agents",
+        "knowledge",
+        "training",
+        "application"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "hallucination problem poses potential legal risks",
+      "year": 2023,
+      "citation_count": 89,
+      "elo_rating": null
+    },
+    {
+      "id": "W2983841094",
+      "title": "BERT Goes to Law School: Quantifying the Competitive Advantage of Access to Large Legal Corpora in Contract Understanding",
+      "claim": "Fine-tuning BERT on legal documents improves NLP tasks in the legal domain.",
+      "paradigm_tags": [
+        "fine-tuning",
+        "application"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": "Obtaining large legal corpora is challenging due to their confidential nature.",
+      "key_quote": "valuable improvements on NLP tasks in the legal domain",
+      "year": 2019,
+      "citation_count": 32,
+      "elo_rating": null
+    },
+    {
+      "id": "W3135190223",
+      "title": "CUAD: An Expert-Annotated NLP Dataset for Legal Contract Review",
+      "claim": "CUAD is a new dataset for legal contract review created with expert annotations.",
+      "paradigm_tags": [
+        "dataset",
+        "evaluation",
+        "application"
+      ],
+      "data_benchmark": "CUAD",
+      "measured": null,
+      "limitation": null,
+      "key_quote": "over 13,000 annotations",
+      "year": 2021,
+      "citation_count": 95,
+      "elo_rating": null
+    },
+    {
+      "id": "W4366999416",
+      "title": "SAILER: Structure-aware Pre-trained Language Model for Legal Case Retrieval",
+      "claim": "SAILER introduces a structure-aware pre-trained language model for improved legal case retrieval.",
+      "paradigm_tags": [
+        "retrieval",
+        "training",
+        "representation"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "effective pre-training strategies for legal case retrieval",
+      "year": 2023,
+      "citation_count": 44,
+      "elo_rating": null
+    },
+    {
+      "id": "W2734994265",
+      "title": "Artificial Intelligence and Legal Analytics: New Tools for Law Practice in the Digital Age",
+      "claim": "The paper explains how AI will transform legal practice by connecting computational models of legal reasoning.",
+      "paradigm_tags": [
+        "application",
+        "reasoning"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "new legal applications are beginning to appear",
+      "year": 2017,
+      "citation_count": 80,
+      "elo_rating": null
+    },
+    {
+      "id": "W3201427244",
+      "title": "Unsupervised law article mining based on deep pre-trained language representation models with application to the Italian civil code",
+      "claim": "We present LamBERTa, a deep learning framework for law article retrieval specifically trained on the Italian civil code.",
+      "paradigm_tags": [
+        "retrieval",
+        "representation",
+        "training",
+        "application"
+      ],
+      "data_benchmark": "Italian civil code",
+      "measured": null,
+      "limitation": null,
+      "key_quote": "first study proposing an advanced approach to law article prediction",
+      "year": 2021,
+      "citation_count": 47,
+      "elo_rating": null
+    },
+    {
+      "id": "W3035668167",
+      "title": "How Does NLP Benefit Legal System: A Summary of Legal Artificial Intelligence",
+      "claim": "LegalAI applies natural language processing to improve efficiency in the legal domain.",
+      "paradigm_tags": [
+        "application",
+        "survey",
+        "efficiency"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "liberating legal professionals from a maze of paperwork",
+      "year": 2020,
+      "citation_count": 293,
+      "elo_rating": null
+    },
+    {
+      "id": "W4385570658",
+      "title": "Exploring the Effectiveness of Prompt Engineering for Legal Reasoning Tasks",
+      "claim": "This paper explores the effectiveness of Chain-of-Thought prompts in legal reasoning tasks.",
+      "paradigm_tags": [
+        "prompting",
+        "reasoning",
+        "evaluation"
+      ],
+      "data_benchmark": "COLIEE entailment task",
+      "measured": null,
+      "limitation": null,
+      "key_quote": "significant improvements in tasks such as arithmetic and common-sense reasoning",
+      "year": 2023,
+      "citation_count": 32,
+      "elo_rating": null
+    },
+    {
+      "id": "W4400047099",
+      "title": "Large Legal Fictions: Profiling Legal Hallucinations in Large Language Models",
+      "claim": "We present the first systematic evidence of hallucinations in public-facing LLMs across various legal contexts.",
+      "paradigm_tags": [
+        "evaluation",
+        "application",
+        "knowledge"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "the presence of 'hallucinations'—textual output that is not consistent with legal facts",
+      "year": 2024,
+      "citation_count": 130,
+      "elo_rating": null
+    },
+    {
+      "id": "W4295884310",
+      "title": "Pre-trained Language Models for the Legal Domain: A Case Study on Indian Law",
+      "claim": "The paper emphasizes the need for pre-training language models on Indian legal text due to its unique characteristics.",
+      "paradigm_tags": [
+        "training",
+        "application"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "necessary to pre-train such LMs over legal text of other countries",
+      "year": 2022,
+      "citation_count": 27,
+      "elo_rating": null
+    },
+    {
+      "id": "W7083708304",
+      "title": "Evaluating the Limits of Large Language Models in Multilingual Legal Reasoning",
+      "claim": "This work evaluates LLaMA and Gemini on multilingual legal and non-legal reasoning.",
+      "paradigm_tags": [
+        "evaluation",
+        "reasoning"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": "Performance in multilingual, jurisdictionally diverse, and adversarial contexts remains insufficiently explored.",
+      "key_quote": "understanding their capabilities and limitations, especially in high-stakes fields like law",
+      "year": 2025,
+      "citation_count": 0,
+      "elo_rating": null
+    },
+    {
+      "id": "W4386106638",
+      "title": "Legal Knowledge Representation Learning",
+      "claim": "Legal AI enhances legal tasks by providing convenient services for professionals and non-specialists.",
+      "paradigm_tags": [
+        "application",
+        "representation",
+        "knowledge"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "Legal AI can provide a handy reference and convenient legal services",
+      "year": 2023,
+      "citation_count": 5,
+      "elo_rating": null
+    },
+    {
+      "id": "W3185808704",
+      "title": "Toward summarizing case decisions via extracting argument issues, reasons, and conclusions",
+      "claim": "The paper explores deep learning algorithms to summarize legal decisions by extracting argument issues, reasons, and conclusions.",
+      "paradigm_tags": [
+        "application",
+        "dataset",
+        "evaluation"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "succinct summaries of legal decisions",
+      "year": 2021,
+      "citation_count": 15,
+      "elo_rating": null
+    },
+    {
+      "id": "W4392456872",
+      "title": "Transforming Justice: Implications of Artificial Intelligence in Legal Systems",
+      "claim": "The literature review explores AI's impact on the justice system, highlighting its prospects and challenges.",
+      "paradigm_tags": [
+        "survey",
+        "application",
+        "fairness",
+        "efficiency"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "growing impact of artificial intelligence (AI) on the justice system",
+      "year": 2024,
+      "citation_count": 14,
+      "elo_rating": null
+    },
+    {
+      "id": "W2123761774",
+      "title": "An artificial intelligence approach to legal reasoning",
+      "claim": "The paper explores AI's ability to reason about legal problems, distinguishing between competent and debatable questions.",
+      "paradigm_tags": [
+        "reasoning",
+        "application"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "distinguish between questions it is competent to answer",
+      "year": 1985,
+      "citation_count": 388,
+      "elo_rating": null
+    },
+    {
+      "id": "W4382319715",
+      "title": "Can GPT-4 Support Analysis of Textual Data in Tasks Requiring Highly Specialized Domain Expertise?",
+      "claim": "GPT-4 performs comparably to law student annotators in analyzing court opinions.",
+      "paradigm_tags": [
+        "generative",
+        "evaluation",
+        "application"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": "minor decrease in performance for batch predictions",
+      "key_quote": "GPT-4 can perform batch predictions",
+      "year": 2023,
+      "citation_count": 11,
+      "elo_rating": null
+    },
+    {
+      "id": "W2858159822",
+      "title": "CAIL2018: A Large-Scale Legal Dataset for Judgment Prediction",
+      "claim": "CAIL2018 is the first large-scale Chinese legal dataset for judgment prediction.",
+      "paradigm_tags": [
+        "dataset",
+        "benchmark"
+      ],
+      "data_benchmark": "CAIL2018",
+      "measured": null,
+      "limitation": null,
+      "key_quote": "the first large-scale Chinese legal dataset",
+      "year": 2018,
+      "citation_count": 187,
+      "elo_rating": null
+    },
+    {
+      "id": "W4403714226",
+      "title": "Generative AI in EU law: Liability, privacy, intellectual property, and cybersecurity",
+      "claim": "The paper explores the implications of generative AI on EU law regarding liability, privacy, intellectual property, and cybersecurity.",
+      "paradigm_tags": [
+        "application",
+        "survey"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": null,
+      "year": 2024,
+      "citation_count": 41,
+      "elo_rating": null
+    },
+    {
+      "id": "W4391748374",
+      "title": "Constructing and Testing AI International Legal Education Coupling-Enabling Model",
+      "claim": "This paper constructs a coupling empowerment model of AI international legal education.",
+      "paradigm_tags": [
+        "application",
+        "evaluation",
+        "knowledge"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "coupling capability of artificial intelligence in international legal education",
+      "year": 2024,
+      "citation_count": 13,
+      "elo_rating": null
+    },
+    {
+      "id": "W2954372680",
+      "title": "Artificial Intelligence and Law: An Overview",
+      "claim": "This article provides a high-level overview of AI and its application in the legal field.",
+      "paradigm_tags": [
+        "application",
+        "survey"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "AI and how it is being used by lawyers",
+      "year": 2019,
+      "citation_count": 130,
+      "elo_rating": null
+    },
+    {
+      "id": "W4388214929",
+      "title": "Harnessing GPT-3.5-Turbo for Rhetorical Role Prediction in Legal Cases",
+      "claim": "We explore one-stage elicitation techniques for rhetorical role prediction in legal cases using GPT-3.5-turbo.",
+      "paradigm_tags": [
+        "prompting",
+        "generative",
+        "reasoning"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": "rhetorical role prediction task of legal cases",
+      "year": 2023,
+      "citation_count": 6,
+      "elo_rating": null
+    },
+    {
+      "id": "W4296886339",
+      "title": "Traditional Machine Learning and Deep Learning-based Text Classification for Turkish Law Documents using Transformers and Domain Adaptation",
+      "claim": "The paper explores text classification for Turkish law documents using traditional and deep learning methods.",
+      "paradigm_tags": [
+        "application",
+        "training",
+        "evaluation"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": "Very little text classification work in the law domain for Turkish language.",
+      "key_quote": "very little text classification work in the law domain",
+      "year": 2022,
+      "citation_count": 11,
+      "elo_rating": null
+    },
+    {
+      "id": "W2885101771",
+      "title": "Artificial Intelligence and Legal Analytics: New Tools for Law Practice in the Digital Age",
+      "claim": "The paper discusses the integration of AI and legal analytics to enhance law practice.",
+      "paradigm_tags": [
+        "application",
+        "evaluation",
+        "efficiency"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": null,
+      "year": 2018,
+      "citation_count": 100,
+      "elo_rating": null
+    },
+    {
+      "id": "W3121217868",
+      "title": "Multi-label legal document classification: A deep learning-based approach with label-attention and domain-specific pre-training",
+      "claim": "This paper presents a deep learning approach for multi-label legal document classification using label-attention and domain-specific pre-training.",
+      "paradigm_tags": [
+        "fine-tuning",
+        "training",
+        "application"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": null,
+      "year": 2021,
+      "citation_count": 68,
+      "elo_rating": null
+    },
+    {
+      "id": "W4397003987",
+      "title": "Self-training improves few-shot learning in legal artificial intelligence tasks",
+      "claim": "Self-training enhances few-shot learning performance in legal AI tasks.",
+      "paradigm_tags": [
+        "training",
+        "evaluation",
+        "application"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": null,
+      "year": 2024,
+      "citation_count": 4,
+      "elo_rating": null
+    },
+    {
+      "id": "W7118167608",
+      "title": "A Reusable Prompting Framework for Applying Large Language Models to Legal Tasks",
+      "claim": "The paper presents a reusable framework for effectively applying large language models to various legal tasks.",
+      "paradigm_tags": [
+        "prompting",
+        "application"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": null,
+      "year": 2026,
+      "citation_count": 0,
+      "elo_rating": null
+    },
+    {
+      "id": "W2903938540",
+      "title": "Deep learning in law: early adaptation and legal word embeddings trained on large corpora",
+      "claim": "The paper discusses the early adaptation of deep learning techniques in law and the development of legal word embeddings from large corpora.",
+      "paradigm_tags": [
+        "representation",
+        "training",
+        "application"
+      ],
+      "data_benchmark": null,
+      "measured": null,
+      "limitation": null,
+      "key_quote": null,
+      "year": 2018,
+      "citation_count": 181,
+      "elo_rating": null
+    },
+    {
+      "id": "W4308615104",
+      "title": "Named Entity Recognition in Indian court judgments",
+      "claim": "This paper introduces a new corpus of 46545 annotated legal named entities mapped to 14 legal entity types.",
+      "paradigm_tags": [
+        "dataset",
+        "benchmark",
+        "application"
+      ],
+      "data_benchmark": "46545 annotated legal named entities",
+      "measured": null,
+      "limitation": null,
+      "key_quote": "Named Entities in legal texts are slightly different and more fine-grained",
+      "year": 2022,
+      "citation_count": 2,
+      "elo_rating": null
+    },
+    {
+      "id": "W4226275564",
+      "title": "Corpus for Automatic Structuring of Legal Documents",
+      "claim": "We introduce a new corpus for structuring legal documents segmented into topical parts with annotated Rhetorical Roles.",
+      "paradigm_tags": [
+        "dataset",
+        "benchmark",
+        "evaluation"
+      ],
+      "data_benchmark": "corpus of legal judgment documents in English",
+      "measured": null,
+      "limitation": null,
+      "key_quote": "a new corpus for structuring legal documents",
+      "year": 2022,
+      "citation_count": 39,
+      "elo_rating": null
+    }
+  ]
+}

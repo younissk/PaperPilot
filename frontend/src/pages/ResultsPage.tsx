@@ -10,6 +10,8 @@ import {
   Text,
   Box,
   useMantineTheme,
+  Badge,
+  Group,
 } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import { ReportForm } from "../components/ReportForm";
@@ -117,10 +119,51 @@ export function ResultsPage() {
 
   return (
     <Container size="xl" py="xl">
+      <style>{`
+        @keyframes gradientShift {
+          0% {
+            background-position: 0% 50%;
+          }
+          50% {
+            background-position: 100% 50%;
+          }
+          100% {
+            background-position: 0% 50%;
+          }
+        }
+        .gradient-title-background {
+          background: linear-gradient(
+            -45deg,
+            var(--mantine-color-primary-6),
+            var(--mantine-color-primary-4),
+            var(--mantine-color-primary-7),
+            var(--mantine-color-primary-5)
+          );
+          background-size: 400% 400%;
+          animation: gradientShift 15s ease infinite;
+          padding: var(--mantine-spacing-xl);
+          padding-top: var(--mantine-spacing-xl);
+          padding-bottom: var(--mantine-spacing-xl);
+          border-radius: var(--mantine-radius-md);
+          margin-bottom: var(--mantine-spacing-xl);
+        }
+      `}</style>
       <Stack gap="xl">
-        <Title order={1}>
-          {currentQuery ? `Results: ${currentQuery}` : "Search Results"}
-        </Title>
+        <Box className="gradient-title-background">
+          <Stack gap="md">
+            <Title order={1} c="white" style={{ margin: 0 }}>
+              {currentQuery ? `Results: ${currentQuery}` : "Search Results"}
+            </Title>
+            <Group gap="sm">
+              <Badge size="lg" variant="light" color="white" style={{ backgroundColor: "rgba(255, 255, 255, 0.2)", color: "white" }}>
+                {papers.length} {papers.length === 1 ? "paper" : "papers"}
+              </Badge>
+              <Badge size="lg" variant="light" color="white" style={{ backgroundColor: "rgba(255, 255, 255, 0.2)", color: "white" }}>
+                {new Date().toLocaleDateString()}
+              </Badge>
+            </Group>
+          </Stack>
+        </Box>
 
         <Box
           style={{
@@ -172,8 +215,8 @@ export function ResultsPage() {
               />
             ) : (
               <Button
-                variant="gradient"
-                gradient={{ from: "primary", to: "accent", deg: 135 }}
+                variant="filled"
+                color="primary"
                 onClick={() => setShowReportForm(true)}
                 radius={0}
               >

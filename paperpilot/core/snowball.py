@@ -11,7 +11,7 @@ Uses async/await for concurrent API calls to improve performance.
 """
 
 import asyncio
-from typing import List, Set, Dict, Tuple
+from typing import List, Set, Dict, Tuple, Optional, Callable
 
 import aiohttp
 
@@ -81,18 +81,24 @@ class SnowballEngine:
     async def run(
         self,
         session: aiohttp.ClientSession,
-        seeds: List[SnowballCandidate]
+        seeds: List[SnowballCandidate],
+        progress_callback: Optional[Callable[[int, str, int, int, str, int, int], None]] = None,
+        total_iterations: int = 0,
     ) -> List[AcceptedPaper]:
         """Run the iterative snowballing algorithm.
         
         Args:
             session: aiohttp ClientSession for HTTP requests
             seeds: Initial seed papers to start snowballing from
+            progress_callback: Optional callback function(step, step_name, current, total, message, current_iteration, total_iterations)
+            total_iterations: Maximum iterations configured (for progress tracking)
             
         Returns:
             List of accepted papers with full provenance
         """
         # Iteration 0: Accept all seeds (they already passed initial filtering)
+        if progress_callback:
+            progress_callback(5, "Running Snowball Search", 0, len(seeds), f"Processing {len(seeds)} seed papers...", 0, total_iterations)
         
         current_frontier: List[SnowballCandidate] = []
         
@@ -118,6 +124,9 @@ class SnowballEngine:
             )
             self.accepted.append(accepted)
             current_frontier.append(seed)
+            
+            if progress_callback:
+                progress_callback(5, "Running Snowball Search", idx, len(seeds), f"Accepted {idx} of {len(seeds)} seed papers", 0, total_iterations)
         
         # Iterations 1..N: Expand, rank, judge
         for iteration in range(1, self.max_iterations + 1):
@@ -127,20 +136,30 @@ class SnowballEngine:
             if len(self.accepted) >= self.max_total_accepted:
                 break
             
+            if progress_callback:
+                progress_callback(5, "Running Snowball Search", 0, 0, f"Iteration {iteration}: Expanding frontier...", iteration, total_iterations)
+            
             # Phase 1: Expand - get refs and citations (CONCURRENT)
-            all_candidates = await self._expand_frontier(session, current_frontier, depth=iteration)
+            all_candidates = await self._expand_frontier(session, current_frontier, depth=iteration, progress_callback=progress_callback, iteration=iteration, total_iterations=total_iterations)
             
             if not all_candidates:
                 # Fallback: Try to find established related papers if iteration 1 failed
                 if iteration == 1:
+                    if progress_callback:
+                        progress_callback(5, "Running Snowball Search", 0, 0, "Iteration 1: No candidates found, trying fallback search...", iteration, total_iterations)
                     fallback_candidates = await self._search_established_papers(session)
                     
                     if fallback_candidates:
                         all_candidates = fallback_candidates
+                        if progress_callback:
+                            progress_callback(5, "Running Snowball Search", len(all_candidates), len(all_candidates), f"Iteration 1: Found {len(all_candidates)} fallback candidates", iteration, total_iterations)
                     else:
                         break
                 else:
                     break
+            
+            if progress_callback:
+                progress_callback(5, "Running Snowball Search", 0, len(all_candidates), f"Iteration {iteration}: Ranking {len(all_candidates)} candidates...", iteration, total_iterations)
             
             # Phase 2: Rank - cheap scoring before LLM (sync, CPU-bound)
             ranked, passed_gate, total = rank_candidates(
@@ -150,11 +169,20 @@ class SnowballEngine:
                 relaxed=True  # Allow papers matching ANY concept group
             )
             
+            if progress_callback:
+                progress_callback(5, "Running Snowball Search", len(ranked), len(all_candidates), f"Iteration {iteration}: Ranked {len(ranked)} top candidates for judging", iteration, total_iterations)
+            
             if not ranked:
                 break
             
+            if progress_callback:
+                progress_callback(5, "Running Snowball Search", 0, len(ranked), f"Iteration {iteration}: Judging {len(ranked)} candidates...", iteration, total_iterations)
+            
             # Phase 3: Judge - LLM evaluation of top N (CONCURRENT)
-            new_accepted = await self._judge_candidates(ranked)
+            new_accepted = await self._judge_candidates(ranked, progress_callback=progress_callback, iteration=iteration, total_iterations=total_iterations)
+            
+            if progress_callback:
+                progress_callback(5, "Running Snowball Search", len(new_accepted), len(ranked), f"Iteration {iteration}: Accepted {len(new_accepted)} papers (total: {len(self.accepted)})", iteration, total_iterations)
             
             # Update frontier for next iteration
             current_frontier = [
@@ -174,6 +202,8 @@ class SnowballEngine:
             
             # Check convergence
             if len(new_accepted) < self.min_new_papers_threshold:
+                if progress_callback:
+                    progress_callback(5, "Running Snowball Search", len(self.accepted), len(self.accepted), f"Converged: Only {len(new_accepted)} new papers (threshold: {self.min_new_papers_threshold})", iteration, total_iterations)
                 break
         
         return self.accepted
@@ -182,7 +212,10 @@ class SnowballEngine:
         self,
         session: aiohttp.ClientSession,
         frontier: List[SnowballCandidate],
-        depth: int
+        depth: int,
+        progress_callback: Optional[Callable[[int, str, int, int, str, int, int], None]] = None,
+        iteration: int = 0,
+        total_iterations: int = 0,
     ) -> List[SnowballCandidate]:
         """Expand all papers in the frontier by fetching refs and citations concurrently.
         
@@ -230,10 +263,13 @@ class SnowballEngine:
         all_candidates: List[SnowballCandidate] = []
         paper_results: Dict[str, Tuple[int, int]] = {}  # paper_id -> (ref_count, cite_count)
         
-        for paper, (ref_candidates, cite_candidates) in zip(frontier, results):
+        for idx, (paper, (ref_candidates, cite_candidates)) in enumerate(zip(frontier, results), 1):
             all_candidates.extend(ref_candidates)
             all_candidates.extend(cite_candidates)
             paper_results[paper.paper_id] = (len(ref_candidates), len(cite_candidates))
+            
+            if progress_callback and idx % 5 == 0:  # Update every 5 papers
+                progress_callback(5, "Running Snowball Search", idx, len(frontier), f"Iteration {iteration}: Expanded {idx} of {len(frontier)} papers, found {len(all_candidates)} candidates", iteration, total_iterations)
         
         # Deduplicate candidates by paper_id (keep first occurrence)
         seen: Set[str] = set()
@@ -485,7 +521,10 @@ class SnowballEngine:
     
     async def _judge_candidates(
         self,
-        candidates: List[SnowballCandidate]
+        candidates: List[SnowballCandidate],
+        progress_callback: Optional[Callable[[int, str, int, int, str, int, int], None]] = None,
+        iteration: int = 0,
+        total_iterations: int = 0,
     ) -> List[AcceptedPaper]:
         """Send candidates to LLM judge concurrently and collect accepted papers.
         
@@ -519,7 +558,7 @@ class SnowballEngine:
         # Process results
         new_accepted: List[AcceptedPaper] = []
         
-        for (candidate, _), result in zip(candidates_with_context, results):
+        for idx, ((candidate, _), result) in enumerate(zip(candidates_with_context, results), 1):
             if result.relevant:
                 # Check budget
                 if len(self.accepted) >= self.max_total_accepted:
@@ -539,5 +578,8 @@ class SnowballEngine:
                 )
                 self.accepted.append(accepted)
                 new_accepted.append(accepted)
+            
+            if progress_callback and idx % 5 == 0:  # Update every 5 judgments
+                progress_callback(5, "Running Snowball Search", idx, len(candidates_with_context), f"Iteration {iteration}: Judged {idx} of {len(candidates_with_context)} candidates, accepted {len(new_accepted)}", iteration, total_iterations)
         
         return new_accepted

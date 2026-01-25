@@ -1,6 +1,7 @@
-import { AppShell } from '@mantine/core';
-import { ReactNode } from 'react';
-import { AppBar } from './AppBar';
+import { AppShell } from "@mantine/core";
+import { ReactNode } from "react";
+import { useLocation } from "react-router-dom";
+import { AppBar } from "./AppBar";
 
 interface LayoutProps {
   children: ReactNode;
@@ -8,11 +9,8 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   return (
-    <AppShell
-      header={{ height: 70 }}
-      padding="md"
-    >
-      <AppShell.Header>
+    <AppShell header={{ height: 55 }} padding="md">
+      <AppShell.Header withBorder={false}>
         <AppBar />
       </AppShell.Header>
       <AppShell.Main>{children}</AppShell.Main>

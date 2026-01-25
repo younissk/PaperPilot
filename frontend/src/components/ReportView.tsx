@@ -35,7 +35,6 @@ export function buildReportSections(
     },
     { id: "open-problems", title: "Open Problems" },
     { id: "conclusion", title: "Conclusion" },
-    { id: "paper-cards", title: "Paper Cards" },
     { id: "sources", title: "Sources" },
   ];
 

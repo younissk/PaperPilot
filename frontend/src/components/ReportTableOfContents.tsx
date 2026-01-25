@@ -16,7 +16,7 @@ export function ReportTableOfContents({
     }
   };
 
-  const renderSection = (section: TocSection, level: number = 0) => {
+  const renderSection = (section: TocSection) => {
     return (
       <div key={section.id}>
         <NavLink
@@ -25,15 +25,8 @@ export function ReportTableOfContents({
           onClick={(e) => handleClick(e, section.id)}
           style={{
             textDecoration: "none",
-            paddingLeft: level > 0 ? `${16 + level * 16}px` : undefined,
-            fontSize: level > 0 ? "0.875rem" : undefined,
           }}
         />
-        {section.children && section.children.length > 0 && (
-          <Stack gap={0} style={{ marginLeft: "8px" }}>
-            {section.children.map((child) => renderSection(child, level + 1))}
-          </Stack>
-        )}
       </div>
     );
   };

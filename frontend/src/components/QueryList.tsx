@@ -5,17 +5,12 @@ import {
   Text,
   Button,
   Group,
-  Badge,
   Loader,
   Alert,
   ScrollArea,
 } from "@mantine/core";
-import {
-  useQueriesList,
-  useQueryMetadata,
-  useSnowballResults,
-} from "../hooks/queries/useQueries";
-import { showError } from "../utils/notifications";
+import { useQueriesList } from "../hooks/queries/useQueries";
+import { getSnowballResults } from "../services/api";
 import type { Paper } from "../services/api";
 
 interface QueryListProps {
@@ -24,27 +19,27 @@ interface QueryListProps {
 
 export function QueryList({ onSelectQuery }: QueryListProps) {
   const { data: queriesData, isLoading, error, refetch } = useQueriesList();
-  const [selectedQuery, setSelectedQuery] = useState<string | null>(null);
-
-  const { data: metadataData } = useQueryMetadata(selectedQuery);
-  const { data: snowballData, isLoading: loadingSnowball } =
-    useSnowballResults(selectedQuery);
+  const [loadingQuery, setLoadingQuery] = useState<string | null>(null);
 
   const queries = queriesData?.queries || [];
 
-  const handleQueryClick = (query: string) => {
-    setSelectedQuery(query);
-    if (onSelectQuery && snowballData) {
-      onSelectQuery(query, snowballData.papers);
+  const handleQueryClick = async (query: string) => {
+    if (!onSelectQuery) return;
+    
+    setLoadingQuery(query);
+    try {
+      const data = await getSnowballResults(query);
+      onSelectQuery(query, data.papers || []);
+    } catch (err) {
+      console.error("Failed to load snowball results:", err);
+    } finally {
+      setLoadingQuery(null);
     }
   };
 
   if (isLoading) {
     return (
       <Stack align="center" gap="md">
-        <Text size="lg" fw={500}>
-          Previous Queries
-        </Text>
         <Loader />
       </Stack>
     );
@@ -53,10 +48,7 @@ export function QueryList({ onSelectQuery }: QueryListProps) {
   if (error) {
     return (
       <Stack gap="md">
-        <Group justify="space-between">
-          <Text size="lg" fw={500}>
-            Previous Queries
-          </Text>
+        <Group justify="flex-end">
           <Button onClick={() => refetch()}>Retry</Button>
         </Group>
         <Alert color="error" title="Error">
@@ -69,10 +61,7 @@ export function QueryList({ onSelectQuery }: QueryListProps) {
   if (queries.length === 0) {
     return (
       <Stack gap="md">
-        <Group justify="space-between">
-          <Text size="lg" fw={500}>
-            Previous Queries
-          </Text>
+        <Group justify="flex-end">
           <Button variant="subtle" onClick={() => refetch()}>
             Refresh
           </Button>
@@ -84,10 +73,7 @@ export function QueryList({ onSelectQuery }: QueryListProps) {
 
   return (
     <Stack gap="md">
-      <Group justify="space-between">
-        <Text size="lg" fw={500}>
-          Previous Queries
-        </Text>
+      <Group justify="flex-end">
         <Button variant="subtle" onClick={() => refetch()}>
           Refresh
         </Button>
@@ -103,44 +89,15 @@ export function QueryList({ onSelectQuery }: QueryListProps) {
               radius={0}
               withBorder
               style={{
-                cursor: "pointer",
-                borderColor:
-                  selectedQuery === query
-                    ? "var(--mantine-color-primary-6)"
-                    : undefined,
-                borderWidth: selectedQuery === query ? 2 : 1,
+                cursor: loadingQuery === query ? "wait" : "pointer",
+                opacity: loadingQuery === query ? 0.7 : 1,
               }}
               onClick={() => handleQueryClick(query)}
             >
-              <Stack gap="sm">
+              <Group justify="space-between">
                 <Text fw={500}>{query}</Text>
-                {loadingSnowball && selectedQuery === query && (
-                  <Group gap="xs">
-                    <Loader size="sm" />
-                    <Text size="sm" c="dimmed">
-                      Loading...
-                    </Text>
-                  </Group>
-                )}
-                {metadataData && selectedQuery === query && (
-                  <Stack gap="xs" mt="sm">
-                    {Object.entries(metadataData.metadata).map(
-                      ([key, value]) => (
-                        <Group key={key} gap="xs">
-                          <Text size="sm" fw={500} c="dimmed">
-                            {key}:
-                          </Text>
-                          <Text size="sm">
-                            {typeof value === "object"
-                              ? JSON.stringify(value)
-                              : String(value)}
-                          </Text>
-                        </Group>
-                      ),
-                    )}
-                  </Stack>
-                )}
-              </Stack>
+                {loadingQuery === query && <Loader size="sm" />}
+              </Group>
             </Card>
           ))}
         </Stack>

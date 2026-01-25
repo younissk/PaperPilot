@@ -2,7 +2,8 @@
  * Component for displaying research report in a formatted, readable way.
  */
 
-import { Title, Text, Stack, Group, Badge, Paper, Grid } from "@mantine/core";
+import { Title, Text, Stack, Group, Badge, Paper, Popover, Anchor } from "@mantine/core";
+import { useState, useMemo } from "react";
 import { PaperList } from "./PaperList";
 import type { Paper as PaperType } from "../services/api";
 
@@ -58,28 +59,126 @@ export function ReportDisplay({
     );
   }
 
-  // Create a lookup map for paper cards
-  const paperCardMap = new Map(data.paper_cards.map((card) => [card.id, card]));
+  // Create a lookup map for paper cards (memoized for performance)
+  const paperCardMap = useMemo(
+    () => new Map(data.paper_cards.map((card) => [card.id, card])),
+    [data.paper_cards]
+  );
 
-  const handleCitationClick = (paperId: string) => {
-    const element = document.getElementById(`paper-card-${paperId}`);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "center" });
-      // Highlight the card briefly
-      element.style.transition = "background-color 0.3s";
-      element.style.backgroundColor = "var(--mantine-color-primary-0)";
-      setTimeout(() => {
-        element.style.backgroundColor = "";
-      }, 2000);
+  // State for popover management - track unique citation instance keys
+  const [openedPopover, setOpenedPopover] = useState<string | null>(null);
+
+  // Get paper link - handles different ID formats
+  const getPaperLink = (paperId: string): string | null => {
+    // OpenAlex IDs start with W, format: https://openalex.org/W1234567890
+    if (paperId.startsWith("W")) {
+      return `https://openalex.org/${paperId}`;
     }
+    // S2 format IDs don't have direct links, return null
+    if (paperId.startsWith("S2:")) {
+      return null;
+    }
+    // Fallback: search on OpenAlex
+    return `https://openalex.org/search?q=${encodeURIComponent(paperId)}`;
   };
 
-  const formatCitations = (text: string, paperIds: string[]): JSX.Element[] => {
+  // Reusable function to render a clickable citation
+  const renderCitation = (paperId: string, uniqueKey: string | number): JSX.Element => {
+    const card = paperCardMap.get(paperId);
+    const citationKey = String(uniqueKey);
+    const isOpen = openedPopover === citationKey;
+    const link = getPaperLink(paperId);
+
+    return (
+      <Popover
+        key={citationKey}
+        opened={isOpen}
+        onChange={(opened) => setOpenedPopover(opened ? citationKey : null)}
+        position="bottom"
+        withArrow
+        shadow="md"
+        withinPortal
+        transitionProps={{ duration: 150 }}
+      >
+        <Popover.Target>
+          <Badge
+            size="xs"
+            variant="light"
+            color="primary"
+            style={{
+              cursor: "pointer",
+              margin: "0 2px",
+              verticalAlign: "baseline",
+              display: "inline-block",
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setOpenedPopover(isOpen ? null : citationKey);
+            }}
+          >
+            [{paperId}]
+          </Badge>
+        </Popover.Target>
+        <Popover.Dropdown>
+          <Stack gap="sm" style={{ maxWidth: 300 }}>
+            {card ? (
+              <>
+                <Text size="sm" fw={600}>
+                  {card.title}
+                </Text>
+                <Text size="xs" c="dimmed">
+                  {card.claim}
+                </Text>
+                <Group gap="xs">
+                  {card.year && <Badge size="xs">{card.year}</Badge>}
+                  <Badge size="xs">{card.citation_count} citations</Badge>
+                  {card.elo_rating && (
+                    <Badge size="xs" color="primary">
+                      ELO: {card.elo_rating.toFixed(1)}
+                    </Badge>
+                  )}
+                </Group>
+                {card.paradigm_tags && card.paradigm_tags.length > 0 && (
+                  <Group gap="xs">
+                    {card.paradigm_tags.map((tag, i) => (
+                      <Badge key={i} variant="outline" size="xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </Group>
+                )}
+              </>
+            ) : (
+              <Text size="sm">Paper ID: {paperId}</Text>
+            )}
+            {link && (
+              <Anchor
+                href={link}
+                target="_blank"
+                rel="noopener noreferrer"
+                size="sm"
+              >
+                View on OpenAlex →
+              </Anchor>
+            )}
+          </Stack>
+        </Popover.Dropdown>
+      </Popover>
+    );
+  };
+
+  const formatCitations = (
+    text: string,
+    paperIds: string[],
+    contextPrefix: string = "cite"
+  ): JSX.Element[] => {
     const parts: JSX.Element[] = [];
     let lastIndex = 0;
 
-    // Find all citation markers like [W1234567890]
-    const citationRegex = /\[([W]\d+)\]/g;
+    // Find all citation markers - matches [W1234567890], [S2:abc123...], and other formats
+    // Pattern matches: [ followed by alphanumeric, underscore, colon, or hyphen characters, then ]
+    const citationRegex = /\[([A-Za-z0-9_:-]+)\]/g;
     let match;
     let key = 0;
 
@@ -87,32 +186,17 @@ export function ReportDisplay({
       // Add text before citation
       if (match.index > lastIndex) {
         parts.push(
-          <span key={`text-${key++}`}>
+          <span key={`text-${contextPrefix}-${key++}`}>
             {text.substring(lastIndex, match.index)}
           </span>,
         );
       }
 
-      // Add citation as a clickable badge/pill
+      // Add citation as a clickable badge/pill with popover
+      // Use context prefix + position for unique key
       const paperId = match[1];
-      const card = paperCardMap.get(paperId);
-      parts.push(
-        <Badge
-          key={`cite-${key++}`}
-          size="xs"
-          variant="light"
-          color="primary"
-          style={{
-            cursor: "pointer",
-            margin: "0 2px",
-            verticalAlign: "baseline",
-          }}
-          title={card?.title || paperId}
-          onClick={() => handleCitationClick(paperId)}
-        >
-          [{paperId}]
-        </Badge>,
-      );
+      const uniqueKey = `${contextPrefix}-${paperId}-${match.index}`;
+      parts.push(renderCitation(paperId, uniqueKey));
 
       lastIndex = match.index + match[0].length;
     }
@@ -120,11 +204,13 @@ export function ReportDisplay({
     // Add remaining text
     if (lastIndex < text.length) {
       parts.push(
-        <span key={`text-${key++}`}>{text.substring(lastIndex)}</span>,
+        <span key={`text-${contextPrefix}-${key++}`}>
+          {text.substring(lastIndex)}
+        </span>,
       );
     }
 
-    return parts.length > 0 ? parts : [<span key="text">{text}</span>];
+    return parts.length > 0 ? parts : [<span key={`text-${contextPrefix}`}>{text}</span>];
   };
 
   return (
@@ -146,7 +232,7 @@ export function ReportDisplay({
           <Title order={3} mb="md">
             Introduction
           </Title>
-          <Text>{formatCitations(data.introduction, [])}</Text>
+          <Text>{formatCitations(data.introduction, [], "intro")}</Text>
         </section>
 
         <section id="current-research">
@@ -157,32 +243,29 @@ export function ReportDisplay({
             {data.current_research.map((item, idx) => (
               <Stack key={idx} id={`current-research-${idx}`} gap="sm">
                 <Title order={4}>{item.title}</Title>
-                <Text>{formatCitations(item.summary, item.paper_ids)}</Text>
+                <Text>
+                  {formatCitations(item.summary, item.paper_ids, `research-${idx}`)}
+                </Text>
                 {item.paper_ids.length > 0 && (
                   <Stack gap="xs" mt="sm">
                     <Text size="sm" fw={500}>
                       Referenced papers:
                     </Text>
-                    <ul style={{ margin: 0, paddingLeft: "1.5rem" }}>
-                      {item.paper_ids.map((paperId) => {
+                    <Group gap="xs" wrap="wrap">
+                      {item.paper_ids.map((paperId, pidIdx) => {
                         const card = paperCardMap.get(paperId);
                         return (
-                          <li key={paperId}>
-                            <Text
-                              size="sm"
-                              component="span"
-                              c="primary"
-                              fw={600}
-                            >
-                              [{paperId}]
-                            </Text>
-                            <Text size="sm" component="span" ml="xs">
-                              {card ? card.title : paperId}
-                            </Text>
-                          </li>
+                          <Group key={`${idx}-${paperId}-${pidIdx}`} gap="xs" align="center">
+                            {renderCitation(paperId, `ref-${idx}-${paperId}-${pidIdx}`)}
+                            {card && (
+                              <Text size="sm" component="span">
+                                {card.title}
+                              </Text>
+                            )}
+                          </Group>
                         );
                       })}
-                    </ul>
+                    </Group>
                   </Stack>
                 )}
               </Stack>
@@ -207,18 +290,24 @@ export function ReportDisplay({
                   }}
                 >
                   <Stack gap="sm">
-                    <Title order={4} c="warning">
+                    <Title
+                      order={4}
+                      c="warning"
+                      style={{ wordBreak: "break-word", overflowWrap: "break-word" }}
+                    >
                       {problem.title}
                     </Title>
-                    <Text>{problem.text}</Text>
+                    <Text>
+                      {formatCitations(problem.text, problem.paper_ids, `problem-${idx}`)}
+                    </Text>
                     {problem.paper_ids.length > 0 && (
-                      <Group gap="xs" mt="sm">
+                      <Group gap="xs" mt="sm" wrap="wrap" align="center">
                         <Text size="sm" fw={500}>
                           Sources:
                         </Text>
-                        <Text size="sm" c="primary">
-                          {problem.paper_ids.map((id) => `[${id}]`).join(", ")}
-                        </Text>
+                        {problem.paper_ids.map((id, pidIdx) =>
+                          renderCitation(id, `source-${idx}-${id}-${pidIdx}`)
+                        )}
                       </Group>
                     )}
                   </Stack>
@@ -232,50 +321,7 @@ export function ReportDisplay({
           <Title order={3} mb="md">
             Conclusion
           </Title>
-          <Text>{formatCitations(data.conclusion, [])}</Text>
-        </section>
-
-        <section id="paper-cards">
-          <Title order={3} mb="md">
-            Paper Cards ({data.paper_cards.length})
-          </Title>
-          <Grid>
-            {data.paper_cards.map((card) => (
-              <Grid.Col key={card.id} span={{ base: 12, sm: 6, md: 4 }}>
-                <Paper id={`paper-card-${card.id}`} p="md" withBorder h="100%">
-                  <Stack gap="sm">
-                    <Title order={4} size="h5">
-                      {card.title}
-                    </Title>
-                    <Group gap="xs">
-                      {card.year && <Badge>{card.year}</Badge>}
-                      <Badge>{card.citation_count} citations</Badge>
-                      {card.elo_rating && (
-                        <Badge color="primary">
-                          ELO: {card.elo_rating.toFixed(1)}
-                        </Badge>
-                      )}
-                    </Group>
-                    <Text size="sm" fs="italic">
-                      <strong>Claim:</strong> {card.claim}
-                    </Text>
-                    {card.paradigm_tags && card.paradigm_tags.length > 0 && (
-                      <Group gap="xs">
-                        {card.paradigm_tags.map((tag, i) => (
-                          <Badge key={i} variant="outline" size="sm">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </Group>
-                    )}
-                    <Text size="xs" c="dimmed" ff="monospace">
-                      ID: {card.id}
-                    </Text>
-                  </Stack>
-                </Paper>
-              </Grid.Col>
-            ))}
-          </Grid>
+          <Text>{formatCitations(data.conclusion, [], "conclusion")}</Text>
         </section>
 
         {papers.length > 0 && (

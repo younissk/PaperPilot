@@ -2,6 +2,19 @@
  * Component for displaying report generation progress with detailed step tracking.
  */
 
+import {
+  Timeline,
+  Text,
+  Paper,
+  Progress,
+  Stack,
+  Title,
+  Box,
+  ThemeIcon,
+  Loader,
+  Group,
+} from "@mantine/core";
+
 interface ReportProgressViewProps {
   currentStep: number;
   stepName: string;
@@ -31,92 +44,125 @@ export function ReportProgressView({
   query,
 }: ReportProgressViewProps) {
   const totalSteps = 8;
-  const overallProgress = ((currentStep + (totalProgress > 0 ? currentProgress / totalProgress : 0)) / totalSteps) * 100;
+  const overallProgress =
+    ((currentStep + (totalProgress > 0 ? currentProgress / totalProgress : 0)) /
+      totalSteps) *
+    100;
 
   return (
-    <div className="report-progress-view">
-      <div className="report-progress-header">
-        <h2>Generating Report: {query}</h2>
-      </div>
+    <Paper p="xl" radius="md" withBorder>
+      <Stack gap="lg">
+        <Box>
+          <Title order={3} mb="xs">
+            Generating Report: {query}
+          </Title>
+        </Box>
 
-      <div className="progress-overview">
-        <div className="overall-progress">
-          <div className="progress-label">
-            <span>Overall Progress</span>
-            <span className="progress-percentage">{Math.round(overallProgress)}%</span>
-          </div>
-          <div className="progress-bar">
-            <div
-              className="progress-fill"
-              style={{ width: `${overallProgress}%` }}
-            />
-          </div>
-        </div>
-      </div>
+        <Box>
+          <Group justify="space-between" mb="xs">
+            <Text fw={500} size="sm">
+              Overall Progress
+            </Text>
+            <Text fw={700} size="md" c="primary">
+              {Math.round(overallProgress)}%
+            </Text>
+          </Group>
+          <Progress
+            value={overallProgress}
+            size="lg"
+            radius="xl"
+            animated
+            color="primary"
+          />
+        </Box>
 
-      <div className="current-step-info">
-        <div className="step-indicator">
-          <div className="step-number">Step {currentStep + 1} of {totalSteps}</div>
-          <div className="step-name">{stepName || STEP_NAMES[currentStep] || "Processing..."}</div>
-        </div>
-        
-        {totalProgress > 0 && (
-          <div className="step-progress">
-            <div className="progress-label">
-              <span>{progressMessage || `Processing ${currentProgress} of ${totalProgress}...`}</span>
-              <span className="progress-count">{currentProgress} / {totalProgress}</span>
-            </div>
-            <div className="progress-bar">
-              <div
-                className="progress-fill"
-                style={{ width: `${(currentProgress / totalProgress) * 100}%` }}
-              />
-            </div>
-          </div>
-        )}
-        
-        {totalProgress === 0 && progressMessage && (
-          <div className="step-message">
-            {progressMessage}
-          </div>
-        )}
-      </div>
+        <Box p="md" style={{ borderLeft: "4px solid var(--mantine-color-primary-6)" }}>
+          <Stack gap="xs">
+            <Text size="sm" c="dimmed">
+              Step {currentStep + 1} of {totalSteps}
+            </Text>
+            <Text fw={600} size="lg" c="primary">
+              {stepName || STEP_NAMES[currentStep] || "Processing..."}
+            </Text>
 
-      <div className="steps-list">
-        <h3>Report Generation Steps</h3>
-        <div className="steps-container">
+            {totalProgress > 0 && (
+              <Box mt="sm">
+                <Group justify="space-between" mb="xs">
+                  <Text size="sm" c="dimmed">
+                    {progressMessage ||
+                      `Processing ${currentProgress} of ${totalProgress}...`}
+                  </Text>
+                  <Text size="sm" c="dimmed" fw={500}>
+                    {currentProgress} / {totalProgress}
+                  </Text>
+                </Group>
+                <Progress
+                  value={(currentProgress / totalProgress) * 100}
+                  size="sm"
+                  radius="xl"
+                  animated
+                />
+              </Box>
+            )}
+
+            {totalProgress === 0 && progressMessage && (
+              <Text size="sm" c="dimmed" mt="xs">
+                {progressMessage}
+              </Text>
+            )}
+          </Stack>
+        </Box>
+
+        <Timeline
+          active={currentStep}
+          bulletSize={28}
+          lineWidth={2}
+          color="primary"
+        >
           {STEP_NAMES.map((name, index) => {
             const isCompleted = index < currentStep;
             const isCurrent = index === currentStep;
             const isPending = index > currentStep;
 
             return (
-              <div
+              <Timeline.Item
                 key={index}
-                className={`step-item ${isCompleted ? 'completed' : ''} ${isCurrent ? 'current' : ''} ${isPending ? 'pending' : ''}`}
-              >
-                <div className="step-item-indicator">
-                  {isCompleted ? (
-                    <span className="step-checkmark">✓</span>
+                bullet={
+                  isCompleted ? (
+                    <ThemeIcon size={20} radius="xl" color="green">
+                      ✓
+                    </ThemeIcon>
                   ) : isCurrent ? (
-                    <span className="step-number-badge">{index + 1}</span>
+                    <ThemeIcon size={20} radius="xl" color="primary" variant="light">
+                      <Loader size="xs" color="primary" />
+                    </ThemeIcon>
                   ) : (
-                    <span className="step-number-badge pending">{index + 1}</span>
-                  )}
-                </div>
-                <div className="step-item-content">
-                  <div className="step-item-name">{name}</div>
-                  {isCurrent && totalProgress > 0 && (
-                    <div className="step-item-progress">
-                      {currentProgress} / {totalProgress}
-                    </div>
-                  )}
-                </div>
-              </div>
+                    <ThemeIcon
+                      size={20}
+                      radius="xl"
+                      color="gray"
+                      variant="light"
+                    >
+                      ○
+                    </ThemeIcon>
+                  )
+                }
+                title={
+                  <Text fw={isCurrent ? 600 : 500} size="md">
+                    {name}
+                  </Text>
+                }
+              >
+                {isCurrent && totalProgress > 0 && (
+                  <Text size="xs" c="dimmed" mt="xs">
+                    {currentProgress} / {totalProgress}
+                  </Text>
+                )}
+              </Timeline.Item>
             );
           })}
-        </div>
-      </div>
-    </div>
+        </Timeline>
+      </Stack>
+    </Paper>
   );
 }

@@ -22,6 +22,13 @@ class SearchResponse(BaseModel):
     total_accepted: int = Field(0, description="Number of accepted papers")
     papers: List[dict] = Field(default_factory=list, description="List of accepted papers")
     result_path: Optional[str] = Field(None, description="Path to saved results file")
+    current_step: int = Field(0, description="Current step number (0-6)")
+    step_name: str = Field("", description="Human-readable name of current step")
+    current_progress: int = Field(0, description="Current progress value (e.g., papers processed)")
+    total_progress: int = Field(0, description="Total progress value (e.g., total papers)")
+    progress_message: str = Field("", description="Descriptive progress message")
+    current_iteration: int = Field(0, description="Current snowball iteration (0 = initial, 1+ = expansion)")
+    total_iterations: int = Field(0, description="Maximum iterations configured")
 
 
 class PaperResponse(BaseModel):
@@ -177,3 +184,38 @@ class QueryMetadataResponse(BaseModel):
     """Response schema for query metadata."""
     query: str = Field(..., description="The query string")
     metadata: Dict[str, Any] = Field(..., description="Metadata dictionary")
+
+
+# Pipeline schemas
+class PipelineRequest(BaseModel):
+    """Request schema for full pipeline: search + elo ranking + report generation."""
+    query: str = Field(..., description="Research topic to search for")
+    # Search params (with good defaults)
+    num_results: int = Field(5, ge=1, le=100, description="Number of results per query variant")
+    max_iterations: int = Field(5, ge=1, le=20, description="Maximum snowball iterations")
+    max_accepted: int = Field(200, ge=10, description="Maximum total papers to accept")
+    top_n: int = Field(50, ge=5, description="Top N candidates to judge per iteration")
+    # ELO params
+    k_factor: float = Field(32.0, ge=1.0, le=100.0, description="K-factor for Elo updates")
+    pairing: str = Field("swiss", description="Pairing strategy: 'swiss' or 'random'")
+    early_stop: bool = Field(True, description="Stop when top-30 rankings stabilize")
+    elo_concurrency: int = Field(5, ge=1, le=20, description="Max concurrent API calls for ELO")
+    # Report params
+    report_top_k: int = Field(30, ge=1, description="Number of top papers to use for report")
+
+
+class PipelineResponse(BaseModel):
+    """Response schema for pipeline results."""
+    job_id: str = Field(..., description="Unique job identifier")
+    status: str = Field(..., description="Job status: 'queued', 'searching', 'ranking', 'reporting', 'completed', 'failed'")
+    query: str = Field(..., description="The search query")
+    phase: str = Field("", description="Current phase: 'search', 'ranking', 'report'")
+    phase_step: int = Field(0, description="Current step within phase")
+    phase_step_name: str = Field("", description="Human-readable name of current step")
+    phase_progress: int = Field(0, description="Current progress value within phase")
+    phase_total: int = Field(0, description="Total progress value for current phase")
+    progress_message: str = Field("", description="Descriptive progress message")
+    # Results when completed
+    papers: List[dict] = Field(default_factory=list, description="List of papers from search")
+    report_data: Optional[Dict[str, Any]] = Field(None, description="Report JSON data when completed")
+    query_profile: Optional[Dict[str, Any]] = Field(None, description="Query profile generated during ranking phase")

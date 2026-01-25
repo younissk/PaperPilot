@@ -96,12 +96,6 @@ export function PaperList({ papers, title = "Papers" }: PaperListProps) {
 
       <Stack gap="md">
         {sortedPapers.map((paper) => {
-          const abstract = paper.abstract || "No abstract available";
-          const abstractPreview =
-            abstract.length > 150
-              ? `${abstract.substring(0, 150)}...`
-              : abstract;
-
           return (
             <Card
               key={paper.paper_id}
@@ -109,10 +103,14 @@ export function PaperList({ papers, title = "Papers" }: PaperListProps) {
               padding="lg"
               radius={0}
               withBorder
+              style={{ cursor: "pointer" }}
+              onClick={() => setSelectedPaper(paper)}
             >
               <Stack gap="sm">
-                <Title order={4}>{paper.title}</Title>
-                <Group gap="xs">
+                <Group gap="xs" align="center" wrap="wrap">
+                  <Title order={4} style={{ margin: 0 }}>
+                    {paper.title}
+                  </Title>
                   {paper.year && (
                     <Badge color="accent" radius={0}>
                       {paper.year}
@@ -122,17 +120,6 @@ export function PaperList({ papers, title = "Papers" }: PaperListProps) {
                     {paper.citation_count} citations
                   </Badge>
                 </Group>
-                <Text size="sm" c="dimmed">
-                  {abstractPreview}
-                </Text>
-                <Button
-                  variant="light"
-                  size="xs"
-                  onClick={() => setSelectedPaper(paper)}
-                  radius={0}
-                >
-                  View Details
-                </Button>
               </Stack>
             </Card>
           );
@@ -159,9 +146,6 @@ export function PaperList({ papers, title = "Papers" }: PaperListProps) {
               </Badge>
               <Badge variant="outline" radius={0}>
                 Depth: {selectedPaper.depth}
-              </Badge>
-              <Badge variant="outline" radius={0}>
-                {(selectedPaper.judge_confidence * 100).toFixed(1)}% confidence
               </Badge>
             </Group>
 

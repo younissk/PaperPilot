@@ -7,7 +7,7 @@ that can be used by CLI, API, or other interfaces.
 
 import asyncio
 import json
-from typing import List
+from typing import List, Optional, Callable
 
 import aiohttp
 
@@ -38,6 +38,7 @@ async def run_search(
     max_iterations: int = 5,
     max_accepted: int = 200,
     top_n: int = 50,
+    progress_callback: Optional[Callable[[int, str, int, int, str, int, int], None]] = None,
 ) -> List[AcceptedPaper]:
     """Run the full PaperPilot search workflow (async version).
     
@@ -48,25 +49,32 @@ async def run_search(
         max_iterations: Maximum snowball iterations
         max_accepted: Maximum total papers to accept
         top_n: Top N candidates to judge per iteration
+        progress_callback: Optional callback function(step, step_name, current, total, message, current_iteration, total_iterations)
         
     Returns:
         List of accepted papers
     """
     # Create shared aiohttp session for all HTTP requests
     async with aiohttp.ClientSession() as session:
-        # Step 1: Generate query profile
+        # Step 0: Generate query profile
+        if progress_callback:
+            progress_callback(0, "Generating Query Profile", 0, 0, "Analyzing query to extract concepts...", 0, max_iterations)
         profile = await generate_query_profile(query)
         
-        # Step 2: Augment the search query
+        # Step 1: Augment the search query
+        if progress_callback:
+            progress_callback(1, "Augmenting Search Query", 0, 0, "Creating query variants...", 0, max_iterations)
         augmented_queries, _ = await augment_search(query)
         
-        # Step 3: Search arXiv for all query variants CONCURRENTLY
+        # Step 2: Search arXiv for all query variants CONCURRENTLY
+        if progress_callback:
+            progress_callback(2, "Searching arXiv", 0, len(augmented_queries), f"Searching {len(augmented_queries)} query variants...", 0, max_iterations)
         feeds = await search_all_queries(session, augmented_queries, num_results)
         
         # Collect all results
         all_results: List[ReducedArxivEntry] = []
         
-        for search_query, feed in zip(augmented_queries, feeds):
+        for idx, (search_query, feed) in enumerate(zip(augmented_queries, feeds), 1):
             for entry in feed.entries:
                 html_link = next(
                     (link.href for link in entry.links if link.type == "text/html"), None
@@ -82,20 +90,34 @@ async def run_search(
                     link=html_link or pdf_link,
                     source_query=search_query,
                 ))
+            if progress_callback:
+                progress_callback(2, "Searching arXiv", idx, len(augmented_queries), f"Completed {idx} of {len(augmented_queries)} queries, found {len(all_results)} papers", 0, max_iterations)
         
-        # Step 4: Filter results for relevance (CONCURRENT LLM calls)
+        # Step 3: Filter results for relevance (CONCURRENT LLM calls)
+        if progress_callback:
+            progress_callback(3, "Filtering Results", 0, len(all_results), f"Filtering {len(all_results)} papers for relevance...", 0, max_iterations)
         filtered_results, _, _ = await filter_results(profile, all_results)
+        
+        if progress_callback:
+            progress_callback(3, "Filtering Results", len(filtered_results), len(all_results), f"Filtered to {len(filtered_results)} relevant papers", 0, max_iterations)
         
         if not filtered_results:
             return []
         
-        # Step 5: Resolve arXiv papers to OpenAlex IDs (CONCURRENT)
-        seeds = await _resolve_papers_to_openalex(session, filtered_results)
+        # Step 4: Resolve arXiv papers to OpenAlex IDs (CONCURRENT)
+        if progress_callback:
+            progress_callback(4, "Resolving Paper IDs", 0, len(filtered_results), f"Resolving {len(filtered_results)} papers to OpenAlex IDs...", 0, max_iterations)
+        seeds = await _resolve_papers_to_openalex(session, filtered_results, progress_callback)
+        
+        if progress_callback:
+            progress_callback(4, "Resolving Paper IDs", len(seeds), len(filtered_results), f"Resolved {len(seeds)} papers to OpenAlex IDs", 0, max_iterations)
         
         if not seeds:
             return []
         
-        # Step 6: Run the Snowball Engine
+        # Step 5: Run the Snowball Engine
+        if progress_callback:
+            progress_callback(5, "Running Snowball Search", 0, 0, f"Starting snowball search with {len(seeds)} seed papers...", 0, max_iterations)
         engine = SnowballEngine(
             profile=profile,
             max_iterations=max_iterations,
@@ -104,17 +126,23 @@ async def run_search(
             max_total_accepted=max_accepted,
         )
         
-        accepted_papers = await engine.run(session, seeds)
+        accepted_papers = await engine.run(session, seeds, progress_callback, max_iterations)
         
-        # Step 7: Export results
+        # Step 6: Export results
+        if progress_callback:
+            progress_callback(6, "Exporting Results", 0, 0, f"Saving {len(accepted_papers)} papers to file...", max_iterations, max_iterations)
         export_results(accepted_papers, query, output_file)
+        
+        if progress_callback:
+            progress_callback(6, "Exporting Results", 1, 1, f"Completed! Found {len(accepted_papers)} papers", max_iterations, max_iterations)
         
         return accepted_papers
 
 
 async def _resolve_papers_to_openalex(
     session: aiohttp.ClientSession,
-    filtered_results: List[ReducedArxivEntry]
+    filtered_results: List[ReducedArxivEntry],
+    progress_callback: Optional[Callable[[int, str, int, int, str, int, int], None]] = None,
 ) -> List[SnowballCandidate]:
     """Resolve arXiv papers to OpenAlex IDs concurrently.
     
@@ -164,9 +192,11 @@ async def _resolve_papers_to_openalex(
     # Collect seeds
     seeds: List[SnowballCandidate] = []
     
-    for result, seed in results:
+    for idx, (result, seed) in enumerate(results, 1):
         if seed:
             seeds.append(seed)
+        if progress_callback and idx % 5 == 0:  # Update every 5 papers
+            progress_callback(4, "Resolving Paper IDs", idx, len(filtered_results), f"Resolved {idx} of {len(filtered_results)} papers...", 0, 0)
     
     return seeds
 
