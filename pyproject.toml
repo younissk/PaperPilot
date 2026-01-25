@@ -1,0 +1,36 @@
+[project]
+name = "paperpilot"
+version = "0.1.0"
+description = "AI-powered academic literature discovery using snowball sampling"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "openai>=2.15.0",
+    "pydantic>=2.12.5",
+    "tqdm>=4.67.1",
+    "rich>=13.0.0",
+    "typer>=0.15.0",
+    "aiohttp>=3.9.0",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.32.0",
+    "numpy>=1.26.0",
+    "scikit-learn>=1.4.0",
+    "plotly>=5.18.0",
+    "structlog>=24.0.0",
+]
+
+[project.optional-dependencies]
+# Optional clustering dependencies (require Python < 3.13)
+cluster-full = [
+    "hdbscan>=0.8.33",
+    "umap-learn>=0.5.5",
+]
+
+[project.scripts]
+paperpilot = "paperpilot.cli.app:app"
+
+[tool.setuptools]
+packages = ["paperpilot"]
+
+[tool.uv]
+package = true
