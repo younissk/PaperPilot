@@ -114,6 +114,8 @@ Resources:
         Variables:
           # Additional API-specific env vars can go here
           LOG_LEVEL: INFO
+          # OPENAI_API_KEY: Set manually after deployment via Lambda console
+          # Or use Secrets Manager and reference it here
 
   # --------------------------------------------------------------------------
   # Worker Lambda Function (SQS Consumer)
@@ -151,6 +153,8 @@ Resources:
       Environment:
         Variables:
           LOG_LEVEL: INFO
+          # OPENAI_API_KEY: Set manually after deployment via Lambda console
+          # Or use Secrets Manager and reference it here
 
 # ============================================================================
 # Outputs

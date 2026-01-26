@@ -10,10 +10,8 @@ env:
     SAM_CLI_TELEMETRY: 0
     # Python version (must match Lambda runtime)
     PYTHON_VERSION: "3.13"
-  parameter-store:
-    # Store your OpenAI API key in SSM Parameter Store
-    # Create it: aws ssm put-parameter --name /paperpilot/openai-api-key --value "sk-..." --type SecureString
-    OPENAI_API_KEY: /paperpilot/openai-api-key
+    # Note: OPENAI_API_KEY should be set as Lambda environment variable after deployment
+    # or fetched from Secrets Manager at runtime. Not needed during build.
 
 phases:
   install:
@@ -48,9 +46,10 @@ phases:
   post_build:
     commands:
       - echo "Deploying SAM application..."
-      - cd infra && sam deploy --no-confirm-changeset --no-fail-on-empty-changeset
-      # --no-confirm-changeset: Don't prompt for confirmation (CI/CD)
-      # --no-fail-on-empty-changeset: Don't fail if there are no changes
+      - cd infra
+      - sam deploy --config-file samconfig.toml --config-env default
+      # Uses samconfig.toml for deployment parameters
+      # --config-env default uses the [default] section
 
 artifacts:
   files:
@@ -61,6 +60,6 @@ artifacts:
 cache:
   paths:
     # Cache pip packages to speed up builds
-    - '/root/.cache/pip/**/*'
+    - "/root/.cache/pip/**/*"
     # Cache SAM build artifacts
-    - 'infra/.aws-sam/**/*'
+    - "infra/.aws-sam/**/*"
