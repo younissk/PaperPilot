@@ -1,0 +1,75 @@
+# SAM CLI configuration file
+# This file stores deployment parameters for `sam deploy`
+# See: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-config.html
+
+version = 0.1
+
+[default]
+[default.global.parameters]
+stack_name = "paperpilot"
+region = "eu-central-1"
+
+[default.build.parameters]
+cached = true
+parallel = true
+# Use container for consistent builds (matches Lambda runtime)
+use_container = true
+
+[default.deploy.parameters]
+# Stack settings
+
+# S3 bucket for deployment artifacts (SAM will create one if not specified)
+# s3_bucket = "paperpilot-sam-artifacts-eu-central-1"
+s3_prefix = "paperpilot"
+resolve_s3 = true
+
+# IAM capabilities required for creating roles
+capabilities = "CAPABILITY_IAM CAPABILITY_NAMED_IAM"
+
+# Don't prompt for confirmation in CI/CD
+confirm_changeset = false
+
+# Don't fail if there are no changes
+fail_on_empty_changeset = false
+
+# CloudFormation parameter overrides
+# These map to the Parameters section in template.yaml
+parameter_overrides = "Environment=\"prod\" SqsQueueArn=\"arn:aws:sqs:eu-central-1:120569648365:paperpilot-jobs-prod\" SqsQueueUrl=\"https://sqs.eu-central-1.amazonaws.com/120569648365/paperpilot-jobs-prod\" OpenAIApiKeySecretArn=\"\""
+
+# Tags for cost tracking
+tags = "Application=PaperPilot Environment=prod"
+
+# ============================================================================
+# Environment-specific configurations
+# ============================================================================
+image_repositories = []
+
+[dev]
+[dev.deploy.parameters]
+stack_name = "paperpilot-dev"
+parameter_overrides = [
+    "Environment=dev",
+    "SqsQueueArn=arn:aws:sqs:eu-central-1:120569648365:paperpilot-jobs-dev",
+    "SqsQueueUrl=https://sqs.eu-central-1.amazonaws.com/120569648365/paperpilot-jobs-dev",
+]
+tags = "Application=PaperPilot Environment=dev"
+
+[staging]
+[staging.deploy.parameters]
+stack_name = "paperpilot-staging"
+parameter_overrides = [
+    "Environment=staging",
+    "SqsQueueArn=arn:aws:sqs:eu-central-1:120569648365:paperpilot-jobs-staging",
+    "SqsQueueUrl=https://sqs.eu-central-1.amazonaws.com/120569648365/paperpilot-jobs-staging",
+]
+tags = "Application=PaperPilot Environment=staging"
+
+[prod]
+[prod.deploy.parameters]
+stack_name = "paperpilot"
+parameter_overrides = [
+    "Environment=prod",
+    "SqsQueueArn=arn:aws:sqs:eu-central-1:120569648365:paperpilot-jobs-prod",
+    "SqsQueueUrl=https://sqs.eu-central-1.amazonaws.com/120569648365/paperpilot-jobs-prod",
+]
+tags = "Application=PaperPilot Environment=prod"

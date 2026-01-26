@@ -1,0 +1,20 @@
+{
+  "Records": [
+    {
+      "messageId": "19dd0b57-b21e-4ac1-bd88-01bbb068cb78",
+      "receiptHandle": "MessageReceiptHandle",
+      "body": "{\"job_id\": \"test-job-123\", \"job_type\": \"search\", \"payload\": {\"query\": \"machine learning in healthcare\", \"num_results\": 5, \"max_iterations\": 3, \"max_accepted\": 50, \"top_n\": 20}}",
+      "attributes": {
+        "ApproximateReceiveCount": "1",
+        "SentTimestamp": "1704067200000",
+        "SenderId": "123456789012",
+        "ApproximateFirstReceiveTimestamp": "1704067200001"
+      },
+      "messageAttributes": {},
+      "md5OfBody": "e4e68fb7bd0e697a0ae8f1bb342846b3",
+      "eventSource": "aws:sqs",
+      "eventSourceARN": "arn:aws:sqs:eu-central-1:123456789012:paperpilot-jobs-prod",
+      "awsRegion": "eu-central-1"
+    }
+  ]
+}

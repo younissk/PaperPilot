@@ -1,0 +1,193 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: PaperPilot - AI-powered academic literature discovery (Serverless)
+
+# ============================================================================
+# Parameters
+# ============================================================================
+Parameters:
+  Environment:
+    Type: String
+    Default: prod
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Deployment environment
+
+  SqsQueueArn:
+    Type: String
+    Default: arn:aws:sqs:eu-central-1:120569648365:paperpilot-jobs-prod
+    Description: ARN of the existing SQS queue for job messages
+
+  SqsQueueUrl:
+    Type: String
+    Default: https://sqs.eu-central-1.amazonaws.com/120569648365/paperpilot-jobs-prod
+    Description: URL of the existing SQS queue for job messages
+
+  OpenAIApiKeySecretArn:
+    Type: String
+    Default: ""
+    Description: ARN of Secrets Manager secret containing OpenAI API key (optional; can use env var instead)
+
+# ============================================================================
+# Globals
+# ============================================================================
+Globals:
+  Function:
+    Runtime: python3.13
+    MemorySize: 512
+    Timeout: 300  # 5 minutes; adjust based on job duration
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+        JOBS_TABLE_NAME: !Ref JobsTable
+        SQS_QUEUE_URL: !Ref SqsQueueUrl
+        # OPENAI_API_KEY should be set via Lambda env vars or fetched from Secrets Manager
+    Architectures:
+      - x86_64
+
+# ============================================================================
+# Resources
+# ============================================================================
+Resources:
+
+  # --------------------------------------------------------------------------
+  # DynamoDB Table for Job State
+  # --------------------------------------------------------------------------
+  JobsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub paperpilot-jobs-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: job_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: job_id
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: expires_at
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Application
+          Value: PaperPilot
+        - Key: Environment
+          Value: !Ref Environment
+
+  # --------------------------------------------------------------------------
+  # API Lambda Function (FastAPI via Mangum adapter)
+  # --------------------------------------------------------------------------
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub paperpilot-api-${Environment}
+      Description: PaperPilot API (FastAPI on Lambda)
+      CodeUri: ../services/api/
+      Handler: handler.handler
+      MemorySize: 1024  # FastAPI benefits from more memory
+      Timeout: 30  # API Gateway has 29s limit
+      Events:
+        ApiGatewayProxy:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+        ApiGatewayRoot:
+          Type: HttpApi
+          Properties:
+            Path: /
+            Method: ANY
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JobsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - sqs:SendMessage
+                - sqs:GetQueueAttributes
+              Resource: !Ref SqsQueueArn
+        - CloudWatchLogsFullAccess
+      Environment:
+        Variables:
+          # Additional API-specific env vars can go here
+          LOG_LEVEL: INFO
+
+  # --------------------------------------------------------------------------
+  # Worker Lambda Function (SQS Consumer)
+  # --------------------------------------------------------------------------
+  WorkerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub paperpilot-worker-${Environment}
+      Description: PaperPilot Worker (SQS job processor)
+      CodeUri: ../services/worker/
+      Handler: handler.handler
+      MemorySize: 2048  # Worker may need more memory for ML/processing
+      Timeout: 900  # 15 minutes max for SQS Lambda
+      ReservedConcurrentExecutions: 5  # Limit concurrent workers to avoid rate limits
+      Events:
+        SqsEvent:
+          Type: SQS
+          Properties:
+            Queue: !Ref SqsQueueArn
+            BatchSize: 1  # Process one job at a time for simplicity
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JobsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - sqs:ReceiveMessage
+                - sqs:DeleteMessage
+                - sqs:GetQueueAttributes
+                - sqs:ChangeMessageVisibility
+              Resource: !Ref SqsQueueArn
+        - CloudWatchLogsFullAccess
+      Environment:
+        Variables:
+          LOG_LEVEL: INFO
+
+# ============================================================================
+# Outputs
+# ============================================================================
+Outputs:
+  ApiUrl:
+    Description: URL of the API Gateway endpoint
+    Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+    Export:
+      Name: !Sub ${AWS::StackName}-ApiUrl
+
+  ApiFunctionArn:
+    Description: ARN of the API Lambda function
+    Value: !GetAtt ApiFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-ApiFunctionArn
+
+  WorkerFunctionArn:
+    Description: ARN of the Worker Lambda function
+    Value: !GetAtt WorkerFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-WorkerFunctionArn
+
+  JobsTableName:
+    Description: Name of the DynamoDB Jobs table
+    Value: !Ref JobsTable
+    Export:
+      Name: !Sub ${AWS::StackName}-JobsTableName
+
+  JobsTableArn:
+    Description: ARN of the DynamoDB Jobs table
+    Value: !GetAtt JobsTable.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-JobsTableArn
+
+  SqsQueueArnOutput:
+    Description: ARN of the SQS queue (passed through for reference)
+    Value: !Ref SqsQueueArn
+    Export:
+      Name: !Sub ${AWS::StackName}-SqsQueueArn
