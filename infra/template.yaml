@@ -129,7 +129,7 @@ Resources:
       Handler: handler.handler
       MemorySize: 2048  # Worker may need more memory for ML/processing
       Timeout: 900  # 15 minutes max for SQS Lambda
-      ReservedConcurrentExecutions: 5  # Limit concurrent workers to avoid rate limits
+      # Note: ReservedConcurrentExecutions removed - requires sufficient account capacity
       Events:
         SqsEvent:
           Type: SQS
