@@ -30,8 +30,8 @@ COPY --from=builder /app/package.json ./package.json
 
 # Set environment variables for Lambda Web Adapter
 ENV PORT=4321
-ENV AWS_LWA_INVOKE_MODE=response_stream
-ENV AWS_LWA_READINESS_CHECK_PATH=/api/health
+ENV AWS_LWA_INVOKE_MODE=buffered
+ENV AWS_LWA_READINESS_CHECK_PATH=/
 
 # Expose port
 EXPOSE 4321

@@ -152,7 +152,8 @@ Resources:
       Environment:
         Variables:
           API_BASE_URL: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
-          AWS_LWA_INVOKE_MODE: response_stream
+          AWS_LWA_INVOKE_MODE: buffered
+          AWS_LWA_READINESS_CHECK_PATH: /
           PORT: "4321"
     Metadata:
       DockerTag: nodejs22-v1
