@@ -1,73 +1,83 @@
-# React + TypeScript + Vite
+# PaperPilot Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Astro SSR frontend for PaperPilot - AI-powered academic literature discovery.
 
-Currently, two official plugins are available:
+## Development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+```bash
+# Install dependencies
+npm install
 
-## React Compiler
+# Start development server
+npm run dev
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+# Build for production
+npm run build
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Preview production build
+npm run preview
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Environment Variables
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Create a `.env` file based on `.env.example`:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+# Backend API URL
+API_BASE_URL=http://localhost:8000
+```
+
+## Pages
+
+- `/` - Search form to start a new research query
+- `/report/{query_id}` - View generated research report (SSR for SEO)
+- `/queries` - List of previous queries
+- `/about` - About page
+
+## SEO Features
+
+- Server-side rendering for all report pages
+- Dynamic sitemap.xml at `/sitemap.xml`
+- robots.txt at `/robots.txt`
+- JSON-LD structured data on report pages
+- Canonical URLs to avoid duplicate content
+- `noindex` on in-progress/generating pages
+
+## Deployment
+
+The frontend is deployed as a Lambda function using Lambda Web Adapter.
+See `infra/template.yaml` for the SAM configuration.
+
+### Local Docker Build
+
+```bash
+# Build the Docker image
+docker build -t paperpilot-frontend .
+
+# Run locally
+docker run -p 4321:4321 -e API_BASE_URL=http://host.docker.internal:8000 paperpilot-frontend
+```
+
+## Architecture
+
+```
+src/
+├── components/      # Astro components
+│   └── Header.astro
+├── layouts/         # Page layouts
+│   └── Layout.astro
+├── lib/            # Shared utilities
+│   ├── api.ts      # API client
+│   ├── config.ts   # Configuration
+│   └── types.ts    # TypeScript types
+├── pages/          # Route pages
+│   ├── index.astro
+│   ├── about.astro
+│   ├── queries.astro
+│   ├── report/
+│   │   └── [query_id].astro
+│   ├── robots.txt.ts
+│   └── sitemap.xml.ts
+└── styles/
+    └── global.css
 ```

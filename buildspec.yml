@@ -35,6 +35,9 @@ phases:
       - ls -la services/api/
       - ls -la services/worker/
       - ls -la services/worker/paperpilot/
+      # Verify frontend directory
+      - echo "Verifying frontend directory..."
+      - ls -la frontend/
 
   build:
     commands:

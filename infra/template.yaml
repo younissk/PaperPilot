@@ -124,6 +124,56 @@ Resources:
           Value: !Ref Environment
 
   # --------------------------------------------------------------------------
+  # Frontend Lambda Function (Astro SSR via Lambda Web Adapter)
+  # --------------------------------------------------------------------------
+  FrontendFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub paperpilot-frontend-${Environment}
+      Description: PaperPilot Frontend (Astro SSR on Lambda)
+      PackageType: Image
+      MemorySize: 512
+      Timeout: 30
+      Architectures:
+        - x86_64
+      Events:
+        FrontendProxy:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+            ApiId: !Ref FrontendHttpApi
+        FrontendRoot:
+          Type: HttpApi
+          Properties:
+            Path: /
+            Method: ANY
+            ApiId: !Ref FrontendHttpApi
+      Environment:
+        Variables:
+          API_BASE_URL: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+          AWS_LWA_INVOKE_MODE: response_stream
+          PORT: "4321"
+    Metadata:
+      DockerTag: nodejs22-v1
+      DockerContext: ../frontend
+      Dockerfile: Dockerfile
+
+  FrontendHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: $default
+      CorsConfiguration:
+        AllowOrigins:
+          - "*"
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        AllowHeaders:
+          - "*"
+
+  # --------------------------------------------------------------------------
   # API Lambda Function (FastAPI via Mangum adapter)
   # --------------------------------------------------------------------------
   ApiFunction:
@@ -533,6 +583,12 @@ Resources:
 # Outputs
 # ============================================================================
 Outputs:
+  FrontendUrl:
+    Description: URL of the Frontend (Astro SSR)
+    Value: !Sub "https://${FrontendHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+    Export:
+      Name: !Sub ${AWS::StackName}-FrontendUrl
+
   ApiUrl:
     Description: URL of the API Gateway endpoint
     Value: !Sub "https://${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
