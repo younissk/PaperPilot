@@ -57,7 +57,8 @@ Conditions:
 # ============================================================================
 Globals:
   Function:
-    Runtime: python3.13
+    # Note: Runtime is NOT set here because FrontendFunction uses PackageType: Image
+    # which is incompatible with Runtime. Each zip-based function sets Runtime explicitly.
     MemorySize: 512
     Timeout: 300 # 5 minutes; adjust based on job duration
     Environment:
@@ -180,6 +181,7 @@ Resources:
     Properties:
       FunctionName: !Sub paperpilot-api-${Environment}
       Description: PaperPilot API (FastAPI on Lambda)
+      Runtime: python3.13
       CodeUri: ../services/api/
       Handler: handler.handler
       MemorySize: 1024 # FastAPI benefits from more memory
@@ -229,6 +231,7 @@ Resources:
     Properties:
       FunctionName: !Sub paperpilot-worker-${Environment}
       Description: PaperPilot Worker (SQS job processor)
+      Runtime: python3.13
       CodeUri: ../services/worker/
       Handler: handler.handler
       MemorySize: 2048 # Worker may need more memory for ML/processing
