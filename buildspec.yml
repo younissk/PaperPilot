@@ -51,19 +51,31 @@ phases:
         sam build --use-container --parallel
         echo "Build complete, deploying..."
         
-        # Clean up any failed companion stacks (ROLLBACK_COMPLETE state cannot be updated)
-        echo "Checking for failed companion stacks..."
-        FAILED_STACKS=$(aws cloudformation list-stacks --stack-status-filter ROLLBACK_COMPLETE --query "StackSummaries[?contains(StackName, 'paperpilot') && contains(StackName, 'CompanionStack')].StackName" --output text 2>/dev/null || true)
+        # Create ECR repository for frontend if it doesn't exist (avoids problematic CompanionStack)
+        ECR_REPO="paperpilot-frontend"
+        AWS_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+        AWS_REGION="eu-central-1"
+        ECR_URI="${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}"
+        
+        echo "Ensuring ECR repository exists: ${ECR_REPO}"
+        aws ecr describe-repositories --repository-names ${ECR_REPO} 2>/dev/null || \
+          aws ecr create-repository --repository-name ${ECR_REPO} --image-scanning-configuration scanOnPush=true
+        
+        # Clean up any failed stacks (ROLLBACK_COMPLETE state cannot be updated)
+        echo "Checking for failed stacks..."
+        FAILED_STACKS=$(aws cloudformation list-stacks --stack-status-filter ROLLBACK_COMPLETE --query "StackSummaries[?contains(StackName, 'paperpilot')].StackName" --output text 2>/dev/null || true)
         if [ -n "$FAILED_STACKS" ]; then
           for STACK in $FAILED_STACKS; do
-            echo "Deleting failed companion stack: $STACK"
+            echo "Deleting failed stack: $STACK"
             aws cloudformation delete-stack --stack-name "$STACK"
             aws cloudformation wait stack-delete-complete --stack-name "$STACK" || true
           done
         fi
         
-        # Deploy with updates in place (no stack deletion to preserve API Gateway URL)
-        sam deploy --config-file samconfig.toml --config-env default --no-fail-on-empty-changeset
+        # Deploy with explicit ECR repository (bypasses CompanionStack)
+        sam deploy --config-file samconfig.toml --config-env default \
+          --no-fail-on-empty-changeset \
+          --image-repository "${ECR_URI}"
 
 artifacts:
   files:

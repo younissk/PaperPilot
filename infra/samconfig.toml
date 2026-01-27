@@ -23,8 +23,8 @@ use_container = true
 s3_prefix = "paperpilot"
 resolve_s3 = true
 
-# ECR repository for Docker-based Lambda functions (FrontendFunction)
-resolve_image_repos = true
+# Note: ECR repository is created and passed explicitly in buildspec.yml
+# to avoid problematic CompanionStack creation
 
 # IAM capabilities required for creating roles
 capabilities = "CAPABILITY_IAM CAPABILITY_NAMED_IAM"
