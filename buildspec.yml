@@ -44,11 +44,8 @@ phases:
         cd infra
         sam build --use-container --parallel
         echo "Build complete, deploying..."
-        # First delete any existing failed stack
-        aws cloudformation delete-stack --stack-name paperpilot --region eu-central-1 || true
-        aws cloudformation wait stack-delete-complete --stack-name paperpilot --region eu-central-1 || true
-        # Now deploy with debug output
-        sam deploy --config-file samconfig.toml --config-env default --debug
+        # Deploy with updates in place (no stack deletion to preserve API Gateway URL)
+        sam deploy --config-file samconfig.toml --config-env default --no-fail-on-empty-changeset
 
 artifacts:
   files:
