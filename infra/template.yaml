@@ -67,8 +67,8 @@ Globals:
         SQS_QUEUE_URL: !Ref SqsQueueUrl
         RESULTS_BUCKET: !Ref ArtifactsBucket
         # OPENAI_API_KEY should be set via Lambda env vars or fetched from Secrets Manager
-    Architectures:
-      - x86_64
+    # Note: Architectures removed from Globals to avoid conflict with PackageType: Image functions
+    # Image-based functions (FrontendFunction) specify Architectures at function level
 
 # ============================================================================
 # Resources
