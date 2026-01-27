@@ -6,7 +6,7 @@ WORKDIR /app
 # Copy package files
 COPY package.json ./
 
-# Install dependencies
+# Install dependencies fresh (don't use lock file in Docker due to platform-specific native binaries)
 RUN npm install
 
 # Copy source code
