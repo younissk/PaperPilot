@@ -1,0 +1,10 @@
+# Azure Functions Core
+azure-functions>=1.17.0
+
+# Azure SDKs
+azure-cosmos>=4.5.0
+azure-servicebus>=7.11.0
+azure-identity>=1.15.0
+
+# Utilities (minimal for stub)
+# Add more as needed when implementing real functionality

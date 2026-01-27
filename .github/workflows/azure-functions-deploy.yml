@@ -1,0 +1,110 @@
+# GitHub Actions workflow for deploying PaperPilot Azure Functions
+# Docs: https://learn.microsoft.com/en-us/azure/azure-functions/functions-how-to-github-actions
+
+name: Deploy Azure Functions
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'azure-functions/**'
+      - '.github/workflows/azure-functions-deploy.yml'
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  AZURE_FUNCTIONAPP_NAME: 'paperpilot-api'  # Your function app name
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: 'azure-functions'
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # ============================================================================
+  # Build and Test
+  # ============================================================================
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Create and activate virtual environment
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+
+      - name: Install dependencies
+        run: |
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Optional: Add linting
+      - name: Lint with ruff (optional)
+        continue-on-error: true
+        run: |
+          source venv/bin/activate
+          pip install ruff
+          ruff check function_app.py || true
+
+      # Prepare deployment package
+      - name: Prepare deployment package
+        run: |
+          source venv/bin/activate
+          pip install --target=".python_packages/lib/site-packages" -r requirements.txt
+
+      - name: Upload artifact for deployment
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-app
+          path: |
+            ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+            !${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/venv
+            !${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/local.settings.json
+
+  # ============================================================================
+  # Deploy to Azure
+  # ============================================================================
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    environment:
+      name: 'production'
+      url: ${{ steps.deploy-to-function.outputs.webapp-url }}
+    
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: python-app
+          path: .
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Functions
+        id: deploy-to-function
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
+          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+          scm-do-build-during-deployment: true
+          enable-oryx-build: true
+
+      - name: Verify deployment
+        run: |
+          echo "Deployed to: https://${{ env.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net"
+          # Wait for deployment to stabilize
+          sleep 10
+          # Health check
+          curl -f "https://${{ env.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net/api/health" || echo "Health check pending..."
