@@ -48,6 +48,12 @@ jobs:
           pip install ruff
           ruff check function_app.py || true
 
+      # Package dependencies for Azure (critical for Consumption plan)
+      - name: Package dependencies
+        working-directory: azure-functions
+        run: |
+          pip install --target=".python_packages/lib/site-packages" -r requirements.txt
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -58,11 +64,11 @@ jobs:
         with:
           app-name: paperpilot-api
           package: ./azure-functions
-          scm-do-build-during-deployment: true
-          enable-oryx-build: true
+          scm-do-build-during-deployment: false
+          enable-oryx-build: false
 
       - name: Verify deployment
         run: |
-          echo "Deployed to: https://paperpilot-api.azurewebsites.net"
+          echo "Deployed to: https://paperpilot-api-f4b7f6dch7atchb5.germanywestcentral-01.azurewebsites.net"
           sleep 15
-          curl -sf "https://paperpilot-api.azurewebsites.net/api/health" && echo "Health check passed!" || echo "Health check pending (may take a minute to warm up)..."
+          curl -sf "https://paperpilot-api-f4b7f6dch7atchb5.germanywestcentral-01.azurewebsites.net/api/health" && echo "Health check passed!" || echo "Health check pending (may take a minute to warm up)..."
