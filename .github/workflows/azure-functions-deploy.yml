@@ -13,16 +13,18 @@ on:
   workflow_dispatch:  # Allow manual trigger
 
 env:
-  AZURE_FUNCTIONAPP_NAME: 'paperpilot-api'  # Your function app name
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: 'azure-functions'
+  AZURE_FUNCTIONAPP_NAME: 'paperpilot-api'
   PYTHON_VERSION: '3.11'
 
 jobs:
   # ============================================================================
-  # Build and Test
+  # Build and Deploy (combined for simplicity)
   # ============================================================================
-  build-and-test:
+  build-and-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: 'production'
+      url: https://${{ env.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net
     
     steps:
       - name: Checkout repository
@@ -33,58 +35,18 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Create virtual environment
-        working-directory: azure-functions
-        run: python -m venv venv
-
       - name: Install dependencies
         working-directory: azure-functions
         run: |
-          source venv/bin/activate
-          pip install --upgrade pip
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Optional: Add linting
       - name: Lint with ruff (optional)
         working-directory: azure-functions
         continue-on-error: true
         run: |
-          source venv/bin/activate
           pip install ruff
           ruff check function_app.py || true
-
-      # Prepare deployment package
-      - name: Prepare deployment package
-        working-directory: azure-functions
-        run: |
-          source venv/bin/activate
-          pip install --target=".python_packages/lib/site-packages" -r requirements.txt
-
-      - name: Upload artifact for deployment
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-app
-          path: |
-            azure-functions
-            !azure-functions/venv
-            !azure-functions/local.settings.json
-
-  # ============================================================================
-  # Deploy to Azure
-  # ============================================================================
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build-and-test
-    environment:
-      name: 'production'
-      url: ${{ steps.deploy-to-function.outputs.webapp-url }}
-    
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: python-app
-          path: .
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -92,18 +54,15 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Deploy to Azure Functions
-        id: deploy-to-function
         uses: Azure/functions-action@v1
         with:
-          app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
-          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+          app-name: paperpilot-api
+          package: ./azure-functions
           scm-do-build-during-deployment: true
           enable-oryx-build: true
 
       - name: Verify deployment
         run: |
-          echo "Deployed to: https://${{ env.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net"
-          # Wait for deployment to stabilize
-          sleep 10
-          # Health check
-          curl -f "https://${{ env.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net/api/health" || echo "Health check pending..."
+          echo "Deployed to: https://paperpilot-api.azurewebsites.net"
+          sleep 15
+          curl -sf "https://paperpilot-api.azurewebsites.net/api/health" && echo "Health check passed!" || echo "Health check pending (may take a minute to warm up)..."
