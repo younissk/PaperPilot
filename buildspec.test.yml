@@ -1,0 +1,68 @@
+# AWS CodeBuild buildspec for running tests (PR and pre-deploy gate)
+# This stage runs format/lint/type checks and unit/component tests.
+# No AWS resources are required (all mocked).
+
+version: 0.2
+
+env:
+  variables:
+    PYTHON_VERSION: "3.13"
+    # Disable telemetry
+    SAM_CLI_TELEMETRY: 0
+    # Fake AWS credentials for mocked tests
+    AWS_ACCESS_KEY_ID: testing
+    AWS_SECRET_ACCESS_KEY: testing
+    AWS_DEFAULT_REGION: eu-central-1
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.13
+    commands:
+      - echo "Installing uv package manager..."
+      - pip install --upgrade pip
+      - pip install uv
+      - uv --version
+
+  pre_build:
+    commands:
+      - echo "Installing dependencies (including test/dev)..."
+      - uv sync --all-extras
+      - echo "Verifying installations..."
+      - uv run python --version
+      - uv run pytest --version
+      - uv run ruff --version
+
+  build:
+    commands:
+      - echo "Running format check..."
+      - uv run ruff format --check paperpilot services tests
+
+      - echo "Running lint check..."
+      - uv run ruff check paperpilot services tests
+
+      - echo "Running type check..."
+      - uv run pyright || echo "Type check warnings (non-blocking)"
+
+      - echo "Running unit tests..."
+      - uv run pytest tests/unit -v --tb=short -m unit
+
+      - echo "Running component tests..."
+      - uv run pytest tests/component -v --tb=short -m component
+
+  post_build:
+    commands:
+      - echo "Test stage completed successfully!"
+
+reports:
+  pytest-reports:
+    files:
+      - "junit.xml"
+    file-format: JUNITXML
+    base-directory: .
+
+cache:
+  paths:
+    - "/root/.cache/pip/**/*"
+    - "/root/.cache/uv/**/*"
+    - ".venv/**/*"

@@ -1,0 +1,70 @@
+# AWS CodeBuild buildspec for deploying to staging
+# This stage builds and deploys the SAM application to the staging environment.
+
+version: 0.2
+
+env:
+  variables:
+    PYTHON_VERSION: "3.13"
+    SAM_CLI_TELEMETRY: 0
+    DEPLOY_ENV: staging
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.13
+    commands:
+      - echo "Installing SAM CLI..."
+      - pip install --upgrade pip
+      - pip install aws-sam-cli
+      - sam --version
+
+  pre_build:
+    commands:
+      - echo "Copying paperpilot package to worker service..."
+      - cp -r paperpilot services/worker/
+      - echo "Verifying service directories..."
+      - ls -la services/api/
+      - ls -la services/worker/
+      - ls -la services/worker/paperpilot/
+
+  build:
+    commands:
+      - echo "Building SAM application..."
+      - cd infra && sam build --use-container --parallel
+
+      - echo "Deploying to staging environment..."
+      - |
+        cd infra
+        sam deploy \
+          --config-file samconfig.toml \
+          --config-env staging \
+          --no-confirm-changeset \
+          --no-fail-on-empty-changeset
+
+      - echo "Capturing staging API URL..."
+      - |
+        cd infra
+        STAGING_API_URL=$(aws cloudformation describe-stacks \
+          --stack-name paperpilot-staging \
+          --query 'Stacks[0].Outputs[?OutputKey==`ApiUrl`].OutputValue' \
+          --output text)
+        echo "STAGING_API_URL=$STAGING_API_URL" >> $CODEBUILD_SRC_DIR/staging-env.txt
+        echo "Staging API URL: $STAGING_API_URL"
+
+  post_build:
+    commands:
+      - echo "Staging deployment completed!"
+      - cat staging-env.txt || true
+
+artifacts:
+  files:
+    - staging-env.txt
+    - infra/template.yaml
+    - infra/samconfig.toml
+  discard-paths: no
+
+cache:
+  paths:
+    - "/root/.cache/pip/**/*"
+    - "infra/.aws-sam/**/*"

@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 JOBS_TABLE_NAME = os.environ.get("JOBS_TABLE_NAME", "paperpilot-jobs-prod")
 RESULTS_BUCKET = os.environ.get("RESULTS_BUCKET", "")
 AWS_ENDPOINT_URL = os.environ.get("AWS_ENDPOINT_URL", "")  # For LocalStack
+OPENAI_API_KEY_SECRET_ARN = os.environ.get("OPENAI_API_KEY_SECRET_ARN", "")
 
 # Initialize AWS clients (with optional LocalStack endpoint for local dev)
 boto_kwargs: dict[str, str] = {}
@@ -42,6 +43,64 @@ if AWS_ENDPOINT_URL:
 dynamodb = boto3.resource("dynamodb", **boto_kwargs)
 s3_client = boto3.client("s3", **boto_kwargs)
 jobs_table = dynamodb.Table(JOBS_TABLE_NAME)
+
+
+def _load_openai_api_key_from_secrets_manager() -> None:
+    """Load OpenAI API key from Secrets Manager and set as environment variable.
+    
+    This is called once at module load time (Lambda cold start).
+    The key is cached in the environment for subsequent invocations.
+    """
+    # Skip if already set (either manually or from previous invocation)
+    if os.environ.get("OPENAI_API_KEY"):
+        logger.info("OPENAI_API_KEY already set in environment")
+        return
+    
+    # Skip if no secret ARN configured
+    if not OPENAI_API_KEY_SECRET_ARN:
+        logger.warning("OPENAI_API_KEY_SECRET_ARN not set, skipping Secrets Manager lookup")
+        return
+    
+    try:
+        logger.info(f"Fetching OpenAI API key from Secrets Manager: {OPENAI_API_KEY_SECRET_ARN}")
+        secrets_client = boto3.client("secretsmanager", **boto_kwargs)
+        response = secrets_client.get_secret_value(SecretId=OPENAI_API_KEY_SECRET_ARN)
+        
+        # Secret can be either a plain string or JSON
+        secret_value = response.get("SecretString", "")
+        
+        # Try parsing as JSON (common pattern: {"OPENAI_API_KEY": "sk-..."})
+        try:
+            secret_dict = json.loads(secret_value)
+            # Look for common key names
+            api_key = (
+                secret_dict.get("OPENAI_API_KEY") or
+                secret_dict.get("openai_api_key") or
+                secret_dict.get("api_key") or
+                secret_dict.get("key")
+            )
+            if api_key:
+                os.environ["OPENAI_API_KEY"] = api_key
+                logger.info("Successfully loaded OPENAI_API_KEY from Secrets Manager (JSON format)")
+                return
+        except json.JSONDecodeError:
+            pass
+        
+        # Treat as plain string (the secret value IS the API key)
+        if secret_value and secret_value.startswith("sk-"):
+            os.environ["OPENAI_API_KEY"] = secret_value
+            logger.info("Successfully loaded OPENAI_API_KEY from Secrets Manager (plain string)")
+            return
+        
+        logger.error("Secret does not contain a valid OpenAI API key")
+        
+    except ClientError as e:
+        logger.error(f"Failed to fetch secret from Secrets Manager: {e}")
+        raise
+
+
+# Load the API key at module initialization (Lambda cold start)
+_load_openai_api_key_from_secrets_manager()
 
 # Maximum number of events to store in DynamoDB (bounded list for real-time UX later)
 MAX_EVENTS = 100

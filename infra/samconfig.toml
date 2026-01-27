@@ -34,7 +34,7 @@ fail_on_empty_changeset = false
 
 # CloudFormation parameter overrides
 # These map to the Parameters section in template.yaml
-parameter_overrides = "Environment=\"prod\" SqsQueueArn=\"arn:aws:sqs:eu-central-1:120569648365:paperpilot-jobs-prod\" SqsQueueUrl=\"https://sqs.eu-central-1.amazonaws.com/120569648365/paperpilot-jobs-prod\" OpenAIApiKeySecretArn=\"\""
+parameter_overrides = "Environment=\"prod\" SqsQueueArn=\"arn:aws:sqs:eu-central-1:120569648365:paperpilot-jobs-prod\" SqsQueueUrl=\"https://sqs.eu-central-1.amazonaws.com/120569648365/paperpilot-jobs-prod\" OpenAIApiKeySecretArn=\"arn:aws:secretsmanager:eu-central-1:120569648365:secret:prod/paperpilot/lambda-Auu1lK\""
 
 # Tags for cost tracking
 tags = "Application=PaperPilot Environment=prod"

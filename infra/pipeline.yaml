@@ -1,0 +1,364 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CodePipeline for PaperPilot CI/CD with staged deployments
+
+# ============================================================================
+# Parameters
+# ============================================================================
+Parameters:
+  GitHubConnectionArn:
+    Type: String
+    Description: ARN of the CodeStar connection to GitHub
+
+  GitHubOwner:
+    Type: String
+    Default: your-org
+    Description: GitHub organization or username
+
+  GitHubRepo:
+    Type: String
+    Default: PaperPilot
+    Description: GitHub repository name
+
+  GitHubBranch:
+    Type: String
+    Default: main
+    Description: GitHub branch to track
+
+  EnableManualApproval:
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
+    Description: Require manual approval before production deploy
+
+# ============================================================================
+# Conditions
+# ============================================================================
+Conditions:
+  UseManualApproval: !Equals [!Ref EnableManualApproval, "true"]
+
+# ============================================================================
+# Resources
+# ============================================================================
+Resources:
+
+  # --------------------------------------------------------------------------
+  # S3 Bucket for Pipeline Artifacts
+  # --------------------------------------------------------------------------
+  PipelineArtifactsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub paperpilot-pipeline-artifacts-${AWS::AccountId}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireOldArtifacts
+            Status: Enabled
+            ExpirationInDays: 30
+
+  # --------------------------------------------------------------------------
+  # IAM Role for CodeBuild
+  # --------------------------------------------------------------------------
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: paperpilot-codebuild-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSCloudFormationFullAccess
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AWSLambda_FullAccess
+        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+        - arn:aws:iam::aws:policy/AmazonSQSFullAccess
+        - arn:aws:iam::aws:policy/AmazonAPIGatewayAdministrator
+        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+      Policies:
+        - PolicyName: CodeBuildBasePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - iam:CreateRole
+                  - iam:DeleteRole
+                  - iam:AttachRolePolicy
+                  - iam:DetachRolePolicy
+                  - iam:PutRolePolicy
+                  - iam:DeleteRolePolicy
+                  - iam:GetRole
+                  - iam:PassRole
+                  - iam:TagRole
+                Resource: !Sub arn:aws:iam::${AWS::AccountId}:role/paperpilot-*
+
+  # --------------------------------------------------------------------------
+  # IAM Role for CodePipeline
+  # --------------------------------------------------------------------------
+  CodePipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: paperpilot-codepipeline-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codepipeline.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CodePipelinePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:GetBucketVersioning
+                Resource:
+                  - !GetAtt PipelineArtifactsBucket.Arn
+                  - !Sub ${PipelineArtifactsBucket.Arn}/*
+              - Effect: Allow
+                Action:
+                  - codebuild:BatchGetBuilds
+                  - codebuild:StartBuild
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - codestar-connections:UseConnection
+                Resource: !Ref GitHubConnectionArn
+
+  # --------------------------------------------------------------------------
+  # CodeBuild Projects
+  # --------------------------------------------------------------------------
+  TestProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: paperpilot-test
+      Description: Run tests (format, lint, unit, component)
+      ServiceRole: !GetAtt CodeBuildRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_MEDIUM
+        Image: aws/codebuild/standard:7.0
+        PrivilegedMode: false
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: buildspec.test.yml
+      TimeoutInMinutes: 30
+
+  DeployStagingProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: paperpilot-deploy-staging
+      Description: Deploy to staging environment
+      ServiceRole: !GetAtt CodeBuildRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_MEDIUM
+        Image: aws/codebuild/standard:7.0
+        PrivilegedMode: true  # Required for SAM build with containers
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: buildspec.deploy-staging.yml
+      TimeoutInMinutes: 30
+
+  E2EStagingProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: paperpilot-e2e-staging
+      Description: Run E2E tests against staging
+      ServiceRole: !GetAtt CodeBuildRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_MEDIUM
+        Image: aws/codebuild/standard:7.0
+        PrivilegedMode: false
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: buildspec.e2e-staging.yml
+      TimeoutInMinutes: 30
+
+  DeployProdProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: paperpilot-deploy-prod
+      Description: Deploy to production environment
+      ServiceRole: !GetAtt CodeBuildRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_MEDIUM
+        Image: aws/codebuild/standard:7.0
+        PrivilegedMode: true
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: buildspec.deploy-prod.yml
+      TimeoutInMinutes: 30
+
+  SmokeProdProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: paperpilot-smoke-prod
+      Description: Run smoke tests against production
+      ServiceRole: !GetAtt CodeBuildRole.Arn
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_MEDIUM
+        Image: aws/codebuild/standard:7.0
+        PrivilegedMode: false
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: buildspec.smoke-prod.yml
+      TimeoutInMinutes: 15
+
+  # --------------------------------------------------------------------------
+  # CodePipeline
+  # --------------------------------------------------------------------------
+  Pipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      Name: paperpilot-pipeline
+      RoleArn: !GetAtt CodePipelineRole.Arn
+      ArtifactStore:
+        Type: S3
+        Location: !Ref PipelineArtifactsBucket
+      Stages:
+        # Source Stage
+        - Name: Source
+          Actions:
+            - Name: GitHub
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Provider: CodeStarSourceConnection
+                Version: '1'
+              Configuration:
+                ConnectionArn: !Ref GitHubConnectionArn
+                FullRepositoryId: !Sub ${GitHubOwner}/${GitHubRepo}
+                BranchName: !Ref GitHubBranch
+                OutputArtifactFormat: CODE_ZIP
+              OutputArtifacts:
+                - Name: SourceArtifact
+
+        # Test Stage
+        - Name: Test
+          Actions:
+            - Name: RunTests
+              ActionTypeId:
+                Category: Test
+                Owner: AWS
+                Provider: CodeBuild
+                Version: '1'
+              Configuration:
+                ProjectName: !Ref TestProject
+              InputArtifacts:
+                - Name: SourceArtifact
+
+        # Deploy Staging Stage
+        - Name: DeployStaging
+          Actions:
+            - Name: DeployToStaging
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: '1'
+              Configuration:
+                ProjectName: !Ref DeployStagingProject
+              InputArtifacts:
+                - Name: SourceArtifact
+              OutputArtifacts:
+                - Name: StagingArtifact
+
+        # Staging E2E Stage
+        - Name: StagingE2E
+          Actions:
+            - Name: RunE2ETests
+              ActionTypeId:
+                Category: Test
+                Owner: AWS
+                Provider: CodeBuild
+                Version: '1'
+              Configuration:
+                ProjectName: !Ref E2EStagingProject
+              InputArtifacts:
+                - Name: StagingArtifact
+
+        # Manual Approval (conditional)
+        - !If
+          - UseManualApproval
+          - Name: Approval
+            Actions:
+              - Name: ManualApproval
+                ActionTypeId:
+                  Category: Approval
+                  Owner: AWS
+                  Provider: Manual
+                  Version: '1'
+                Configuration:
+                  CustomData: "Approve deployment to production?"
+          - !Ref AWS::NoValue
+
+        # Deploy Production Stage
+        - Name: DeployProd
+          Actions:
+            - Name: DeployToProduction
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: '1'
+              Configuration:
+                ProjectName: !Ref DeployProdProject
+              InputArtifacts:
+                - Name: SourceArtifact
+              OutputArtifacts:
+                - Name: ProdArtifact
+
+        # Production Smoke Stage
+        - Name: ProdSmoke
+          Actions:
+            - Name: RunSmokeTests
+              ActionTypeId:
+                Category: Test
+                Owner: AWS
+                Provider: CodeBuild
+                Version: '1'
+              Configuration:
+                ProjectName: !Ref SmokeProdProject
+              InputArtifacts:
+                - Name: ProdArtifact
+
+# ============================================================================
+# Outputs
+# ============================================================================
+Outputs:
+  PipelineName:
+    Description: Name of the CodePipeline
+    Value: !Ref Pipeline
+
+  PipelineUrl:
+    Description: URL to the CodePipeline console
+    Value: !Sub https://${AWS::Region}.console.aws.amazon.com/codesuite/codepipeline/pipelines/${Pipeline}/view
+
+  ArtifactsBucket:
+    Description: S3 bucket for pipeline artifacts
+    Value: !Ref PipelineArtifactsBucket

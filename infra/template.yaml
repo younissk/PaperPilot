@@ -30,6 +30,28 @@ Parameters:
     Default: ""
     Description: ARN of Secrets Manager secret containing OpenAI API key (optional; can use env var instead)
 
+  EnableMonitoring:
+    Type: String
+    Default: "true"
+    AllowedValues: ["true", "false"]
+    Description: Enable CloudWatch Synthetics and Alarms
+
+  AlarmEmailEndpoint:
+    Type: String
+    Default: ""
+    Description: Email address for alarm notifications (leave empty to skip SNS topic creation)
+
+# ============================================================================
+# Conditions
+# ============================================================================
+Conditions:
+  MonitoringEnabled: !Equals [!Ref EnableMonitoring, "true"]
+  HasAlarmEmail: !Not [!Equals [!Ref AlarmEmailEndpoint, ""]]
+  CreateAlarmTopic: !And
+    - !Condition MonitoringEnabled
+    - !Condition HasAlarmEmail
+  HasOpenAISecret: !Not [!Equals [!Ref OpenAIApiKeySecretArn, ""]]
+
 # ============================================================================
 # Globals
 # ============================================================================
@@ -182,12 +204,330 @@ Resources:
               Resource:
                 - !GetAtt ArtifactsBucket.Arn
                 - !Sub "${ArtifactsBucket.Arn}/*"
+        - !If
+          - HasOpenAISecret
+          - Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Ref OpenAIApiKeySecretArn
+          - !Ref "AWS::NoValue"
         - CloudWatchLogsFullAccess
       Environment:
         Variables:
           LOG_LEVEL: INFO
-          # OPENAI_API_KEY: Set manually after deployment via Lambda console
-          # Or use Secrets Manager and reference it here
+          # OpenAI API key fetched from Secrets Manager at runtime
+          OPENAI_API_KEY_SECRET_ARN: !If [HasOpenAISecret, !Ref OpenAIApiKeySecretArn, ""]
+
+  # --------------------------------------------------------------------------
+  # SNS Topic for Alarm Notifications
+  # --------------------------------------------------------------------------
+  AlarmNotificationTopic:
+    Type: AWS::SNS::Topic
+    Condition: CreateAlarmTopic
+    Properties:
+      TopicName: !Sub paperpilot-alarms-${Environment}
+      DisplayName: PaperPilot Alarms
+      Tags:
+        - Key: Application
+          Value: PaperPilot
+        - Key: Environment
+          Value: !Ref Environment
+
+  AlarmEmailSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: CreateAlarmTopic
+    Properties:
+      TopicArn: !Ref AlarmNotificationTopic
+      Protocol: email
+      Endpoint: !Ref AlarmEmailEndpoint
+
+  # --------------------------------------------------------------------------
+  # CloudWatch Synthetics Canary for Health Checks
+  # --------------------------------------------------------------------------
+  CanaryArtifactsBucket:
+    Type: AWS::S3::Bucket
+    Condition: MonitoringEnabled
+    Properties:
+      BucketName: !Sub paperpilot-canary-${Environment}-${AWS::AccountId}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireCanaryArtifacts
+            Status: Enabled
+            ExpirationInDays: 7
+
+  CanaryExecutionRole:
+    Type: AWS::IAM::Role
+    Condition: MonitoringEnabled
+    Properties:
+      RoleName: !Sub paperpilot-canary-role-${Environment}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchSyntheticsFullAccess
+      Policies:
+        - PolicyName: CanaryS3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                Resource: !Sub ${CanaryArtifactsBucket.Arn}/*
+              - Effect: Allow
+                Action:
+                  - s3:GetBucketLocation
+                Resource: !GetAtt CanaryArtifactsBucket.Arn
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/cwsyn-*
+              - Effect: Allow
+                Action:
+                  - cloudwatch:PutMetricData
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    cloudwatch:namespace: CloudWatchSynthetics
+
+  HealthCanary:
+    Type: AWS::Synthetics::Canary
+    Condition: MonitoringEnabled
+    Properties:
+      Name: !Sub paperpilot-health-${Environment}
+      RuntimeVersion: syn-python-selenium-4.1
+      ArtifactS3Location: !Sub s3://${CanaryArtifactsBucket}
+      ExecutionRoleArn: !GetAtt CanaryExecutionRole.Arn
+      Schedule:
+        Expression: rate(5 minutes)
+        DurationInSeconds: 0  # Run indefinitely
+      StartCanaryAfterCreation: true
+      SuccessRetentionPeriod: 7
+      FailureRetentionPeriod: 14
+      Code:
+        Handler: canary.handler
+        Script: !Sub |
+          import urllib.request
+          import json
+
+          def handler(event, context):
+              """Health check canary for PaperPilot API."""
+              api_url = "${ServerlessHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+              health_endpoint = f"https://{api_url}/api/health"
+
+              try:
+                  # Call health endpoint
+                  req = urllib.request.Request(health_endpoint)
+                  with urllib.request.urlopen(req, timeout=10) as response:
+                      status_code = response.status
+                      body = json.loads(response.read().decode())
+
+                  # Verify response
+                  assert status_code == 200, f"Expected 200, got {status_code}"
+                  assert body.get("status") == "ok", f"Health status not ok: {body}"
+
+                  print(f"Health check passed: {body}")
+                  return {
+                      "statusCode": 200,
+                      "body": "Canary succeeded"
+                  }
+
+              except Exception as e:
+                  print(f"Health check failed: {str(e)}")
+                  raise
+      Tags:
+        - Key: Application
+          Value: PaperPilot
+        - Key: Environment
+          Value: !Ref Environment
+
+  # --------------------------------------------------------------------------
+  # CloudWatch Alarms - API
+  # --------------------------------------------------------------------------
+  Api5xxAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: MonitoringEnabled
+    Properties:
+      AlarmName: !Sub paperpilot-api-5xx-${Environment}
+      AlarmDescription: API Gateway 5xx error rate exceeds threshold
+      MetricName: 5xx
+      Namespace: AWS/ApiGateway
+      Statistic: Sum
+      Period: 300  # 5 minutes
+      EvaluationPeriods: 2
+      Threshold: 10
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: ApiId
+          Value: !Ref ServerlessHttpApi
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [CreateAlarmTopic, !Ref AlarmNotificationTopic, !Ref "AWS::NoValue"]
+
+  ApiLatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: MonitoringEnabled
+    Properties:
+      AlarmName: !Sub paperpilot-api-latency-${Environment}
+      AlarmDescription: API Gateway p99 latency exceeds threshold
+      MetricName: Latency
+      Namespace: AWS/ApiGateway
+      ExtendedStatistic: p99
+      Period: 300
+      EvaluationPeriods: 3
+      Threshold: 5000  # 5 seconds
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: ApiId
+          Value: !Ref ServerlessHttpApi
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [CreateAlarmTopic, !Ref AlarmNotificationTopic, !Ref "AWS::NoValue"]
+
+  # --------------------------------------------------------------------------
+  # CloudWatch Alarms - API Lambda
+  # --------------------------------------------------------------------------
+  ApiFunctionErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: MonitoringEnabled
+    Properties:
+      AlarmName: !Sub paperpilot-api-lambda-errors-${Environment}
+      AlarmDescription: API Lambda function errors exceed threshold
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 5
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref ApiFunction
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [CreateAlarmTopic, !Ref AlarmNotificationTopic, !Ref "AWS::NoValue"]
+
+  # --------------------------------------------------------------------------
+  # CloudWatch Alarms - Worker Lambda
+  # --------------------------------------------------------------------------
+  WorkerFunctionErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: MonitoringEnabled
+    Properties:
+      AlarmName: !Sub paperpilot-worker-errors-${Environment}
+      AlarmDescription: Worker Lambda function errors exceed threshold
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 3
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref WorkerFunction
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [CreateAlarmTopic, !Ref AlarmNotificationTopic, !Ref "AWS::NoValue"]
+
+  WorkerDurationAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: MonitoringEnabled
+    Properties:
+      AlarmName: !Sub paperpilot-worker-duration-${Environment}
+      AlarmDescription: Worker Lambda average duration exceeds threshold (approaching timeout)
+      MetricName: Duration
+      Namespace: AWS/Lambda
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 600000  # 10 minutes (out of 15 min timeout)
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref WorkerFunction
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [CreateAlarmTopic, !Ref AlarmNotificationTopic, !Ref "AWS::NoValue"]
+
+  WorkerThrottlesAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: MonitoringEnabled
+    Properties:
+      AlarmName: !Sub paperpilot-worker-throttles-${Environment}
+      AlarmDescription: Worker Lambda is being throttled
+      MetricName: Throttles
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref WorkerFunction
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [CreateAlarmTopic, !Ref AlarmNotificationTopic, !Ref "AWS::NoValue"]
+
+  # --------------------------------------------------------------------------
+  # CloudWatch Alarms - SQS Queue
+  # --------------------------------------------------------------------------
+  SqsOldestMessageAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: MonitoringEnabled
+    Properties:
+      AlarmName: !Sub paperpilot-sqs-oldest-message-${Environment}
+      AlarmDescription: SQS oldest message age exceeds threshold (queue backlog)
+      MetricName: ApproximateAgeOfOldestMessage
+      Namespace: AWS/SQS
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 1800  # 30 minutes
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: QueueName
+          Value: !Sub paperpilot-jobs-${Environment}
+      TreatMissingData: notBreaching
+      AlarmActions:
+        - !If [CreateAlarmTopic, !Ref AlarmNotificationTopic, !Ref "AWS::NoValue"]
+
+  # --------------------------------------------------------------------------
+  # CloudWatch Alarms - Canary
+  # --------------------------------------------------------------------------
+  CanaryFailedAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Condition: MonitoringEnabled
+    Properties:
+      AlarmName: !Sub paperpilot-canary-failed-${Environment}
+      AlarmDescription: Health check canary is failing
+      MetricName: Failed
+      Namespace: CloudWatchSynthetics
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: CanaryName
+          Value: !Sub paperpilot-health-${Environment}
+      TreatMissingData: breaching
+      AlarmActions:
+        - !If [CreateAlarmTopic, !Ref AlarmNotificationTopic, !Ref "AWS::NoValue"]
 
 # ============================================================================
 # Outputs
@@ -240,3 +580,17 @@ Outputs:
     Value: !GetAtt ArtifactsBucket.Arn
     Export:
       Name: !Sub ${AWS::StackName}-ArtifactsBucketArn
+
+  AlarmTopicArn:
+    Condition: CreateAlarmTopic
+    Description: ARN of the SNS topic for alarm notifications
+    Value: !Ref AlarmNotificationTopic
+    Export:
+      Name: !Sub ${AWS::StackName}-AlarmTopicArn
+
+  CanaryName:
+    Condition: MonitoringEnabled
+    Description: Name of the health check canary
+    Value: !Sub paperpilot-health-${Environment}
+    Export:
+      Name: !Sub ${AWS::StackName}-CanaryName

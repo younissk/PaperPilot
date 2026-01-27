@@ -52,6 +52,10 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 pytest_cache/
+junit.xml
+*-results.xml
+staging-env.txt
+prod-env.txt
 
 # mypy
 .mypy_cache/
