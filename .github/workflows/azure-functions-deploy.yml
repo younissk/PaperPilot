@@ -23,9 +23,6 @@ jobs:
   # ============================================================================
   build-and-test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
     
     steps:
       - name: Checkout repository
@@ -36,12 +33,12 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Create and activate virtual environment
-        run: |
-          python -m venv venv
-          source venv/bin/activate
+      - name: Create virtual environment
+        working-directory: azure-functions
+        run: python -m venv venv
 
       - name: Install dependencies
+        working-directory: azure-functions
         run: |
           source venv/bin/activate
           pip install --upgrade pip
@@ -49,6 +46,7 @@ jobs:
 
       # Optional: Add linting
       - name: Lint with ruff (optional)
+        working-directory: azure-functions
         continue-on-error: true
         run: |
           source venv/bin/activate
@@ -57,6 +55,7 @@ jobs:
 
       # Prepare deployment package
       - name: Prepare deployment package
+        working-directory: azure-functions
         run: |
           source venv/bin/activate
           pip install --target=".python_packages/lib/site-packages" -r requirements.txt
@@ -66,9 +65,9 @@ jobs:
         with:
           name: python-app
           path: |
-            ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-            !${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/venv
-            !${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/local.settings.json
+            azure-functions
+            !azure-functions/venv
+            !azure-functions/local.settings.json
 
   # ============================================================================
   # Deploy to Azure
