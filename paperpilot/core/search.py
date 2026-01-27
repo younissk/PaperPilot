@@ -7,16 +7,15 @@ with support for concurrent batch searches.
 import asyncio
 import urllib.parse
 import xml.etree.ElementTree as ET
-from typing import List, Optional
 
 import aiohttp
 
-from paperpilot.core.models import ArxivFeed, ArxivEntry, Author, Link, Category
+from paperpilot.core.models import ArxivEntry, ArxivFeed, Author, Category, Link
 
 # arXiv rate limiting - be respectful of their API
 ARXIV_MAX_CONCURRENT = 3
 ARXIV_RATE_LIMIT_DELAY = 0.5  # 500ms between requests
-_arxiv_semaphore: Optional[asyncio.Semaphore] = None
+_arxiv_semaphore: asyncio.Semaphore | None = None
 
 
 def _get_arxiv_semaphore() -> asyncio.Semaphore:
@@ -42,9 +41,9 @@ def _parse_arxiv_response(data: bytes) -> ArxivFeed:
         'opensearch': 'http://a9.com/-/spec/opensearch/1.1/',
         'arxiv': 'http://arxiv.org/schemas/atom'
     }
-    
+
     root = ET.fromstring(data)
-    
+
     # Extract entries first
     entries = []
     for entry in root.findall('atom:entry', ns):
@@ -57,13 +56,13 @@ def _parse_arxiv_response(data: bytes) -> ArxivFeed:
             if affil is not None:
                 auth_info['affiliation'] = affil.text
             authors.append(Author(**auth_info))
-            
+
         # Categories
         categories = [
             Category(term=cat.get('term'), scheme=cat.get('scheme'))
             for cat in entry.findall('atom:category', ns)
         ]
-            
+
         # Links
         links = [
             Link(
@@ -74,14 +73,14 @@ def _parse_arxiv_response(data: bytes) -> ArxivFeed:
             )
             for link in entry.findall('atom:link', ns)
         ]
-            
+
         # ArXiv specific extensions
         arxiv_fields = {}
         for field in ['comment', 'journal_ref', 'doi']:
             val = entry.find(f'arxiv:{field}', ns)
             if val is not None:
                 arxiv_fields[field] = val.text
-                
+
         primary_cat = entry.find('arxiv:primary_category', ns)
         if primary_cat is not None:
             arxiv_fields['primary_category'] = primary_cat.get('term')
@@ -103,7 +102,7 @@ def _parse_arxiv_response(data: bytes) -> ArxivFeed:
             categories=categories,
             **arxiv_fields
         ))
-    
+
     # Construct final feed
     id_elem = root.find('atom:id', ns)
     title_elem = root.find('atom:title', ns)
@@ -111,7 +110,7 @@ def _parse_arxiv_response(data: bytes) -> ArxivFeed:
     total_elem = root.find('opensearch:totalResults', ns)
     start_elem = root.find('opensearch:startIndex', ns)
     items_elem = root.find('opensearch:itemsPerPage', ns)
-    
+
     feed_data = ArxivFeed(
         id=id_elem.text if id_elem is not None else "",
         title=title_elem.text if title_elem is not None else "",
@@ -121,7 +120,7 @@ def _parse_arxiv_response(data: bytes) -> ArxivFeed:
         itemsPerPage=int(items_elem.text) if items_elem is not None else 0,
         entries=entries
     )
-    
+
     return feed_data
 
 
@@ -142,12 +141,12 @@ async def search_articles(
     """
     encoded_query = urllib.parse.quote(query)
     url = f'http://export.arxiv.org/api/query?search_query=all:{encoded_query}&start=0&max_results={max_results}'
-    
+
     semaphore = _get_arxiv_semaphore()
-    
+
     async with semaphore:
         await asyncio.sleep(ARXIV_RATE_LIMIT_DELAY)
-        
+
         try:
             async with session.get(url, timeout=aiohttp.ClientTimeout(total=30)) as response:
                 data = await response.read()
@@ -167,9 +166,9 @@ async def search_articles(
 
 async def search_all_queries(
     session: aiohttp.ClientSession,
-    queries: List[str],
+    queries: list[str],
     max_results_per_query: int = 10
-) -> List[ArxivFeed]:
+) -> list[ArxivFeed]:
     """Search arXiv for multiple queries concurrently.
     
     Args:

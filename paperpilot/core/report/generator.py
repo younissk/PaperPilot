@@ -11,9 +11,9 @@ This module coordinates the complete report generation process:
 
 import json
 import time
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Callable
 
 from paperpilot.core.logging import get_logger
 from paperpilot.core.report.auditor import audit_all_sections, merge_citations
@@ -48,19 +48,19 @@ def load_papers_from_file(file_path: Path) -> tuple[list[dict], str]:
         Tuple of (papers list, query string)
     """
     log.debug("loading_papers", file=str(file_path))
-    
-    with open(file_path, "r", encoding="utf-8") as f:
+
+    with open(file_path, encoding="utf-8") as f:
         data = json.load(f)
-    
+
     papers = data.get("papers", [])
     query = data.get("query", "Unknown query")
-    
+
     log.info("papers_loaded", file=str(file_path), count=len(papers))
     return papers, query
 
 
 def select_top_k_papers(
-    elo_file: Optional[Path],
+    elo_file: Path | None,
     snowball_file: Path,
     k: int = 30,
 ) -> tuple[list[dict], str]:
@@ -99,7 +99,7 @@ def select_top_k_papers(
         raise FileNotFoundError(
             f"Neither elo file nor snowball file found: {elo_file}, {snowball_file}"
         )
-    
+
     selected = papers[:k]
     log.info(
         "papers_selected",
@@ -107,7 +107,7 @@ def select_top_k_papers(
         selected=len(selected),
         top_paper=selected[0].get("title", "Unknown")[:50] if selected else None
     )
-    
+
     return selected, query
 
 
@@ -131,36 +131,36 @@ def _sections_to_research_items(
         List of ResearchItem for the report
     """
     items = []
-    
+
     for i, result in enumerate(audit_results):
         # Get original section (if available)
         original = original_sections[i] if i < len(original_sections) else None
-        
+
         # Start with revised text
         final_text = result.revised_text
-        
+
         # Merge citations from original if they were lost
         if original:
             final_text = merge_citations(original.content, final_text, all_cards)
-        
+
         # Final injection pass to ensure every paragraph has citations
         final_text = inject_citations_if_missing(final_text, all_cards)
-        
+
         # Extract final citations
         cited_ids = extract_cited_ids(final_text)
-        
+
         log.debug(
             "section_to_research_item",
             section=result.section_title,
             citations=len(cited_ids)
         )
-        
+
         items.append(ResearchItem(
             title=result.section_title,
             summary=final_text,
             paper_ids=cited_ids
         ))
-    
+
     return items
 
 
@@ -175,7 +175,7 @@ def _extract_open_problems(cards: list[PaperCard]) -> list[OpenProblem]:
     """
     problems = []
     seen_limitations = set()
-    
+
     for card in cards:
         if card.limitation and card.limitation not in seen_limitations:
             seen_limitations.add(card.limitation)
@@ -184,16 +184,16 @@ def _extract_open_problems(cards: list[PaperCard]) -> list[OpenProblem]:
                 text=card.limitation,
                 paper_ids=[card.id]
             ))
-    
+
     # Limit to top 5 problems
     return problems[:5]
 
 
 async def generate_report(
     snowball_file: Path,
-    elo_file: Optional[Path] = None,
+    elo_file: Path | None = None,
     top_k: int = 30,
-    progress_callback: Optional[Callable[[int, str, int, int, str], None]] = None,
+    progress_callback: Callable[[int, str, int, int, str], None] | None = None,
 ) -> Report:
     """Generate a complete research report.
     
@@ -210,85 +210,85 @@ async def generate_report(
     """
     start_time = time.time()
     log.info("report_generation_start", snowball_file=str(snowball_file), top_k=top_k)
-    
+
     # Step 0: Select top-k papers
     log.info("step_0_paper_selection")
     papers, query = select_top_k_papers(elo_file, snowball_file, k=top_k)
-    
+
     if not papers:
         raise ValueError("No papers available for report generation")
-    
+
     if progress_callback:
         progress_callback(0, "Selecting Top Papers", 1, 1, f"Selected {len(papers)} papers")
-    
+
     # Step 1: Generate paper cards
     log.info("step_1_card_generation", num_papers=len(papers))
     cards = await generate_paper_cards(papers, progress_callback=lambda current, total, msg: (
         progress_callback(1, "Generating Paper Cards", current, total, msg) if progress_callback else None
     ))
-    
+
     if not cards:
         raise ValueError("Failed to generate any paper cards")
-    
+
     log.info("cards_ready", count=len(cards))
-    
+
     if progress_callback:
         progress_callback(1, "Generating Paper Cards", len(cards), len(cards), f"Generated {len(cards)} paper cards")
-    
+
     # Step 2: Generate outline
     log.info("step_2_outline_generation")
     outline = await generate_outline(query, cards)
     log.info("outline_ready", num_sections=len(outline.sections))
-    
+
     if progress_callback:
         progress_callback(2, "Creating Report Outline", 1, 1, f"Created outline with {len(outline.sections)} sections")
-    
+
     # Step 3: Write sections
     log.info("step_3_section_writing")
     written_sections = await write_all_sections(
-        outline.sections, 
+        outline.sections,
         cards,
         progress_callback=lambda current, total, msg: (
             progress_callback(3, "Writing Sections", current, total, msg) if progress_callback else None
         )
     )
     log.info("sections_written", count=len(written_sections))
-    
+
     if progress_callback:
         progress_callback(3, "Writing Sections", len(written_sections), len(written_sections), f"Wrote {len(written_sections)} sections")
-    
+
     # Step 4: Audit sections
     log.info("step_4_citation_audit")
     audit_results = await audit_all_sections(
-        written_sections, 
+        written_sections,
         cards,
         progress_callback=lambda current, total, msg: (
             progress_callback(4, "Auditing Citations", current, total, msg) if progress_callback else None
         )
     )
     log.info("audit_complete", count=len(audit_results))
-    
+
     if progress_callback:
         progress_callback(4, "Auditing Citations", len(audit_results), len(audit_results), f"Audited {len(audit_results)} sections")
-    
+
     # Step 5: Write introduction and conclusion
     log.info("step_5_intro_conclusion")
     introduction = await write_introduction(query, cards)
     conclusion = await write_conclusion(query, cards, written_sections)
-    
+
     if progress_callback:
         progress_callback(5, "Writing Introduction & Conclusion", 1, 1, "Completed introduction and conclusion")
-    
+
     # Step 6: Assemble report with citation preservation
     log.info("step_6_assembly")
-    
+
     current_research = _sections_to_research_items(
         audit_results,
         written_sections,
         cards
     )
     open_problems = _extract_open_problems(cards)
-    
+
     report = Report(
         query=query,
         generated_at=datetime.now().isoformat(),
@@ -299,21 +299,21 @@ async def generate_report(
         conclusion=conclusion,
         paper_cards=cards,
     )
-    
+
     if progress_callback:
         progress_callback(6, "Assembling Report", 1, 1, "Assembling final report")
-    
+
     # Step 7: Final citation quality check
     log.info("step_7_final_check")
     report, warnings = final_citation_check(report)
-    
+
     if progress_callback:
         progress_callback(7, "Final Quality Check", 1, 1, f"Quality check complete ({len(warnings)} warnings)")
-    
+
     # Calculate statistics
     total_citations = sum(len(item.paper_ids) for item in current_research)
     duration = time.time() - start_time
-    
+
     log.info(
         "report_generation_complete",
         query=query,
@@ -323,7 +323,7 @@ async def generate_report(
         duration_sec=round(duration, 2),
         warnings=len(warnings)
     )
-    
+
     return report
 
 
@@ -340,12 +340,12 @@ def final_citation_check(report: Report) -> tuple[Report, list[str]]:
         Tuple of (report, list of warning messages)
     """
     warnings = []
-    
+
     for item in report.current_research:
         citations = len(item.paper_ids)
         words = len(item.summary.split())
         density = citations / (words / 100) if words > 0 else 0
-        
+
         if citations == 0:
             warnings.append(f"Section '{item.title}' has 0 citations")
         elif density < 0.5:
@@ -353,7 +353,7 @@ def final_citation_check(report: Report) -> tuple[Report, list[str]]:
                 f"Section '{item.title}' has low citation density: "
                 f"{density:.2f} per 100 words ({citations} citations in {words} words)"
             )
-    
+
     if warnings:
         log.warning(
             "final_citation_check_warnings",
@@ -362,7 +362,7 @@ def final_citation_check(report: Report) -> tuple[Report, list[str]]:
         )
     else:
         log.info("final_citation_check_passed", sections=len(report.current_research))
-    
+
     return report, warnings
 
 

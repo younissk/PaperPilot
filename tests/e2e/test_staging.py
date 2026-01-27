@@ -8,11 +8,12 @@ Run with:
     STAGING_API_URL=https://xxx.execute-api.eu-central-1.amazonaws.com pytest tests/e2e/ -v -m e2e
 """
 
-import pytest
 import os
 import time
-import httpx
+
 import boto3
+import httpx
+import pytest
 
 # Mark all tests in this module as e2e tests
 pytestmark = [

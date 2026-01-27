@@ -1,9 +1,10 @@
 """Shared pytest fixtures and configuration for PaperPilot tests."""
 
 import os
-import pytest
-from unittest.mock import MagicMock, patch
 from decimal import Decimal
+from unittest.mock import MagicMock
+
+import pytest
 
 # Ensure test environment variables
 os.environ.setdefault("AWS_DEFAULT_REGION", "eu-central-1")

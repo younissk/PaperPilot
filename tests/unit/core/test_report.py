@@ -1,18 +1,19 @@
 """Unit tests for report models and serialization."""
 
-import pytest
 from datetime import datetime
 
+import pytest
+
 from paperpilot.core.report.models import (
-    PaperCard,
-    SectionPlan,
-    ReportOutline,
-    SentenceAudit,
     AuditResult,
-    WrittenSection,
-    ResearchItem,
     OpenProblem,
+    PaperCard,
     Report,
+    ReportOutline,
+    ResearchItem,
+    SectionPlan,
+    SentenceAudit,
+    WrittenSection,
 )
 
 # Mark all tests in this module as unit tests

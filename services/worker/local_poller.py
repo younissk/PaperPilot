@@ -16,11 +16,11 @@ Environment variables:
     LOG_LEVEL: Logging level (default: INFO)
 """
 
+import logging
 import os
+import signal
 import sys
 import time
-import signal
-import logging
 from typing import NoReturn
 
 import boto3
@@ -82,7 +82,7 @@ def create_sqs_event(messages: list[dict]) -> dict:
             "awsRegion": AWS_REGION,
         }
         records.append(record)
-    
+
     return {"Records": records}
 
 
@@ -94,13 +94,13 @@ def poll_and_process() -> None:
         endpoint_url=AWS_ENDPOINT_URL,
         region_name=AWS_REGION,
     )
-    
-    logger.info(f"Starting SQS poller")
+
+    logger.info("Starting SQS poller")
     logger.info(f"  Queue URL: {SQS_QUEUE_URL}")
     logger.info(f"  Endpoint: {AWS_ENDPOINT_URL}")
     logger.info(f"  Region: {AWS_REGION}")
     logger.info("")
-    
+
     while not shutdown_requested:
         try:
             # Long-poll for messages
@@ -112,31 +112,31 @@ def poll_and_process() -> None:
                 AttributeNames=["All"],
                 MessageAttributeNames=["All"],
             )
-            
+
             messages = response.get("Messages", [])
-            
+
             if not messages:
                 # No messages, continue polling
                 continue
-            
+
             logger.info(f"Received {len(messages)} message(s)")
-            
+
             # Create Lambda-style event
             event = create_sqs_event(messages)
-            
+
             # Invoke the handler (same code path as Lambda)
             try:
                 result = handler(event, context=None)
-                
+
                 # Check for batch item failures
                 failures = result.get("batchItemFailures", [])
                 failed_ids = {f["itemIdentifier"] for f in failures}
-                
+
                 # Delete successfully processed messages
                 for msg in messages:
                     msg_id = msg.get("MessageId", "")
                     receipt_handle = msg.get("ReceiptHandle", "")
-                    
+
                     if msg_id not in failed_ids:
                         # Message processed successfully, delete it
                         try:
@@ -150,11 +150,11 @@ def poll_and_process() -> None:
                     else:
                         # Message failed, leave it for retry
                         logger.warning(f"Message {msg_id} failed, will be retried")
-                        
+
             except Exception as e:
                 logger.exception(f"Handler raised an exception: {e}")
                 # Don't delete messages on handler exception
-                
+
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code", "")
             if error_code == "AWS.SimpleQueueService.NonExistentQueue":
@@ -165,11 +165,11 @@ def poll_and_process() -> None:
             else:
                 logger.error(f"SQS error: {e}")
                 time.sleep(2)
-                
+
         except Exception as e:
             logger.exception(f"Unexpected error: {e}")
             time.sleep(2)
-    
+
     logger.info("Poller shutdown complete")
 
 
@@ -178,7 +178,7 @@ def main() -> NoReturn:
     # Set up signal handlers for graceful shutdown
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
-    
+
     print("=" * 60)
     print("PaperPilot Local Worker Poller")
     print("=" * 60)
@@ -186,7 +186,7 @@ def main() -> NoReturn:
     print("This process polls LocalStack SQS and processes jobs locally.")
     print("Press Ctrl+C to stop.")
     print("")
-    
+
     # Verify environment
     logger.info("Environment configuration:")
     logger.info(f"  JOBS_TABLE_NAME: {os.environ.get('JOBS_TABLE_NAME', 'paperpilot-jobs-prod')}")
@@ -194,12 +194,12 @@ def main() -> NoReturn:
     logger.info(f"  SQS_QUEUE_URL: {SQS_QUEUE_URL}")
     logger.info(f"  AWS_ENDPOINT_URL: {AWS_ENDPOINT_URL}")
     print("")
-    
+
     try:
         poll_and_process()
     except KeyboardInterrupt:
         logger.info("Interrupted by user")
-    
+
     sys.exit(0)
 
 

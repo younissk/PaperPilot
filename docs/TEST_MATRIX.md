@@ -88,6 +88,7 @@ tests/
 │       ├── test_models.py
 │       └── test_report.py
 ├── component/
+│   ├── test_api_contract.py # Frontend API contract compliance
 │   ├── test_api_routes.py   # FastAPI TestClient + mocked AWS
 │   └── test_worker_handler.py
 ├── integration/

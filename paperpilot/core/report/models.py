@@ -4,9 +4,9 @@ This module defines the data structures used throughout the report generation
 pipeline, including paper cards, report outlines, and the final report format.
 """
 
-from pydantic import BaseModel, Field
-from typing import Optional
 from datetime import datetime
+
+from pydantic import BaseModel, Field
 
 
 class PaperCard(BaseModel):
@@ -22,25 +22,25 @@ class PaperCard(BaseModel):
         default_factory=list,
         description="2-4 tags like 'prompting', 'evaluation', 'retrieval'"
     )
-    data_benchmark: Optional[str] = Field(
+    data_benchmark: str | None = Field(
         None,
         description="Dataset or benchmark used (if stated)"
     )
-    measured: Optional[str] = Field(
+    measured: str | None = Field(
         None,
         description="What is measured/evaluated (if stated)"
     )
-    limitation: Optional[str] = Field(
+    limitation: str | None = Field(
         None,
         description="One limitation mentioned (if stated)"
     )
-    key_quote: Optional[str] = Field(
+    key_quote: str | None = Field(
         None,
         description="Key phrase from the abstract (optional)"
     )
-    year: Optional[int] = Field(None, description="Publication year")
+    year: int | None = Field(None, description="Publication year")
     citation_count: int = Field(0, description="Total citation count")
-    elo_rating: Optional[float] = Field(
+    elo_rating: float | None = Field(
         None,
         description="Elo rating from ranking (if available)"
     )
@@ -75,11 +75,11 @@ class SentenceAudit(BaseModel):
         default_factory=list,
         description="Paper IDs cited in this sentence"
     )
-    issue: Optional[str] = Field(
+    issue: str | None = Field(
         None,
         description="Description of the issue if not supported"
     )
-    suggested_fix: Optional[str] = Field(
+    suggested_fix: str | None = Field(
         None,
         description="Suggested fix if not supported"
     )

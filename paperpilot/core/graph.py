@@ -13,23 +13,24 @@ HOW: 1. Extract paper IDs from snowball.json
      5. Generate JSON and HTML visualization
 """
 
-from typing import Dict, Any, List, Set, Literal
+from typing import Any, Literal
+
 import aiohttp
 
 from paperpilot.core.openalex import (
-    get_references,
-    get_citations,
     extract_openalex_id,
+    get_citations,
+    get_references,
 )
 
 
 async def build_citation_graph(
     session: aiohttp.ClientSession,
-    papers: List[Dict[str, Any]],
+    papers: list[dict[str, Any]],
     query: str = "Unknown",
     direction: Literal["both", "citations", "references"] = "both",
     limit: int = 100,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Build a citation/reference graph from papers.
     
     Args:
@@ -42,9 +43,9 @@ async def build_citation_graph(
         Graph data dictionary with nodes and edges
     """
     # Create set of paper IDs in the snowball for fast lookup
-    paper_ids: Set[str] = set()
-    paper_map: Dict[str, Dict[str, Any]] = {}
-    
+    paper_ids: set[str] = set()
+    paper_map: dict[str, dict[str, Any]] = {}
+
     for paper in papers:
         paper_id = paper.get("paper_id")
         if paper_id:
@@ -53,7 +54,7 @@ async def build_citation_graph(
                 paper_id = f"W{paper_id}"
             paper_ids.add(paper_id)
             paper_map[paper_id] = paper
-    
+
     # Build nodes list
     nodes = []
     for paper_id, paper in paper_map.items():
@@ -64,20 +65,20 @@ async def build_citation_graph(
             "citation_count": paper.get("citation_count", 0),
             "abstract": paper.get("abstract"),
         })
-    
+
     # Build edges by fetching references and/or citations
     edges = []
-    edge_set: Set[tuple[str, str, str]] = set()  # (source, target, type) to avoid duplicates
-    
+    edge_set: set[tuple[str, str, str]] = set()  # (source, target, type) to avoid duplicates
+
     for paper in papers:
         paper_id = paper.get("paper_id")
         if not paper_id:
             continue
-        
+
         # Normalize ID
         if not paper_id.startswith("W"):
             paper_id = f"W{paper_id}"
-        
+
         # Fetch references (papers this paper cites)
         if direction in ["both", "references"]:
             try:
@@ -102,7 +103,7 @@ async def build_citation_graph(
             except Exception:
                 # Skip if API call fails
                 pass
-        
+
         # Fetch citations (papers that cite this paper)
         if direction in ["both", "citations"]:
             try:
@@ -127,7 +128,7 @@ async def build_citation_graph(
             except Exception:
                 # Skip if API call fails
                 pass
-    
+
     return {
         "query": query,
         "total_papers": len(nodes),

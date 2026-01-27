@@ -1,18 +1,13 @@
 """Main EloRanker orchestrator integrating all components."""
 
-from typing import List, Optional
 
-from paperpilot.core.models import SnowballCandidate, QueryProfile
-from paperpilot.core.elo_ranker.models import (
-    CandidateElo, 
-    MatchResult, 
-    RankerConfig
-)
 from paperpilot.core.elo_ranker.elo import update_elo
-from paperpilot.core.elo_ranker.pairing import RandomPairing, SwissPairing, PairingStrategy
 from paperpilot.core.elo_ranker.judge import judge_match_batch
+from paperpilot.core.elo_ranker.models import CandidateElo, MatchResult, RankerConfig
+from paperpilot.core.elo_ranker.pairing import PairingStrategy, RandomPairing, SwissPairing
 from paperpilot.core.elo_ranker.stopping import StabilityChecker, TournamentRounds
 from paperpilot.core.events import EventHandler, NullEventHandler
+from paperpilot.core.models import QueryProfile, SnowballCandidate
 
 
 class EloRanker:
@@ -29,13 +24,13 @@ class EloRanker:
     - Concurrent match execution for speed
     - Rich interactive display
     """
-    
+
     def __init__(
         self,
         profile: QueryProfile,
-        candidates: List[SnowballCandidate],
-        config: Optional[RankerConfig] = None,
-        event_handler: Optional[EventHandler] = None
+        candidates: list[SnowballCandidate],
+        config: RankerConfig | None = None,
+        event_handler: EventHandler | None = None
     ):
         """Initialize the Elo ranker.
         
@@ -48,44 +43,44 @@ class EloRanker:
         self.profile = profile
         self.config = config or RankerConfig()
         self.event_handler = event_handler or NullEventHandler()
-        
+
         # Initialize candidates with Elo ratings
         self.elo_candidates = [
             CandidateElo(candidate=candidate, elo=self.config.initial_elo)
             for candidate in candidates
         ]
-        
+
         # Match history for display
-        self.match_history: List[MatchResult] = []
-        self.current_match: Optional[MatchResult] = None
-        
+        self.match_history: list[MatchResult] = []
+        self.current_match: MatchResult | None = None
+
         # Pairing strategy
         if self.config.pairing_strategy == "swiss":
             self.pairing: PairingStrategy = SwissPairing()
         else:
             self.pairing: PairingStrategy = RandomPairing()
-        
+
         # Early stopping
-        self.stability_checker: Optional[StabilityChecker] = None
+        self.stability_checker: StabilityChecker | None = None
         if self.config.early_stop_enabled and not self.config.tournament_mode:
             self.stability_checker = StabilityChecker(
                 top_k=self.config.early_stop_top_k,
                 check_interval=self.config.early_stop_check_interval,
                 threshold=self.config.early_stop_threshold
             )
-        
+
         # Tournament rounds
-        self.tournament: Optional[TournamentRounds] = None
+        self.tournament: TournamentRounds | None = None
         if self.config.tournament_mode:
             self.tournament = TournamentRounds(self.config.tournament_rounds)
-        
+
         # Determine max matches
         if self.config.max_matches is None:
             self.max_matches = len(candidates) * 3
         else:
             self.max_matches = self.config.max_matches
-    
-    async def rank_candidates(self) -> List[CandidateElo]:
+
+    async def rank_candidates(self) -> list[CandidateElo]:
         """Rank candidates using Elo ranking through pairwise matches.
         
         Runs multiple pairwise matches, updates Elo ratings after each match,
@@ -100,17 +95,17 @@ class EloRanker:
         if len(self.elo_candidates) < 2:
             # Need at least 2 candidates to run matches
             return self.elo_candidates
-        
+
         if self.config.interactive:
             return await self._rank_with_display()
         else:
             return await self._rank_silent()
-    
-    async def _rank_silent(self) -> List[CandidateElo]:
+
+    async def _rank_silent(self) -> list[CandidateElo]:
         """Run ranking without any display."""
         matches_played = 0
         calibration_matches = self.config.calibration_matches
-        
+
         while matches_played < self.max_matches:
             # Determine active candidates (for tournament mode)
             if self.tournament:
@@ -119,25 +114,25 @@ class EloRanker:
                     break  # Tournament complete
             else:
                 active_candidates = self.elo_candidates
-            
+
             # Select pairing strategy based on calibration phase
             if matches_played < calibration_matches:
                 pairing_strategy = RandomPairing()
             else:
                 pairing_strategy = self.pairing
-            
+
             # Select pairs
             batch_size = min(self.config.batch_size, self.max_matches - matches_played)
             pairs = pairing_strategy.select_pairs(active_candidates, batch_size)
-            
+
             if not pairs:
                 break
-            
+
             # Prepare pairs for judging
             judge_pairs = [
                 (p[0].candidate, p[1].candidate) for p in pairs
             ]
-            
+
             # Emit match start events
             for pair in pairs:
                 self.event_handler.on_match_start(
@@ -145,56 +140,56 @@ class EloRanker:
                     paper2_title=pair[1].candidate.title,
                     candidates=self.elo_candidates,
                 )
-            
+
             # Judge matches concurrently
             results = await judge_match_batch(
                 judge_pairs,
                 self.profile,
                 concurrency=self.config.concurrency
             )
-            
+
             # Update Elo ratings and emit events
             for (c1, c2), result in zip(pairs, results):
                 update_elo(c1, c2, result.winner, self.config.k_factor)
                 self.match_history.append(result)
                 matches_played += 1
-                
+
                 # Emit match complete event
                 self.event_handler.on_match_complete(
                     match=result,
                     candidates=self.elo_candidates,
                 )
-                
+
                 # Emit Elo update event
                 self.event_handler.on_elo_update(
                     candidates=self.elo_candidates,
                     match_num=matches_played,
                     total_matches=self.max_matches,
                 )
-                
+
                 # Emit progress event
                 self.event_handler.on_progress(
                     current=matches_played,
                     total=self.max_matches,
                     message="Running Elo matches...",
                 )
-                
+
                 if self.tournament:
                     self.tournament.record_match()
                     if self.tournament.should_advance_round():
                         if not self.tournament.advance_round():
                             break  # Tournament complete
-            
+
             # Check early stopping
             if self.stability_checker:
                 if self.stability_checker.check(self.elo_candidates):
                     break
-        
+
         # Sort candidates by Elo rating (highest first)
         self.elo_candidates.sort(key=lambda x: x.elo, reverse=True)
         return self.elo_candidates
-    
-    async def _rank_with_display(self) -> List[CandidateElo]:
+
+    async def _rank_with_display(self) -> list[CandidateElo]:
         """Run ranking with interactive display via event handler."""
         # Start display if handler supports it
         if hasattr(self.event_handler, 'start_elo_display'):
@@ -209,10 +204,10 @@ class EloRanker:
                     "concurrency": self.config.concurrency,
                 },
             )
-        
+
         matches_played = 0
         calibration_matches = self.config.calibration_matches
-        
+
         try:
             while matches_played < self.max_matches:
                 # Determine active candidates (for tournament mode)
@@ -222,25 +217,25 @@ class EloRanker:
                         break  # Tournament complete
                 else:
                     active_candidates = self.elo_candidates
-                
+
                 # Select pairing strategy based on calibration phase
                 if matches_played < calibration_matches:
                     pairing_strategy = RandomPairing()
                 else:
                     pairing_strategy = self.pairing
-                
+
                 # Select pairs
                 batch_size = min(self.config.batch_size, self.max_matches - matches_played)
                 pairs = pairing_strategy.select_pairs(active_candidates, batch_size)
-                
+
                 if not pairs:
                     break
-                
+
                 # Prepare pairs for judging
                 judge_pairs = [
                     (p[0].candidate, p[1].candidate) for p in pairs
                 ]
-                
+
                 # Emit match start events
                 for pair in pairs:
                     self.event_handler.on_match_start(
@@ -248,46 +243,46 @@ class EloRanker:
                         paper2_title=pair[1].candidate.title,
                         candidates=self.elo_candidates,
                     )
-                
+
                 # Judge matches concurrently
                 results = await judge_match_batch(
                     judge_pairs,
                     self.profile,
                     concurrency=self.config.concurrency
                 )
-                
+
                 # Update Elo ratings and emit events
                 for (c1, c2), result in zip(pairs, results):
                     update_elo(c1, c2, result.winner, self.config.k_factor)
                     self.match_history.append(result)
                     matches_played += 1
-                    
+
                     # Emit match complete event
                     self.event_handler.on_match_complete(
                         match=result,
                         candidates=self.elo_candidates,
                     )
-                    
+
                     # Emit Elo update event
                     self.event_handler.on_elo_update(
                         candidates=self.elo_candidates,
                         match_num=matches_played,
                         total_matches=self.max_matches,
                     )
-                    
+
                     # Emit progress event
                     self.event_handler.on_progress(
                         current=matches_played,
                         total=self.max_matches,
                         message="Running Elo matches...",
                     )
-                    
+
                     if self.tournament:
                         self.tournament.record_match()
                         if self.tournament.should_advance_round():
                             if not self.tournament.advance_round():
                                 break  # Tournament complete
-                
+
                 # Check early stopping
                 if self.stability_checker:
                     if self.stability_checker.check(self.elo_candidates):
@@ -305,8 +300,8 @@ class EloRanker:
                     candidates=self.elo_candidates,
                     final=True,
                 )
-        
+
         # Sort candidates by Elo rating (highest first)
         self.elo_candidates.sort(key=lambda x: x.elo, reverse=True)
-        
+
         return self.elo_candidates

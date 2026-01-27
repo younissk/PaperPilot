@@ -5,14 +5,18 @@ with support for concurrent batch processing.
 """
 
 import asyncio
+import json
 import os
 import re
-import json
-from typing import Optional, List, Tuple
 
 from openai import AsyncOpenAI
 
-from paperpilot.core.models import ReducedArxivEntry, QueryProfile, SnowballCandidate, JudgmentResult
+from paperpilot.core.models import (
+    JudgmentResult,
+    QueryProfile,
+    ReducedArxivEntry,
+    SnowballCandidate,
+)
 
 # Async OpenAI client
 async_client = AsyncOpenAI(
@@ -21,7 +25,7 @@ async_client = AsyncOpenAI(
 
 # Concurrency limits for OpenAI API
 OPENAI_MAX_CONCURRENT = 50
-_openai_semaphore: Optional[asyncio.Semaphore] = None
+_openai_semaphore: asyncio.Semaphore | None = None
 
 
 def _get_openai_semaphore() -> asyncio.Semaphore:
@@ -40,9 +44,9 @@ def keyword_gate(profile: QueryProfile, title: str, summary: str) -> bool:
     """
     if not profile.keyword_patterns:
         return True
-    
+
     text = f"{title} {summary}"
-    
+
     # All patterns must match (AND logic) for the paper to pass
     for pattern_str in profile.keyword_patterns:
         try:
@@ -52,7 +56,7 @@ def keyword_gate(profile: QueryProfile, title: str, summary: str) -> bool:
         except re.error:
             # Skip invalid patterns
             continue
-    
+
     return True
 
 
@@ -71,7 +75,7 @@ async def judge_result(
     Returns:
         True if the paper is relevant, False otherwise.
     """
-    
+
     # 1. Cheap keyword gate (sync, no API call)
     if not keyword_gate(profile, result.title, result.summary):
         return False
@@ -80,7 +84,7 @@ async def judge_result(
     required_concepts_str = ", ".join(profile.required_concepts) if profile.required_concepts else "None specified"
     optional_concepts_str = ", ".join(profile.optional_concepts) if profile.optional_concepts else "None specified"
     exclusion_concepts_str = ", ".join(profile.exclusion_concepts) if profile.exclusion_concepts else "None specified"
-    
+
     prompt = f"""
 You are a strict relevance judge for academic paper search.
 
@@ -129,7 +133,7 @@ Paper summary: {result.summary}
 """
 
     semaphore = _get_openai_semaphore()
-    
+
     try:
         async with semaphore:
             response = await async_client.chat.completions.create(
@@ -139,11 +143,11 @@ Paper summary: {result.summary}
                 max_tokens=100,
                 response_format={"type": "json_object"}
             )
-        
+
         content = response.choices[0].message.content.strip()
         data = json.loads(content)
         return bool(data.get("relevant", False))
-        
+
     except Exception:
         # Fallback for parsing errors or API issues
         return False
@@ -152,7 +156,7 @@ Paper summary: {result.summary}
 async def judge_candidate(
     profile: QueryProfile,
     candidate: SnowballCandidate,
-    parent_context: Optional[str] = None
+    parent_context: str | None = None
 ) -> JudgmentResult:
     """Judge a snowball candidate and return structured result with provenance info.
     
@@ -171,17 +175,17 @@ async def judge_candidate(
     required_concepts_str = ", ".join(profile.required_concepts) if profile.required_concepts else "None specified"
     optional_concepts_str = ", ".join(profile.optional_concepts) if profile.optional_concepts else "None specified"
     exclusion_concepts_str = ", ".join(profile.exclusion_concepts) if profile.exclusion_concepts else "None specified"
-    
+
     abstract = candidate.abstract or "(No abstract available)"
-    
+
     # Determine if this might be a foundational paper based on discovery context
     is_foundational_candidate = (
-        parent_context and 
-        ("foundation" in parent_context.lower() or 
+        parent_context and
+        ("foundation" in parent_context.lower() or
          "reference" in parent_context.lower() or
          "fallback" in (candidate.discovered_from or "").lower())
     )
-    
+
     foundational_guidance = ""
     if is_foundational_candidate:
         foundational_guidance = """
@@ -196,7 +200,7 @@ Foundational papers should be ACCEPTED if they:
 For foundational papers, it is OK if they don't explicitly mention ALL required concepts,
 as long as they provide essential building blocks for the core topic.
 """
-    
+
     prompt = f"""
 You are a relevance judge for academic paper search in a snowballing literature review.
 
@@ -248,7 +252,7 @@ Discovery context: {parent_context or "Discovered through citation graph expansi
 """
 
     semaphore = _get_openai_semaphore()
-    
+
     try:
         async with semaphore:
             response = await async_client.chat.completions.create(
@@ -258,16 +262,16 @@ Discovery context: {parent_context or "Discovered through citation graph expansi
                 max_tokens=150,
                 response_format={"type": "json_object"}
             )
-        
+
         content = response.choices[0].message.content.strip()
         data = json.loads(content)
-        
+
         return JudgmentResult(
             relevant=bool(data.get("relevant", False)),
             confidence=float(data.get("confidence", 0.0)),
             reason=str(data.get("reason", "No reason provided"))
         )
-        
+
     except Exception as e:
         # Fallback for parsing errors or API issues
         return JudgmentResult(
@@ -284,8 +288,8 @@ Discovery context: {parent_context or "Discovered through citation graph expansi
 
 async def batch_judge_results(
     profile: QueryProfile,
-    results: List[Tuple[str, ReducedArxivEntry]]
-) -> List[bool]:
+    results: list[tuple[str, ReducedArxivEntry]]
+) -> list[bool]:
     """Judge multiple arXiv results concurrently.
     
     Args:
@@ -304,8 +308,8 @@ async def batch_judge_results(
 
 async def batch_judge_candidates(
     profile: QueryProfile,
-    candidates_with_context: List[Tuple[SnowballCandidate, Optional[str]]]
-) -> List[JudgmentResult]:
+    candidates_with_context: list[tuple[SnowballCandidate, str | None]]
+) -> list[JudgmentResult]:
     """Judge multiple snowball candidates concurrently.
     
     Args:

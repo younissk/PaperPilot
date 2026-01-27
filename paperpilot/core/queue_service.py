@@ -16,12 +16,11 @@ Usage:
     )
 """
 
-import os
 import json
-from typing import Any, Optional
+import os
+from typing import Any
 
 import boto3
-from botocore.exceptions import ClientError
 
 
 class QueueService:
@@ -31,8 +30,8 @@ class QueueService:
     It's designed to be used by the API Lambda to enqueue work
     for the worker Lambda.
     """
-    
-    def __init__(self, queue_url: Optional[str] = None):
+
+    def __init__(self, queue_url: str | None = None):
         """Initialize the queue service.
         
         Args:
@@ -42,24 +41,24 @@ class QueueService:
             "SQS_QUEUE_URL",
             "https://sqs.eu-central-1.amazonaws.com/120569648365/paperpilot-jobs-prod"
         )
-        
+
         # Lazy initialization of SQS client
         self._sqs = None
-    
+
     @property
     def sqs(self):
         """Lazy-load SQS client."""
         if self._sqs is None:
             self._sqs = boto3.client("sqs")
         return self._sqs
-    
+
     def enqueue_job(
         self,
         job_id: str,
         job_type: str,
         payload: dict[str, Any],
-        message_group_id: Optional[str] = None,
-        deduplication_id: Optional[str] = None,
+        message_group_id: str | None = None,
+        deduplication_id: str | None = None,
     ) -> str:
         """Send a job message to the SQS queue.
         
@@ -81,21 +80,21 @@ class QueueService:
             "job_type": job_type,
             "payload": payload,
         })
-        
+
         kwargs = {
             "QueueUrl": self.queue_url,
             "MessageBody": message_body,
         }
-        
+
         # Add FIFO queue attributes if provided
         if message_group_id:
             kwargs["MessageGroupId"] = message_group_id
         if deduplication_id:
             kwargs["MessageDeduplicationId"] = deduplication_id
-        
+
         response = self.sqs.send_message(**kwargs)
         return response["MessageId"]
-    
+
     def enqueue_search_job(
         self,
         job_id: str,
@@ -129,13 +128,13 @@ class QueueService:
                 "top_n": top_n,
             },
         )
-    
+
     def enqueue_ranking_job(
         self,
         job_id: str,
         query: str,
-        file_path: Optional[str] = None,
-        n_matches: Optional[int] = None,
+        file_path: str | None = None,
+        n_matches: int | None = None,
         k_factor: float = 32.0,
         pairing: str = "swiss",
         early_stop: bool = True,
@@ -169,7 +168,7 @@ class QueueService:
                 "concurrency": concurrency,
             },
         )
-    
+
     def enqueue_pipeline_job(
         self,
         job_id: str,
@@ -221,7 +220,7 @@ class QueueService:
 
 
 # Module-level singleton for convenience
-_default_queue_service: Optional[QueueService] = None
+_default_queue_service: QueueService | None = None
 
 
 def get_queue_service() -> QueueService:

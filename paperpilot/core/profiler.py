@@ -7,7 +7,6 @@ for relevance filtering.
 import json
 import os
 import re
-from typing import List
 
 from openai import AsyncOpenAI
 
@@ -84,15 +83,15 @@ Research topic query: {query}
         temperature=0,
         response_format={"type": "json_object"}
     )
-    
+
     content = response.choices[0].message.content.strip()
     data = json.loads(content)
-    
+
     # Parse required_concepts - preserve groups if nested
     required_raw = data.get("required_concepts", [])
-    required_groups: List[List[str]] = []
-    required_flat: List[str] = []
-    
+    required_groups: list[list[str]] = []
+    required_flat: list[str] = []
+
     if required_raw:
         if isinstance(required_raw[0], list):
             # Already grouped: [["LLM", "large language model"], ["recommender", ...]]
@@ -102,17 +101,17 @@ Research topic query: {query}
             # Flat list - treat as single group (backward compat)
             required_groups = [required_raw]
             required_flat = required_raw
-    
+
     # Generate keyword patterns from groups: OR within group, AND across groups
     # This is more reliable than relying on LLM-generated patterns
     keyword_patterns = _build_keyword_patterns(required_groups)
-    
+
     # Extract fallback queries, or generate defaults if not provided
     fallback_queries = data.get("fallback_queries", [])
     if not fallback_queries:
         # Generate basic fallback queries from concept groups
         fallback_queries = _generate_default_fallback_queries(query, required_groups)
-    
+
     return QueryProfile(
         core_query=query,
         domain_description=data.get("domain_description", ""),
@@ -126,7 +125,7 @@ Research topic query: {query}
     )
 
 
-def _build_keyword_patterns(groups: List[List[str]]) -> List[str]:
+def _build_keyword_patterns(groups: list[list[str]]) -> list[str]:
     """Build regex patterns from concept groups.
     
     Each group becomes one pattern with OR semantics inside.
@@ -139,7 +138,7 @@ def _build_keyword_patterns(groups: List[List[str]]) -> List[str]:
         List of regex patterns, one per group
     """
     patterns = []
-    
+
     for group in groups:
         if not group:
             continue
@@ -148,14 +147,14 @@ def _build_keyword_patterns(groups: List[List[str]]) -> List[str]:
         # Case-insensitive matching will be applied at match time
         pattern = "(" + "|".join(escaped) + ")"
         patterns.append(pattern)
-    
+
     return patterns
 
 
 def _generate_default_fallback_queries(
     core_query: str,
-    concept_groups: List[List[str]]
-) -> List[str]:
+    concept_groups: list[list[str]]
+) -> list[str]:
     """Generate default fallback queries when LLM doesn't provide them.
     
     Creates queries for:
@@ -174,7 +173,7 @@ def _generate_default_fallback_queries(
         f"{core_query} survey",
         f"{core_query} review",
     ]
-    
+
     # Add queries for each concept group separately
     for group in concept_groups:
         if group:
@@ -182,20 +181,20 @@ def _generate_default_fallback_queries(
             top_terms = " ".join(group[:2])
             queries.append(f"{top_terms} survey")
             queries.append(f"{top_terms} deep learning")
-    
+
     # Add cross-group combinations
     if len(concept_groups) >= 2:
         for term1 in concept_groups[0][:2]:
             for term2 in concept_groups[1][:2]:
                 queries.append(f"{term1} {term2}")
-    
+
     # Deduplicate while preserving order
     seen: set[str] = set()
-    unique_queries: List[str] = []
+    unique_queries: list[str] = []
     for q in queries:
         q_lower = q.lower()
         if q_lower not in seen:
             seen.add(q_lower)
             unique_queries.append(q)
-    
+
     return unique_queries[:10]  # Limit to 10 queries

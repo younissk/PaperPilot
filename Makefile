@@ -31,10 +31,13 @@ run:
 	uv run python main.py
 
 # ==============================================================================
-# Legacy Local Development (non-serverless FastAPI)
+# Legacy Local Development (DEPRECATED - use 'make dev' for serverless)
 # ==============================================================================
+# NOTE: These targets run the monolith FastAPI directly without AWS emulation.
+# For production-like development, use 'make dev' instead.
 
-# Run API server directly (use: make api PORT=8000)
+# Run LEGACY API server directly (use: make api PORT=8000)
+# WARNING: This is the deprecated monolith API, not the serverless API
 api:
 	uv run uvicorn paperpilot.api.main:app --reload --port $(or $(PORT),8000)
 
@@ -42,7 +45,7 @@ api:
 frontend:
 	cd frontend && npm install && npm run dev
 
-# Legacy dev server (tmux: frontend + FastAPI direct)
+# LEGACY dev server (tmux: frontend + FastAPI direct) - DEPRECATED
 dev-server:
 	@tmux has-session 2>/dev/null; if [ $$? -ne 0 ]; then tmux new-session -d -s paperpilot; fi
 	tmux new-window -t paperpilot: -n "dev" "bash"

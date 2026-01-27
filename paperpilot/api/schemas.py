@@ -1,8 +1,8 @@
 """Pydantic schemas for API requests and responses."""
 
-from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
+from typing import Any
 
+from pydantic import BaseModel, Field
 
 
 class SearchRequest(BaseModel):
@@ -20,8 +20,8 @@ class SearchResponse(BaseModel):
     status: str = Field(..., description="Job status: 'queued', 'running', 'completed', 'failed'")
     query: str = Field(..., description="The search query")
     total_accepted: int = Field(0, description="Number of accepted papers")
-    papers: List[dict] = Field(default_factory=list, description="List of accepted papers")
-    result_path: Optional[str] = Field(None, description="Path to saved results file")
+    papers: list[dict] = Field(default_factory=list, description="List of accepted papers")
+    result_path: str | None = Field(None, description="Path to saved results file")
     current_step: int = Field(0, description="Current step number (0-6)")
     step_name: str = Field("", description="Human-readable name of current step")
     current_progress: int = Field(0, description="Current progress value (e.g., papers processed)")
@@ -35,10 +35,10 @@ class PaperResponse(BaseModel):
     """Schema for a single paper in API response."""
     paper_id: str
     title: str
-    abstract: Optional[str] = None
-    year: Optional[int] = None
+    abstract: str | None = None
+    year: int | None = None
     citation_count: int = 0
-    discovered_from: Optional[str] = None
+    discovered_from: str | None = None
     edge_type: str
     depth: int
     judge_reason: str
@@ -55,8 +55,8 @@ class HealthResponse(BaseModel):
 class RankingRequest(BaseModel):
     """Request schema for Elo ranking."""
     query: str = Field(..., description="Research query string")
-    file_path: Optional[str] = Field(None, description="Path to snowball results file (if not provided, uses latest for query)")
-    n_matches: Optional[int] = Field(None, ge=1, description="Number of matches to run (default: papers * 3)")
+    file_path: str | None = Field(None, description="Path to snowball results file (if not provided, uses latest for query)")
+    n_matches: int | None = Field(None, ge=1, description="Number of matches to run (default: papers * 3)")
     k_factor: float = Field(32.0, ge=1.0, le=100.0, description="K-factor for Elo updates")
     pairing: str = Field("swiss", description="Pairing strategy: 'swiss' or 'random'")
     early_stop: bool = Field(True, description="Stop when top-30 rankings stabilize")
@@ -69,8 +69,8 @@ class RankingResponse(BaseModel):
     job_id: str = Field(..., description="Unique job identifier")
     status: str = Field(..., description="Job status: 'queued', 'running', 'completed', 'failed'")
     query: str = Field(..., description="The search query")
-    papers: List[dict] = Field(default_factory=list, description="List of ranked papers")
-    result_path: Optional[str] = Field(None, description="Path to saved ranking file")
+    papers: list[dict] = Field(default_factory=list, description="List of ranked papers")
+    result_path: str | None = Field(None, description="Path to saved ranking file")
     matches_played: int = Field(0, description="Number of matches completed so far")
     total_matches: int = Field(0, description="Total number of matches expected")
 
@@ -79,12 +79,12 @@ class RankingResponse(BaseModel):
 class ClusteringRequest(BaseModel):
     """Request schema for clustering."""
     query: str = Field(..., description="Research query string")
-    file_path: Optional[str] = Field(None, description="Path to snowball results file (if not provided, uses latest for query)")
+    file_path: str | None = Field(None, description="Path to snowball results file (if not provided, uses latest for query)")
     method: str = Field("hdbscan", description="Clustering method: 'hdbscan', 'dbscan', or 'kmeans'")
-    n_clusters: Optional[int] = Field(None, ge=2, description="Number of clusters (kmeans only)")
+    n_clusters: int | None = Field(None, ge=2, description="Number of clusters (kmeans only)")
     dim_method: str = Field("umap", description="Dimension reduction: 'umap', 'tsne', or 'pca'")
-    eps: Optional[float] = Field(None, ge=0.0, description="Eps parameter for DBSCAN/HDBSCAN")
-    min_samples: Optional[int] = Field(None, ge=1, description="Min samples for DBSCAN/HDBSCAN")
+    eps: float | None = Field(None, ge=0.0, description="Eps parameter for DBSCAN/HDBSCAN")
+    min_samples: int | None = Field(None, ge=1, description="Min samples for DBSCAN/HDBSCAN")
 
 
 class ClusteringResponse(BaseModel):
@@ -92,17 +92,17 @@ class ClusteringResponse(BaseModel):
     job_id: str = Field(..., description="Unique job identifier")
     status: str = Field(..., description="Job status: 'queued', 'running', 'completed', 'failed'")
     query: str = Field(..., description="The search query")
-    clusters_data: Optional[Dict[str, Any]] = Field(None, description="Clustering JSON data")
-    html_content: Optional[str] = Field(None, description="HTML visualization content")
-    clusters_json_path: Optional[str] = Field(None, description="Path to clusters JSON file (deprecated)")
-    clusters_html_path: Optional[str] = Field(None, description="Path to clusters HTML visualization (deprecated)")
+    clusters_data: dict[str, Any] | None = Field(None, description="Clustering JSON data")
+    html_content: str | None = Field(None, description="HTML visualization content")
+    clusters_json_path: str | None = Field(None, description="Path to clusters JSON file (deprecated)")
+    clusters_html_path: str | None = Field(None, description="Path to clusters HTML visualization (deprecated)")
 
 
 # Timeline schemas
 class TimelineRequest(BaseModel):
     """Request schema for timeline creation."""
     query: str = Field(..., description="Research query string")
-    file_path: Optional[str] = Field(None, description="Path to snowball results file (if not provided, uses latest for query)")
+    file_path: str | None = Field(None, description="Path to snowball results file (if not provided, uses latest for query)")
 
 
 class TimelineResponse(BaseModel):
@@ -110,17 +110,17 @@ class TimelineResponse(BaseModel):
     job_id: str = Field(..., description="Unique job identifier")
     status: str = Field(..., description="Job status: 'queued', 'running', 'completed', 'failed'")
     query: str = Field(..., description="The search query")
-    timeline_data: Optional[Dict[str, Any]] = Field(None, description="Timeline JSON data")
-    html_content: Optional[str] = Field(None, description="HTML visualization content")
-    timeline_json_path: Optional[str] = Field(None, description="Path to timeline JSON file (deprecated)")
-    timeline_html_path: Optional[str] = Field(None, description="Path to timeline HTML visualization (deprecated)")
+    timeline_data: dict[str, Any] | None = Field(None, description="Timeline JSON data")
+    html_content: str | None = Field(None, description="HTML visualization content")
+    timeline_json_path: str | None = Field(None, description="Path to timeline JSON file (deprecated)")
+    timeline_html_path: str | None = Field(None, description="Path to timeline HTML visualization (deprecated)")
 
 
 # Graph schemas
 class GraphRequest(BaseModel):
     """Request schema for citation graph building."""
     query: str = Field(..., description="Research query string")
-    file_path: Optional[str] = Field(None, description="Path to snowball results file (if not provided, uses latest for query)")
+    file_path: str | None = Field(None, description="Path to snowball results file (if not provided, uses latest for query)")
     direction: str = Field("both", description="Graph direction: 'both', 'citations', or 'references'")
     limit: int = Field(100, ge=1, le=500, description="Maximum refs/cites to fetch per paper")
 
@@ -130,19 +130,19 @@ class GraphResponse(BaseModel):
     job_id: str = Field(..., description="Unique job identifier")
     status: str = Field(..., description="Job status: 'queued', 'running', 'completed', 'failed'")
     query: str = Field(..., description="The search query")
-    graph_data: Optional[Dict[str, Any]] = Field(None, description="Graph JSON data (nodes, edges)")
-    html_content: Optional[str] = Field(None, description="HTML visualization content")
-    graph_json_path: Optional[str] = Field(None, description="Path to graph JSON file (deprecated)")
-    graph_html_path: Optional[str] = Field(None, description="Path to graph HTML visualization (deprecated)")
+    graph_data: dict[str, Any] | None = Field(None, description="Graph JSON data (nodes, edges)")
+    html_content: str | None = Field(None, description="HTML visualization content")
+    graph_json_path: str | None = Field(None, description="Path to graph JSON file (deprecated)")
+    graph_html_path: str | None = Field(None, description="Path to graph HTML visualization (deprecated)")
 
 
 # Report schemas
 class ReportRequest(BaseModel):
     """Request schema for report generation."""
     query: str = Field(..., description="Research query string")
-    file_path: Optional[str] = Field(None, description="Path to snowball results file (if not provided, uses latest for query)")
+    file_path: str | None = Field(None, description="Path to snowball results file (if not provided, uses latest for query)")
     top_k: int = Field(30, ge=1, description="Number of top papers to use")
-    elo_file_path: Optional[str] = Field(None, description="Path to Elo ranking file (auto-detected if not provided)")
+    elo_file_path: str | None = Field(None, description="Path to Elo ranking file (auto-detected if not provided)")
 
 
 class ReportResponse(BaseModel):
@@ -150,8 +150,8 @@ class ReportResponse(BaseModel):
     job_id: str = Field(..., description="Unique job identifier")
     status: str = Field(..., description="Job status: 'queued', 'running', 'completed', 'failed'")
     query: str = Field(..., description="The search query")
-    report_data: Optional[Dict[str, Any]] = Field(None, description="Report JSON data")
-    report_path: Optional[str] = Field(None, description="Path to generated report file (deprecated)")
+    report_data: dict[str, Any] | None = Field(None, description="Report JSON data")
+    report_path: str | None = Field(None, description="Path to generated report file (deprecated)")
     current_step: int = Field(0, description="Current step number (0-7)")
     step_name: str = Field("", description="Human-readable name of current step")
     current_progress: int = Field(0, description="Current progress value (e.g., papers processed)")
@@ -163,7 +163,7 @@ class ReportResponse(BaseModel):
 class EverythingRequest(BaseModel):
     """Request schema for running all analysis features."""
     query: str = Field(..., description="Research query string")
-    file_path: Optional[str] = Field(None, description="Path to snowball results file (if not provided, uses latest for query)")
+    file_path: str | None = Field(None, description="Path to snowball results file (if not provided, uses latest for query)")
 
 
 class EverythingResponse(BaseModel):
@@ -171,19 +171,19 @@ class EverythingResponse(BaseModel):
     job_id: str = Field(..., description="Unique job identifier")
     status: str = Field(..., description="Job status: 'queued', 'running', 'completed', 'failed'")
     query: str = Field(..., description="The search query")
-    generated_files: List[str] = Field(default_factory=list, description="List of generated file paths")
+    generated_files: list[str] = Field(default_factory=list, description="List of generated file paths")
 
 
 # Results management schemas
 class QueryListResponse(BaseModel):
     """Response schema for listing queries."""
-    queries: List[str] = Field(..., description="List of query strings with results")
+    queries: list[str] = Field(..., description="List of query strings with results")
 
 
 class QueryMetadataResponse(BaseModel):
     """Response schema for query metadata."""
     query: str = Field(..., description="The query string")
-    metadata: Dict[str, Any] = Field(..., description="Metadata dictionary")
+    metadata: dict[str, Any] = Field(..., description="Metadata dictionary")
 
 
 # Pipeline schemas
@@ -216,6 +216,6 @@ class PipelineResponse(BaseModel):
     phase_total: int = Field(0, description="Total progress value for current phase")
     progress_message: str = Field("", description="Descriptive progress message")
     # Results when completed
-    papers: List[dict] = Field(default_factory=list, description="List of papers from search")
-    report_data: Optional[Dict[str, Any]] = Field(None, description="Report JSON data when completed")
-    query_profile: Optional[Dict[str, Any]] = Field(None, description="Query profile generated during ranking phase")
+    papers: list[dict] = Field(default_factory=list, description="List of papers from search")
+    report_data: dict[str, Any] | None = Field(None, description="Report JSON data when completed")
+    query_profile: dict[str, Any] | None = Field(None, description="Query profile generated during ranking phase")

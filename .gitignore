@@ -81,7 +81,8 @@ cython_debug/
 .aws-sam/
 infra/.aws-sam/
 
-# Copied paperpilot packages during build (see buildspec.yml)
+# Copied paperpilot packages during build (see buildspec*.yml)
+# These are vendored at build time for Lambda deployment
 services/api/paperpilot/
 services/worker/paperpilot/
 
@@ -166,8 +167,16 @@ log/
 # =============================================================================
 # Misc
 # =============================================================================
-# Local results (comment out if you want to track example results)
-# results/
+# Results directory policy:
+# - Existing committed results are historical examples (still tracked)
+# - New generated outputs should NOT be committed
+# - See results/README.md for details
+#
+# Note: Git ignores only apply to untracked files. The already-committed
+# results are intentionally kept in the repo as examples.
+results/*
+# But keep the README
+!results/README.md
 
 # Temporary files
 tmp/

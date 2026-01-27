@@ -1,15 +1,14 @@
 """Unit tests for core domain models."""
 
 import pytest
-from pydantic import ValidationError
 
 from paperpilot.core.models import (
-    EdgeType,
-    SnowballCandidate,
     AcceptedPaper,
+    EdgeType,
     JudgmentResult,
     QueryProfile,
     QueueItem,
+    SnowballCandidate,
 )
 
 # Mark all tests in this module as unit tests

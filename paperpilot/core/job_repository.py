@@ -27,11 +27,10 @@ Usage:
 
 import os
 import uuid
-import json
-from datetime import datetime, timezone, timedelta
-from typing import Any, Optional
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime, timedelta
 from enum import Enum
+from typing import Any
 
 import boto3
 from botocore.exceptions import ClientError
@@ -71,18 +70,18 @@ class JobState:
     created_at: str
     updated_at: str
     expires_at: int  # Unix timestamp for DynamoDB TTL
-    
+
     # Optional fields
     payload: dict[str, Any] = field(default_factory=dict)
     progress: JobProgress = field(default_factory=JobProgress)
-    result: Optional[dict[str, Any]] = None
-    error_message: Optional[str] = None
-    
+    result: dict[str, Any] | None = None
+    error_message: str | None = None
+
     # For search/pipeline jobs
     papers: list[dict] = field(default_factory=list)
-    report_data: Optional[dict[str, Any]] = None
-    query_profile: Optional[dict[str, Any]] = None
-    
+    report_data: dict[str, Any] | None = None
+    query_profile: dict[str, Any] | None = None
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for DynamoDB."""
         data = {
@@ -96,7 +95,7 @@ class JobState:
             "payload": self.payload,
             "progress": asdict(self.progress) if isinstance(self.progress, JobProgress) else self.progress,
         }
-        
+
         # Only include optional fields if they have values
         if self.result is not None:
             data["result"] = self.result
@@ -108,9 +107,9 @@ class JobState:
             data["report_data"] = self.report_data
         if self.query_profile is not None:
             data["query_profile"] = self.query_profile
-            
+
         return data
-    
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "JobState":
         """Create JobState from DynamoDB item."""
@@ -119,14 +118,14 @@ class JobState:
             progress = JobProgress(**progress_data)
         else:
             progress = JobProgress()
-        
+
         status = data.get("status", "queued")
         if isinstance(status, str):
             try:
                 status = JobStatus(status)
             except ValueError:
                 status = JobStatus.QUEUED
-        
+
         return cls(
             job_id=data["job_id"],
             job_type=data.get("job_type", "unknown"),
@@ -153,10 +152,10 @@ class JobRepository:
     (to create jobs and check status) and the worker Lambda
     (to update progress and results).
     """
-    
+
     def __init__(
         self,
-        table_name: Optional[str] = None,
+        table_name: str | None = None,
         ttl_days: int = DEFAULT_TTL_DAYS,
     ):
         """Initialize the repository.
@@ -167,39 +166,39 @@ class JobRepository:
         """
         self.table_name = table_name or os.environ.get("JOBS_TABLE_NAME", "paperpilot-jobs-prod")
         self.ttl_days = ttl_days
-        
+
         # Lazy initialization of DynamoDB resource
         self._dynamodb = None
         self._table = None
-    
+
     @property
     def dynamodb(self):
         """Lazy-load DynamoDB resource."""
         if self._dynamodb is None:
             self._dynamodb = boto3.resource("dynamodb")
         return self._dynamodb
-    
+
     @property
     def table(self):
         """Lazy-load DynamoDB table."""
         if self._table is None:
             self._table = self.dynamodb.Table(self.table_name)
         return self._table
-    
+
     def _calculate_ttl(self) -> int:
         """Calculate TTL timestamp (Unix epoch seconds)."""
-        return int((datetime.now(timezone.utc) + timedelta(days=self.ttl_days)).timestamp())
-    
+        return int((datetime.now(UTC) + timedelta(days=self.ttl_days)).timestamp())
+
     def _now_iso(self) -> str:
         """Get current time as ISO string."""
-        return datetime.now(timezone.utc).isoformat()
-    
+        return datetime.now(UTC).isoformat()
+
     def create_job(
         self,
         job_type: str,
         query: str,
-        payload: Optional[dict[str, Any]] = None,
-        job_id: Optional[str] = None,
+        payload: dict[str, Any] | None = None,
+        job_id: str | None = None,
     ) -> JobState:
         """Create a new job.
         
@@ -224,11 +223,11 @@ class JobRepository:
             payload=payload or {},
             progress=JobProgress(message="Waiting to start..."),
         )
-        
+
         self.table.put_item(Item=job.to_dict())
         return job
-    
-    def get_job(self, job_id: str) -> Optional[JobState]:
+
+    def get_job(self, job_id: str) -> JobState | None:
         """Get job by ID.
         
         Args:
@@ -247,12 +246,12 @@ class JobRepository:
             # Log error but return None
             print(f"Error getting job {job_id}: {e}")
             return None
-    
+
     def update_status(
         self,
         job_id: str,
         status: JobStatus,
-        error_message: Optional[str] = None,
+        error_message: str | None = None,
     ) -> None:
         """Update job status.
         
@@ -267,29 +266,29 @@ class JobRepository:
             ":status": status.value,
             ":updated_at": self._now_iso(),
         }
-        
+
         if error_message is not None:
             update_expr += ", error_message = :error"
             expr_values[":error"] = error_message
-        
+
         self.table.update_item(
             Key={"job_id": job_id},
             UpdateExpression=update_expr,
             ExpressionAttributeNames=expr_names,
             ExpressionAttributeValues=expr_values,
         )
-    
+
     def update_progress(
         self,
         job_id: str,
-        step: Optional[int] = None,
-        step_name: Optional[str] = None,
-        current: Optional[int] = None,
-        total: Optional[int] = None,
-        message: Optional[str] = None,
-        phase: Optional[str] = None,
-        current_iteration: Optional[int] = None,
-        total_iterations: Optional[int] = None,
+        step: int | None = None,
+        step_name: str | None = None,
+        current: int | None = None,
+        total: int | None = None,
+        message: str | None = None,
+        phase: str | None = None,
+        current_iteration: int | None = None,
+        total_iterations: int | None = None,
     ) -> None:
         """Update job progress.
         
@@ -322,10 +321,10 @@ class JobRepository:
             progress_updates["current_iteration"] = current_iteration
         if total_iterations is not None:
             progress_updates["total_iterations"] = total_iterations
-        
+
         if not progress_updates:
             return
-        
+
         # Build SET expression for each progress field
         set_parts = ["updated_at = :updated_at", "#status = :status"]
         expr_names = {"#status": "status"}
@@ -333,18 +332,18 @@ class JobRepository:
             ":updated_at": self._now_iso(),
             ":status": JobStatus.RUNNING.value,
         }
-        
+
         for key, value in progress_updates.items():
             set_parts.append(f"progress.{key} = :p_{key}")
             expr_values[f":p_{key}"] = value
-        
+
         self.table.update_item(
             Key={"job_id": job_id},
             UpdateExpression="SET " + ", ".join(set_parts),
             ExpressionAttributeNames=expr_names,
             ExpressionAttributeValues=expr_values,
         )
-    
+
     def update_papers(self, job_id: str, papers: list[dict]) -> None:
         """Update job papers list.
         
@@ -360,13 +359,13 @@ class JobRepository:
                 ":updated_at": self._now_iso(),
             },
         )
-    
+
     def complete_job(
         self,
         job_id: str,
-        result: Optional[dict[str, Any]] = None,
-        papers: Optional[list[dict]] = None,
-        report_data: Optional[dict[str, Any]] = None,
+        result: dict[str, Any] | None = None,
+        papers: list[dict] | None = None,
+        report_data: dict[str, Any] | None = None,
     ) -> None:
         """Mark job as completed.
         
@@ -382,27 +381,27 @@ class JobRepository:
             ":status": JobStatus.COMPLETED.value,
             ":updated_at": self._now_iso(),
         }
-        
+
         if result is not None:
             update_expr += ", #result = :result"
             expr_names["#result"] = "result"
             expr_values[":result"] = result
-        
+
         if papers is not None:
             update_expr += ", papers = :papers"
             expr_values[":papers"] = papers
-        
+
         if report_data is not None:
             update_expr += ", report_data = :report_data"
             expr_values[":report_data"] = report_data
-        
+
         self.table.update_item(
             Key={"job_id": job_id},
             UpdateExpression=update_expr,
             ExpressionAttributeNames=expr_names,
             ExpressionAttributeValues=expr_values,
         )
-    
+
     def fail_job(self, job_id: str, error_message: str) -> None:
         """Mark job as failed.
         
@@ -411,7 +410,7 @@ class JobRepository:
             error_message: Error description
         """
         self.update_status(job_id, JobStatus.FAILED, error_message=error_message)
-    
+
     def set_query_profile(self, job_id: str, query_profile: dict[str, Any]) -> None:
         """Set query profile for a job.
         
@@ -430,7 +429,7 @@ class JobRepository:
 
 
 # Module-level singleton for convenience
-_default_repository: Optional[JobRepository] = None
+_default_repository: JobRepository | None = None
 
 
 def get_job_repository() -> JobRepository:

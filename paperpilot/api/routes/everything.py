@@ -3,49 +3,48 @@
 import json
 import os
 import tempfile
-from typing import Dict, List
 import uuid
 from pathlib import Path
 
 import aiohttp
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 
 from paperpilot.api.schemas import EverythingRequest, EverythingResponse
-from paperpilot.core.elo_ranker import EloRanker, RankerConfig
-from paperpilot.core.profiler import generate_query_profile
-from paperpilot.core.models import SnowballCandidate, EdgeType
 from paperpilot.core.cluster import ClusteringEngine, ClusteringResult
-from paperpilot.core.timeline import create_timeline
+from paperpilot.core.elo_ranker import EloRanker, RankerConfig
 from paperpilot.core.graph import build_citation_graph
+from paperpilot.core.models import EdgeType, SnowballCandidate
+from paperpilot.core.profiler import generate_query_profile
+from paperpilot.core.results import ResultsManager
+from paperpilot.core.timeline import create_timeline
 from paperpilot.core.visualize import (
     save_cluster_visualization,
-    save_timeline_visualization,
     save_graph_visualization,
+    save_timeline_visualization,
 )
-from paperpilot.core.results import ResultsManager
 
 router = APIRouter(prefix="/api/everything", tags=["everything"])
 
 # In-memory job storage
-jobs: Dict[str, Dict] = {}
+jobs: dict[str, dict] = {}
 
 results_manager = ResultsManager()
 
 
 async def _run_everything_task(job_id: str, request: EverythingRequest):
     """Background task to run all analysis features."""
-    generated_files: List[str] = []
-    
+    generated_files: list[str] = []
+
     try:
         jobs[job_id]["status"] = "running"
-        
+
         # Load papers from file or use query
         papers = []
         if request.file_path:
             file_path = Path(request.file_path)
             if not file_path.exists():
                 raise FileNotFoundError(f"File not found: {request.file_path}")
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 data = json.load(f)
                 papers = data.get("papers", [])
                 query = data.get("query", request.query)
@@ -54,18 +53,18 @@ async def _run_everything_task(job_id: str, request: EverythingRequest):
             snowball_path = results_manager.get_latest_snowball(request.query)
             if snowball_path is None:
                 raise FileNotFoundError(f"No snowball results found for query: {request.query}")
-            with open(snowball_path, "r", encoding="utf-8") as f:
+            with open(snowball_path, encoding="utf-8") as f:
                 data = json.load(f)
                 papers = data.get("papers", [])
                 query = data.get("query", request.query)
-        
+
         if not papers:
             raise ValueError("No papers found in results file")
-        
+
         # 1. Elo Ranking
         try:
             profile = await generate_query_profile(query)
-            
+
             candidates = []
             for p in papers:
                 candidate = SnowballCandidate(
@@ -80,7 +79,7 @@ async def _run_everything_task(job_id: str, request: EverythingRequest):
                     depth=p.get("depth", 0),
                 )
                 candidates.append(candidate)
-            
+
             config = RankerConfig(
                 k_factor=32.0,
                 max_matches=None,
@@ -90,16 +89,16 @@ async def _run_everything_task(job_id: str, request: EverythingRequest):
                 tournament_mode=False,
                 interactive=False,
             )
-            
+
             ranker = EloRanker(
                 profile=profile,
                 candidates=candidates,
                 config=config,
                 event_handler=None,
             )
-            
+
             ranked = await ranker.rank_candidates()
-            
+
             ranked_papers = []
             for i, ce in enumerate(ranked, 1):
                 ranked_papers.append({
@@ -115,7 +114,7 @@ async def _run_everything_task(job_id: str, request: EverythingRequest):
                     "citation_count": ce.candidate.citation_count,
                     "abstract": ce.candidate.abstract[:500] if ce.candidate.abstract else None,
                 })
-            
+
             results = {
                 "query": query,
                 "ranking_method": "elo",
@@ -124,7 +123,7 @@ async def _run_everything_task(job_id: str, request: EverythingRequest):
                 "total_papers": len(ranked),
                 "papers": ranked_papers,
             }
-            
+
             saved_path = results_manager.save_elo_ranking(
                 query,
                 results,
@@ -135,20 +134,20 @@ async def _run_everything_task(job_id: str, request: EverythingRequest):
         except Exception:
             # Continue with other features even if ranking fails
             pass
-        
+
         # 2. Clustering
         try:
             engine = ClusteringEngine()
             features = engine.get_available_features()
-            
+
             cluster_method = "hdbscan"
             dim_method = "umap"
-            
+
             if dim_method == "umap" and not features["umap"]:
                 dim_method = "pca"
             if cluster_method == "hdbscan" and not features["hdbscan"]:
                 cluster_method = "dbscan"
-            
+
             embeddings = engine.embed_papers(papers)
             coords_2d = engine.reduce_dimensions(embeddings, method=dim_method)
             labels = engine.cluster(
@@ -158,10 +157,10 @@ async def _run_everything_task(job_id: str, request: EverythingRequest):
                 eps=None,
                 min_samples=None,
             )
-            
+
             summaries = engine.get_cluster_summaries(papers, labels)
             actual_clusters = len([s for s in summaries if s.cluster_id != -1])
-            
+
             result = ClusteringResult(
                 method=cluster_method,
                 dim_reduction=dim_method,
@@ -171,20 +170,20 @@ async def _run_everything_task(job_id: str, request: EverythingRequest):
                 cluster_summaries=summaries,
                 papers=papers,
             )
-            
+
             json_data = engine.to_json(result)
             json_data["query"] = query
-            
+
             with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False) as tmp:
                 tmp_html = tmp.name
-            
+
             save_cluster_visualization(result, tmp_html, title=f"Paper Clusters: {query}")
-            
-            with open(tmp_html, "r", encoding="utf-8") as f:
+
+            with open(tmp_html, encoding="utf-8") as f:
                 html_content = f.read()
-            
+
             os.unlink(tmp_html)
-            
+
             json_path, html_path = results_manager.save_clusters(
                 query,
                 json_data,
@@ -199,21 +198,21 @@ async def _run_everything_task(job_id: str, request: EverythingRequest):
         except Exception:
             # Continue with other features even if clustering fails
             pass
-        
+
         # 3. Timeline
         try:
             timeline_data = create_timeline(papers, query)
-            
+
             with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False) as tmp:
                 tmp_html = tmp.name
-            
+
             save_timeline_visualization(timeline_data, tmp_html, title=f"Paper Timeline: {query}")
-            
-            with open(tmp_html, "r", encoding="utf-8") as f:
+
+            with open(tmp_html, encoding="utf-8") as f:
                 html_content = f.read()
-            
+
             os.unlink(tmp_html)
-            
+
             json_path, html_path = results_manager.save_timeline(
                 query,
                 timeline_data,
@@ -225,7 +224,7 @@ async def _run_everything_task(job_id: str, request: EverythingRequest):
         except Exception:
             # Continue with other features even if timeline fails
             pass
-        
+
         # 4. Source Graph
         try:
             async with aiohttp.ClientSession() as session:
@@ -236,17 +235,17 @@ async def _run_everything_task(job_id: str, request: EverythingRequest):
                     direction="both",
                     limit=100,
                 )
-            
+
             with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False) as tmp:
                 tmp_html = tmp.name
-            
+
             save_graph_visualization(graph_data, tmp_html, title=f"Citation Graph: {query}")
-            
-            with open(tmp_html, "r", encoding="utf-8") as f:
+
+            with open(tmp_html, encoding="utf-8") as f:
                 html_content = f.read()
-            
+
             os.unlink(tmp_html)
-            
+
             json_path, html_path = results_manager.save_graph(
                 query,
                 graph_data,
@@ -260,10 +259,10 @@ async def _run_everything_task(job_id: str, request: EverythingRequest):
         except Exception:
             # Continue even if graph fails
             pass
-        
+
         jobs[job_id]["status"] = "completed"
         jobs[job_id]["generated_files"] = generated_files
-        
+
     except Exception as e:
         jobs[job_id]["status"] = "failed"
         jobs[job_id]["error"] = str(e)
@@ -279,16 +278,16 @@ async def start_everything(
     Returns immediately with a job_id. Use GET /api/everything/{job_id} to check status.
     """
     job_id = str(uuid.uuid4())
-    
+
     jobs[job_id] = {
         "status": "queued",
         "query": request.query,
         "generated_files": [],
     }
-    
+
     # Run everything in background
     background_tasks.add_task(_run_everything_task, job_id, request)
-    
+
     return EverythingResponse(
         job_id=job_id,
         status="queued",
@@ -302,13 +301,13 @@ async def get_everything_results(job_id: str):
     """Get everything results by job ID."""
     if job_id not in jobs:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     job = jobs[job_id]
-    
+
     if job["status"] == "failed":
         error = job.get("error", "Unknown error")
         raise HTTPException(status_code=500, detail=f"Everything mode failed: {error}")
-    
+
     return EverythingResponse(
         job_id=job_id,
         status=job["status"],

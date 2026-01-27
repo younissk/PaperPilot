@@ -7,7 +7,6 @@ paper cards and grouping them by research themes/paradigms.
 import json
 import os
 from collections import defaultdict
-from typing import Optional
 
 from openai import AsyncOpenAI
 
@@ -17,7 +16,7 @@ from paperpilot.core.report.models import PaperCard, ReportOutline, SectionPlan
 log = get_logger(__name__)
 
 # Async OpenAI client
-_async_client: Optional[AsyncOpenAI] = None
+_async_client: AsyncOpenAI | None = None
 
 
 def _get_async_client() -> AsyncOpenAI:
@@ -40,14 +39,14 @@ def group_by_tags(cards: list[PaperCard]) -> dict[str, list[PaperCard]]:
         Dictionary mapping tag -> list of papers with that tag
     """
     groups: dict[str, list[PaperCard]] = defaultdict(list)
-    
+
     for card in cards:
         if not card.paradigm_tags:
             groups["general"].append(card)
         else:
             for tag in card.paradigm_tags:
                 groups[tag].append(card)
-    
+
     return dict(groups)
 
 
@@ -55,21 +54,21 @@ def _build_outline_prompt(query: str, cards: list[PaperCard]) -> str:
     """Build the prompt for generating the report outline."""
     # Group cards by tags for context
     tag_groups = group_by_tags(cards)
-    
+
     # Build a summary of papers by tag
     tag_summary_lines = []
     for tag, tag_cards in sorted(tag_groups.items(), key=lambda x: -len(x[1])):
         paper_titles = [f"- {c.title[:60]}... [{c.id}]" for c in tag_cards[:5]]
         tag_summary_lines.append(f"\n**{tag.upper()}** ({len(tag_cards)} papers):")
         tag_summary_lines.extend(paper_titles)
-    
+
     tag_summary = "\n".join(tag_summary_lines)
-    
+
     # Build cards summary (claims only for brevity)
     cards_summary = "\n".join([
         f"[{c.id}] {c.claim}" for c in cards
     ])
-    
+
     return f"""You are creating an outline for a research survey report.
 
 Research Query: {query}
@@ -120,18 +119,18 @@ async def generate_outline(query: str, cards: list[PaperCard]) -> ReportOutline:
     if not cards:
         log.warning("no_cards_for_outline")
         return ReportOutline(sections=[])
-    
+
     log.info("outline_planning_start", query=query, num_cards=len(cards))
-    
+
     # Log tag distribution
     tag_groups = group_by_tags(cards)
     log.debug("tag_groups", groups=list(tag_groups.keys()), counts={
         k: len(v) for k, v in tag_groups.items()
     })
-    
+
     prompt = _build_outline_prompt(query, cards)
     client = _get_async_client()
-    
+
     try:
         response = await client.chat.completions.create(
             model="gpt-4o-mini",
@@ -140,10 +139,10 @@ async def generate_outline(query: str, cards: list[PaperCard]) -> ReportOutline:
             max_tokens=2000,
             response_format={"type": "json_object"}
         )
-        
+
         content = response.choices[0].message.content.strip()
         data = json.loads(content)
-        
+
         # Parse sections
         sections = []
         for section_data in data.get("sections", []):
@@ -153,17 +152,17 @@ async def generate_outline(query: str, cards: list[PaperCard]) -> ReportOutline:
                 relevant_paper_ids=section_data.get("relevant_paper_ids", []),
             )
             sections.append(section)
-        
+
         outline = ReportOutline(sections=sections)
-        
+
         log.info(
             "outline_planning_complete",
             num_sections=len(outline.sections),
             section_titles=[s.title for s in outline.sections]
         )
-        
+
         return outline
-        
+
     except json.JSONDecodeError as e:
         log.error("outline_json_parse_error", error=str(e))
         # Return a fallback single-section outline

@@ -8,42 +8,41 @@ import asyncio
 import json
 from pathlib import Path
 
+import aiohttp
 import typer
 
 from paperpilot.cli.console import (
     console,
-    print_header,
-    print_error,
+    create_spinner_progress,
+    display_augmented_queries,
+    display_cluster_export_success,
+    display_clusters_table,
+    display_export_success,
+    display_filtering_results,
     display_papers_table,
+    display_query_profile,
+    display_resolve_result,
+    print_error,
+    print_header,
     print_step,
     print_success,
     print_warning,
-    display_query_profile,
-    display_augmented_queries,
-    display_filtering_results,
-    display_resolve_result,
-    display_export_success,
-    create_spinner_progress,
-    display_clusters_table,
-    display_cluster_export_success,
 )
 from paperpilot.cli.handlers import RichEventHandler
-from paperpilot.core.models import AcceptedPaper, EdgeType
 from paperpilot.core.augment import augment_search
-from paperpilot.core.profiler import generate_query_profile
-from paperpilot.core.search import search_all_queries
 from paperpilot.core.filter import filter_results
-from paperpilot.core.openalex import (
-    resolve_arxiv_to_openalex,
-    get_work_details,
-    resolve_by_title,
-    extract_openalex_id,
-    extract_arxiv_id,
-)
-from paperpilot.core.models import ReducedArxivEntry, SnowballCandidate
 from paperpilot.core.logging import configure_logging, get_logger
+from paperpilot.core.models import AcceptedPaper, EdgeType, ReducedArxivEntry, SnowballCandidate
+from paperpilot.core.openalex import (
+    extract_arxiv_id,
+    extract_openalex_id,
+    get_work_details,
+    resolve_arxiv_to_openalex,
+    resolve_by_title,
+)
+from paperpilot.core.profiler import generate_query_profile
 from paperpilot.core.results import ResultsManager
-import aiohttp
+from paperpilot.core.search import search_all_queries
 
 # Configure logging for CLI mode
 configure_logging(cli_mode=True)
@@ -81,40 +80,40 @@ async def run_search_with_display(
     """Run search with Rich console output."""
     # Initialize results manager
     results_manager = ResultsManager()
-    
+
     # Create shared aiohttp session for all HTTP requests
     async with aiohttp.ClientSession() as session:
         # Step 1: Generate query profile
         print_step(1, "Generating query profile...")
-        
+
         with create_spinner_progress() as progress:
             progress.add_task("Analyzing research domain...", total=None)
             profile = await generate_query_profile(query)
-        
+
         display_query_profile(profile)
         console.print()
-        
+
         # Step 2: Augment the search query
         print_step(2, "Augmenting search queries...")
-        
+
         with create_spinner_progress() as progress:
             task = progress.add_task("Generating query variants...", total=None)
             augmented_queries, time_taken = await augment_search(query)
-        
+
         display_augmented_queries(augmented_queries, time_taken)
         console.print()
-        
+
         # Step 3: Search arXiv for all query variants CONCURRENTLY
         print_step(3, "Searching arXiv...")
-        
+
         console.print(f"[dim]Searching {len(augmented_queries)} queries concurrently...[/dim]")
-        
+
         # Search all queries concurrently
         feeds = await search_all_queries(session, augmented_queries, num_results)
-        
+
         # Collect all results
         all_results: list[ReducedArxivEntry] = []
-        
+
         for search_query, feed in zip(augmented_queries, feeds):
             for entry in feed.entries:
                 html_link = next(
@@ -123,7 +122,7 @@ async def run_search_with_display(
                 pdf_link = next(
                     (link.href for link in entry.links if link.type == "application/pdf"), None
                 )
-                
+
                 all_results.append(ReducedArxivEntry(
                     title=entry.title,
                     updated=entry.updated,
@@ -131,20 +130,20 @@ async def run_search_with_display(
                     link=html_link or pdf_link,
                     source_query=search_query,
                 ))
-        
+
         print_success(f"Found {len(all_results)} total results from arXiv")
         console.print()
-        
+
         # Step 4: Filter results for relevance (CONCURRENT LLM calls)
         print_step(4, "Filtering results for relevance...")
-        
+
         console.print("[dim]Running LLM relevance filter concurrently...[/dim]")
         filtered_results, discarded_results, total_time_taken = await filter_results(
             profile, all_results
         )
-        
+
         display_filtering_results(filtered_results, discarded_results, total_time_taken)
-        
+
         if filtered_results:
             console.print()
             display_papers_table(
@@ -153,35 +152,35 @@ async def run_search_with_display(
                 show_link=True,
                 max_rows=10,
             )
-        
+
         if not filtered_results:
             print_warning("No relevant papers found in initial search. Cannot start snowballing.")
             return
-        
+
         console.print()
-        
+
         # Step 5: Resolve arXiv papers to OpenAlex IDs (CONCURRENT)
         print_step(5, "Resolving papers to OpenAlex...")
         print_header("OpenAlex Resolution", "bold cyan")
-        
+
         console.print("[dim]Resolving papers concurrently...[/dim]")
-        
+
         # Resolve all papers concurrently
         seeds = await _resolve_papers_to_openalex_with_display(session, filtered_results)
-        
+
         print_success(f"Resolved {len(seeds)} of {len(filtered_results)} papers")
-        
+
         if not seeds:
             print_warning("No papers could be resolved to OpenAlex. Cannot start snowballing.")
             return
-        
+
         console.print()
-        
+
         # Step 6: Run the Snowball Engine
         print_step(6, "Running snowball discovery...")
-        
+
         from paperpilot.core.snowball import SnowballEngine
-        
+
         engine = SnowballEngine(
             profile=profile,
             max_iterations=max_iterations,
@@ -189,13 +188,13 @@ async def run_search_with_display(
             min_new_papers_threshold=3,
             max_total_accepted=max_accepted,
         )
-        
+
         accepted_papers = await engine.run(session, seeds)
-        
+
         # Step 7: Export results
         print_step(7, "Exporting results...")
         from paperpilot.core.service import export_results
-        
+
         # Use ResultsManager if output_file not specified
         if not output_file:
             saved_path = results_manager.save_snowball(query, {
@@ -220,7 +219,7 @@ async def run_search_with_display(
             output_file = str(saved_path)
         else:
             export_results(accepted_papers, query, output_file)
-        
+
         display_export_success(output_file, len(accepted_papers), query)
 
 
@@ -229,22 +228,22 @@ async def _resolve_papers_to_openalex_with_display(
     filtered_results: list[ReducedArxivEntry]
 ) -> list[SnowballCandidate]:
     """Resolve arXiv papers to OpenAlex IDs concurrently with display."""
-    
+
     async def resolve_single_paper(result: ReducedArxivEntry) -> tuple[ReducedArxivEntry, SnowballCandidate | None]:
         """Resolve a single paper, returning (result, candidate or None)."""
         # Try to resolve via arXiv DOI first
         openalex_id = await resolve_arxiv_to_openalex(session, result.link) if result.link else None
-        
+
         # Fallback: search by title
         if not openalex_id:
             paper_data = await resolve_by_title(session, result.title)
             if paper_data:
                 openalex_id = extract_openalex_id(paper_data)
-        
+
         if openalex_id:
             details = await get_work_details(session, openalex_id)
             arxiv_id = extract_arxiv_id(result.link) if result.link else None
-            
+
             seed = SnowballCandidate(
                 paper_id=openalex_id,
                 title=result.title,
@@ -258,16 +257,16 @@ async def _resolve_papers_to_openalex_with_display(
                 arxiv_id=arxiv_id,
             )
             return result, seed
-        
+
         return result, None
-    
+
     # Resolve all papers concurrently
     tasks = [resolve_single_paper(result) for result in filtered_results]
     results = await asyncio.gather(*tasks)
-    
+
     # Collect seeds and display results
     seeds: list[SnowballCandidate] = []
-    
+
     for result, seed in results:
         if seed:
             seeds.append(seed)
@@ -280,7 +279,7 @@ async def _resolve_papers_to_openalex_with_display(
             )
         else:
             display_resolve_result(result.title, success=False)
-    
+
     return seeds
 
 
@@ -340,7 +339,7 @@ def search(
     console.print(f"[bold]Output:[/bold] {output}")
     console.print("[dim]Using async concurrency for faster execution[/dim]")
     console.print()
-    
+
     try:
         # Run the async search workflow with display
         asyncio.run(
@@ -390,31 +389,31 @@ def results(
     View and analyze papers from a snowball_results.json file.
     """
     file_path = Path(file)
-    
+
     if not file_path.exists():
         print_error(f"Results file not found: {file}")
         raise typer.Exit(code=1)
-    
+
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             data = json.load(f)
     except json.JSONDecodeError as e:
         print_error(f"Invalid JSON in results file: {e}")
         raise typer.Exit(code=1)
-    
+
     print_header(f"Results: {data.get('query', 'Unknown')}", "bold blue")
-    
+
     papers = data.get("papers", [])
     total = data.get("total_accepted", len(papers))
-    
+
     console.print(f"[bold]Total papers:[/bold] {total}")
     console.print(f"[bold]Query:[/bold] {data.get('query', 'N/A')}")
     console.print()
-    
+
     if not papers:
         print_error("No papers in results file")
         raise typer.Exit(code=1)
-    
+
     # Convert to objects for easier handling
     paper_objects = []
     for p in papers:
@@ -432,7 +431,7 @@ def results(
                 judge_confidence=p.get("judge_confidence", 0.0),
             )
         )
-    
+
     # Sort papers
     if sort_by == "citations":
         paper_objects.sort(key=lambda p: p.citation_count, reverse=True)
@@ -440,7 +439,7 @@ def results(
         paper_objects.sort(key=lambda p: p.year or 0, reverse=True)
     elif sort_by == "depth":
         paper_objects.sort(key=lambda p: p.depth)
-    
+
     # Display table
     display_papers_table(
         paper_objects[:top],
@@ -448,7 +447,7 @@ def results(
         show_depth=True,
         show_judge=True,
     )
-    
+
     if show_abstracts:
         console.print()
         print_header("Abstracts", "bold cyan")
@@ -457,13 +456,13 @@ def results(
                 console.print(f"[bold cyan]{i}. {p.title}[/bold cyan]")
                 console.print(f"[dim]{p.abstract}[/dim]")
                 console.print()
-    
+
     # Show summary stats
     console.print()
     seeds = sum(1 for p in paper_objects if p.edge_type == EdgeType.SEED)
     refs = sum(1 for p in paper_objects if p.edge_type == EdgeType.REFERENCE)
     cites = sum(1 for p in paper_objects if p.edge_type == EdgeType.CITATION)
-    
+
     console.print("[bold]Breakdown:[/bold]")
     console.print(f"  Seeds: {seeds} | References: {refs} | Citations: {cites}")
 
@@ -540,33 +539,33 @@ def rank(
         paperpilot rank snowball_results.json -m 100 -k 32 --pairing swiss --concurrency 5
     """
     file_path = Path(file)
-    
+
     if not file_path.exists():
         print_error(f"Results file not found: {file}")
         raise typer.Exit(code=1)
-    
+
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             data = json.load(f)
     except json.JSONDecodeError as e:
         print_error(f"Invalid JSON in results file: {e}")
         raise typer.Exit(code=1)
-    
+
     papers = data.get("papers", [])
     query = data.get("query", "Unknown")
-    
+
     if not papers:
         print_error("No papers in results file")
         raise typer.Exit(code=1)
-    
+
     if len(papers) < 2:
         print_error("Need at least 2 papers for Elo ranking")
         raise typer.Exit(code=1)
-    
+
     if pairing not in ["random", "swiss"]:
         print_error(f"Invalid pairing strategy: {pairing}. Must be 'random' or 'swiss'")
         raise typer.Exit(code=1)
-    
+
     print_header("Elo Ranking", "bold cyan")
     console.print(f"[bold]Query:[/bold] {query}")
     console.print(f"[bold]Papers:[/bold] {len(papers)}")
@@ -578,7 +577,7 @@ def rank(
     if tournament:
         console.print("[bold]Tournament mode:[/bold] enabled")
     console.print()
-    
+
     try:
         asyncio.run(
             run_elo_ranking(
@@ -618,12 +617,12 @@ async def run_elo_ranking(
     """Run Elo ranking on papers."""
     from paperpilot.core.elo_ranker import EloRanker, RankerConfig
     from paperpilot.core.profiler import generate_query_profile
-    
+
     # Generate query profile for relevance judgment
     console.print("[dim]Generating query profile for relevance judgment...[/dim]")
     profile = await generate_query_profile(query)
     console.print()
-    
+
     # Convert papers to SnowballCandidate objects
     candidates = []
     for p in papers:
@@ -639,7 +638,7 @@ async def run_elo_ranking(
             depth=p.get("depth", 0),
         )
         candidates.append(candidate)
-    
+
     # Create configuration
     config = RankerConfig(
         k_factor=k_factor,
@@ -650,10 +649,10 @@ async def run_elo_ranking(
         tournament_mode=tournament,
         interactive=interactive,
     )
-    
+
     # Create event handler for Rich display
     event_handler = RichEventHandler(console=console) if interactive else None
-    
+
     # Create and run Elo ranker
     ranker = EloRanker(
         profile=profile,
@@ -661,9 +660,9 @@ async def run_elo_ranking(
         config=config,
         event_handler=event_handler,
     )
-    
+
     ranked = await ranker.rank_candidates()
-    
+
     # Export ranked results
     ranked_papers = []
     for i, ce in enumerate(ranked, 1):
@@ -680,7 +679,7 @@ async def run_elo_ranking(
             "citation_count": ce.candidate.citation_count,
             "abstract": ce.candidate.abstract[:500] if ce.candidate.abstract else None,
         })
-    
+
     results = {
         "query": query,
         "ranking_method": "elo",
@@ -689,12 +688,12 @@ async def run_elo_ranking(
         "total_papers": len(ranked),
         "papers": ranked_papers,
     }
-    
+
     # Use ResultsManager if output_file not specified
     results_manager = ResultsManager()
     if not output_file:
         saved_path = results_manager.save_elo_ranking(
-            query, 
+            query,
             results,
             pairing=pairing,
             k_factor=k_factor,
@@ -703,7 +702,7 @@ async def run_elo_ranking(
     else:
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(results, f, indent=2, ensure_ascii=False)
-    
+
     console.print()
     print_success(f"Ranked results exported to: {output_file}")
 
@@ -770,41 +769,41 @@ def cluster(
         paperpilot cluster snowball_results.json -d pca -m kmeans -k 8
     """
     file_path = Path(file)
-    
+
     if not file_path.exists():
         print_error(f"Results file not found: {file}")
         raise typer.Exit(code=1)
-    
+
     # Validate options
     if method not in ["hdbscan", "dbscan", "kmeans"]:
         print_error(f"Invalid clustering method: {method}. Use 'hdbscan', 'dbscan', or 'kmeans'")
         raise typer.Exit(code=1)
-    
+
     if dim_method not in ["umap", "tsne", "pca"]:
         print_error(f"Invalid dimension reduction method: {dim_method}. Use 'umap', 'tsne', or 'pca'")
         raise typer.Exit(code=1)
-    
+
     if method == "kmeans" and n_clusters is None:
         n_clusters = 5  # Default for kmeans
-    
+
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             data = json.load(f)
     except json.JSONDecodeError as e:
         print_error(f"Invalid JSON in results file: {e}")
         raise typer.Exit(code=1)
-    
+
     papers = data.get("papers", [])
     query = data.get("query", "Unknown")
-    
+
     if not papers:
         print_error("No papers in results file")
         raise typer.Exit(code=1)
-    
+
     if len(papers) < 3:
         print_error("Need at least 3 papers for clustering")
         raise typer.Exit(code=1)
-    
+
     print_header("Paper Clustering", "bold magenta")
     console.print(f"[bold]Query:[/bold] {query}")
     console.print(f"[bold]Papers:[/bold] {len(papers)}")
@@ -818,7 +817,7 @@ def cluster(
         if min_samples is not None:
             console.print(f"[bold]Min samples:[/bold] {min_samples}")
     console.print()
-    
+
     try:
         run_clustering(
             papers=papers,
@@ -854,9 +853,9 @@ def run_clustering(
     """Run the clustering pipeline with display."""
     from paperpilot.core.cluster import ClusteringEngine
     from paperpilot.core.visualize import save_cluster_visualization
-    
+
     engine = ClusteringEngine()
-    
+
     # Check feature availability and warn about fallbacks
     features = engine.get_available_features()
     if dim_method == "umap" and not features["umap"]:
@@ -866,7 +865,7 @@ def run_clustering(
         print_warning("hdbscan not installed - using DBSCAN for clustering")
         cluster_method = "dbscan"
     console.print()
-    
+
     # Step 1: Embed papers
     print_step(1, "Embedding papers with OpenAI...")
     with create_spinner_progress() as progress:
@@ -874,7 +873,7 @@ def run_clustering(
         embeddings = engine.embed_papers(papers)
     print_success(f"Generated {embeddings.shape[0]} embeddings ({embeddings.shape[1]} dims)")
     console.print()
-    
+
     # Step 2: Reduce dimensions
     print_step(2, f"Reducing dimensions with {dim_method.upper()}...")
     with create_spinner_progress() as progress:
@@ -882,7 +881,7 @@ def run_clustering(
         coords_2d = engine.reduce_dimensions(embeddings, method=dim_method)
     print_success("Reduced to 2D coordinates")
     console.print()
-    
+
     # Step 3: Cluster
     print_step(3, f"Clustering with {cluster_method.upper()}...")
     with create_spinner_progress() as progress:
@@ -894,16 +893,16 @@ def run_clustering(
             eps=eps,
             min_samples=min_samples,
         )
-    
+
     # Show auto-selected eps if DBSCAN was used
     if cluster_method == "dbscan" and eps is None and hasattr(engine, '_last_eps') and engine._last_eps is not None:
         console.print(f"[dim]Auto-selected eps: {engine._last_eps:.4f}[/dim]")
-    
+
     # Get summaries
     summaries = engine.get_cluster_summaries(papers, labels)
     actual_clusters = len([s for s in summaries if s.cluster_id != -1])
     print_success(f"Found {actual_clusters} clusters")
-    
+
     # Warn if too few clusters found (heuristic: < 3 clusters for > 20 papers)
     if actual_clusters < 3 and len(papers) > 20:
         print_warning(
@@ -912,15 +911,15 @@ def run_clustering(
             f"Try adjusting --eps or --min-samples, or use -m kmeans -k <n> for manual clustering."
         )
     console.print()
-    
+
     # Step 4: Display results
     print_step(4, "Displaying cluster analysis...")
     console.print()
     display_clusters_table(summaries, len(papers), cluster_method, dim_method)
-    
+
     # Step 5: Export
     print_step(5, "Exporting results...")
-    
+
     # Build clustering result for export
     from paperpilot.core.cluster import ClusteringResult
     result = ClusteringResult(
@@ -932,11 +931,11 @@ def run_clustering(
         cluster_summaries=summaries,
         papers=papers,
     )
-    
+
     # Export JSON
     json_data = engine.to_json(result)
     json_data["query"] = query
-    
+
     # Use ResultsManager if output files not specified
     results_manager = ResultsManager()
     if not output_file or not html_file:
@@ -944,17 +943,17 @@ def run_clustering(
         import tempfile
         with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False) as tmp:
             tmp_html = tmp.name
-        
+
         from paperpilot.core.visualize import save_cluster_visualization
         save_cluster_visualization(result, tmp_html, title=f"Paper Clusters: {query}")
-        
+
         # Read HTML content
-        with open(tmp_html, "r", encoding="utf-8") as f:
+        with open(tmp_html, encoding="utf-8") as f:
             html_content = f.read()
-        
+
         import os
         os.unlink(tmp_html)
-        
+
         json_path, html_path = results_manager.save_clusters(
             query,
             json_data,
@@ -970,7 +969,7 @@ def run_clustering(
             json.dump(json_data, f, indent=2, ensure_ascii=False)
         from paperpilot.core.visualize import save_cluster_visualization
         save_cluster_visualization(result, html_file, title=f"Paper Clusters: {query}")
-    
+
     console.print()
     display_cluster_export_success(output_file, html_file, len(papers), actual_clusters)
 
@@ -1001,60 +1000,60 @@ def timeline(
         paperpilot timeline snowball_results.json
     """
     file_path = Path(file)
-    
+
     if not file_path.exists():
         print_error(f"Results file not found: {file}")
         raise typer.Exit(code=1)
-    
+
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             data = json.load(f)
     except json.JSONDecodeError as e:
         print_error(f"Invalid JSON in results file: {e}")
         raise typer.Exit(code=1)
-    
+
     papers = data.get("papers", [])
     query = data.get("query", "Unknown")
-    
+
     if not papers:
         print_error("No papers in results file")
         raise typer.Exit(code=1)
-    
+
     print_header("Timeline Creator", "bold yellow")
     console.print(f"[bold]Query:[/bold] {query}")
     console.print(f"[bold]Papers:[/bold] {len(papers)}")
     console.print()
-    
+
     try:
         from paperpilot.core.timeline import create_timeline
         from paperpilot.core.visualize import save_timeline_visualization
-        
+
         # Create timeline data
         print_step(1, "Creating timeline...")
         timeline_data = create_timeline(papers, query)
-        
+
         year_range = timeline_data.get("year_range", {})
         if year_range.get("min") and year_range.get("max"):
             console.print(f"[dim]Year range: {year_range['min']} - {year_range['max']}[/dim]")
-        
+
         print_success(f"Timeline created with {len(timeline_data.get('timeline', []))} years")
         console.print()
-        
+
         # Generate visualization
         print_step(2, "Generating visualization...")
         import tempfile
         with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False) as tmp:
             tmp_html = tmp.name
-        
+
         save_timeline_visualization(timeline_data, tmp_html, title=f"Paper Timeline: {query}")
-        
+
         # Read HTML content
-        with open(tmp_html, "r", encoding="utf-8") as f:
+        with open(tmp_html, encoding="utf-8") as f:
             html_content = f.read()
-        
+
         import os
         os.unlink(tmp_html)
-        
+
         # Save using ResultsManager
         results_manager = ResultsManager()
         if not output or not html:
@@ -1069,12 +1068,12 @@ def timeline(
             with open(output, "w", encoding="utf-8") as f:
                 json.dump(timeline_data, f, indent=2, ensure_ascii=False)
             save_timeline_visualization(timeline_data, html, title=f"Paper Timeline: {query}")
-        
+
         console.print()
         print_success(f"Timeline exported to: {output}")
         if html:
             print_success(f"Visualization exported to: {html}")
-        
+
     except KeyboardInterrupt:
         console.print()
         print_error("Timeline creation interrupted by user")
@@ -1123,40 +1122,40 @@ def graph(
         paperpilot graph snowball_results.json -d citations -l 50
     """
     file_path = Path(file)
-    
+
     if not file_path.exists():
         print_error(f"Results file not found: {file}")
         raise typer.Exit(code=1)
-    
+
     if direction not in ["both", "citations", "references"]:
         print_error(f"Invalid direction: {direction}. Use 'both', 'citations', or 'references'")
         raise typer.Exit(code=1)
-    
+
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             data = json.load(f)
     except json.JSONDecodeError as e:
         print_error(f"Invalid JSON in results file: {e}")
         raise typer.Exit(code=1)
-    
+
     papers = data.get("papers", [])
     query = data.get("query", "Unknown")
-    
+
     if not papers:
         print_error("No papers in results file")
         raise typer.Exit(code=1)
-    
+
     print_header("Source Graph Builder", "bold green")
     console.print(f"[bold]Query:[/bold] {query}")
     console.print(f"[bold]Papers:[/bold] {len(papers)}")
     console.print(f"[bold]Direction:[/bold] {direction}")
     console.print(f"[bold]Limit per paper:[/bold] {limit}")
     console.print()
-    
+
     try:
         from paperpilot.core.graph import build_citation_graph
         from paperpilot.core.visualize import save_graph_visualization
-        
+
         # Build graph
         print_step(1, "Fetching citation/reference data from OpenAlex...")
         async def run_graph_building():
@@ -1169,27 +1168,27 @@ def graph(
                     limit=limit,
                 )
                 return graph_data
-        
+
         graph_data = asyncio.run(run_graph_building())
-        
+
         print_success(f"Graph built: {graph_data.get('total_papers', 0)} nodes, {graph_data.get('total_edges', 0)} edges")
         console.print()
-        
+
         # Generate visualization
         print_step(2, "Generating visualization...")
         import tempfile
         with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False) as tmp:
             tmp_html = tmp.name
-        
+
         save_graph_visualization(graph_data, tmp_html, title=f"Citation Graph: {query}")
-        
+
         # Read HTML content
-        with open(tmp_html, "r", encoding="utf-8") as f:
+        with open(tmp_html, encoding="utf-8") as f:
             html_content = f.read()
-        
+
         import os
         os.unlink(tmp_html)
-        
+
         # Save using ResultsManager
         results_manager = ResultsManager()
         if not output or not html:
@@ -1206,12 +1205,12 @@ def graph(
             with open(output, "w", encoding="utf-8") as f:
                 json.dump(graph_data, f, indent=2, ensure_ascii=False)
             save_graph_visualization(graph_data, html, title=f"Citation Graph: {query}")
-        
+
         console.print()
         print_success(f"Graph exported to: {output}")
         if html:
             print_success(f"Visualization exported to: {html}")
-        
+
     except KeyboardInterrupt:
         console.print()
         print_error("Graph building interrupted by user")
@@ -1240,33 +1239,33 @@ def everything(
         paperpilot everything snowball_results.json
     """
     file_path = Path(file)
-    
+
     if not file_path.exists():
         print_error(f"Results file not found: {file}")
         raise typer.Exit(code=1)
-    
+
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             data = json.load(f)
     except json.JSONDecodeError as e:
         print_error(f"Invalid JSON in results file: {e}")
         raise typer.Exit(code=1)
-    
+
     papers = data.get("papers", [])
     query = data.get("query", "Unknown")
-    
+
     if not papers:
         print_error("No papers in results file")
         raise typer.Exit(code=1)
-    
+
     print_header("Everything Mode", "bold cyan")
     console.print(f"[bold]Query:[/bold] {query}")
     console.print(f"[bold]Papers:[/bold] {len(papers)}")
     console.print()
-    
+
     results_manager = ResultsManager()
     generated_files = []
-    
+
     try:
         # 1. Elo Ranking
         console.print("[bold cyan]1. Running Elo Ranking...[/bold cyan]")
@@ -1290,10 +1289,10 @@ def everything(
                 generated_files.append(metadata["elo_file"])
         except Exception as e:
             print_warning(f"Elo ranking failed: {e}")
-        
+
         console.print()
         console.print()
-        
+
         # 2. Clustering
         console.print("[bold magenta]2. Running Clustering...[/bold magenta]")
         console.print()
@@ -1318,31 +1317,31 @@ def everything(
                     generated_files.append(metadata["clusters_html"])
         except Exception as e:
             print_warning(f"Clustering failed: {e}")
-        
+
         console.print()
         console.print()
-        
+
         # 3. Timeline
         console.print("[bold yellow]3. Creating Timeline...[/bold yellow]")
         console.print()
         try:
             from paperpilot.core.timeline import create_timeline
             from paperpilot.core.visualize import save_timeline_visualization
-            
+
             timeline_data = create_timeline(papers, query)
-            
+
             import tempfile
             with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False) as tmp:
                 tmp_html = tmp.name
-            
+
             save_timeline_visualization(timeline_data, tmp_html, title=f"Paper Timeline: {query}")
-            
-            with open(tmp_html, "r", encoding="utf-8") as f:
+
+            with open(tmp_html, encoding="utf-8") as f:
                 html_content = f.read()
-            
+
             import os
             os.unlink(tmp_html)
-            
+
             json_path, html_path = results_manager.save_timeline(
                 query,
                 timeline_data,
@@ -1351,21 +1350,21 @@ def everything(
             generated_files.append(json_path.name)
             if html_path:
                 generated_files.append(html_path.name)
-            
+
             print_success(f"Timeline created: {json_path.name}")
         except Exception as e:
             print_warning(f"Timeline creation failed: {e}")
-        
+
         console.print()
         console.print()
-        
+
         # 4. Source Graph
         console.print("[bold green]4. Building Source Graph...[/bold green]")
         console.print()
         try:
             from paperpilot.core.graph import build_citation_graph
             from paperpilot.core.visualize import save_graph_visualization
-            
+
             async def run_graph():
                 async with aiohttp.ClientSession() as session:
                     graph_data = await build_citation_graph(
@@ -1376,21 +1375,21 @@ def everything(
                         limit=100,
                     )
                     return graph_data
-            
+
             graph_data = asyncio.run(run_graph())
-            
+
             import tempfile
             with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False) as tmp:
                 tmp_html = tmp.name
-            
+
             save_graph_visualization(graph_data, tmp_html, title=f"Citation Graph: {query}")
-            
-            with open(tmp_html, "r", encoding="utf-8") as f:
+
+            with open(tmp_html, encoding="utf-8") as f:
                 html_content = f.read()
-            
+
             import os
             os.unlink(tmp_html)
-            
+
             json_path, html_path = results_manager.save_graph(
                 query,
                 graph_data,
@@ -1401,11 +1400,11 @@ def everything(
             generated_files.append(json_path.name)
             if html_path:
                 generated_files.append(html_path.name)
-            
+
             print_success(f"Graph built: {json_path.name}")
         except Exception as e:
             print_warning(f"Graph building failed: {e}")
-        
+
         console.print()
         console.print()
         print_header("Summary", "bold green")
@@ -1415,7 +1414,7 @@ def everything(
         console.print()
         query_dir = results_manager.get_query_dir(query)
         print_success(f"All results saved to: {query_dir}")
-        
+
     except KeyboardInterrupt:
         console.print()
         print_error("Everything mode interrupted by user")
@@ -1469,16 +1468,16 @@ def report(
         paperpilot report results/my_query/snowball.json -o my_report.json
     """
     from paperpilot.core.report.generator import generate_report, report_to_dict
-    
+
     file_path = Path(file)
-    
+
     if not file_path.exists():
         print_error(f"Results file not found: {file}")
         raise typer.Exit(code=1)
-    
+
     # Initialize results manager
     results_manager = ResultsManager()
-    
+
     # Determine elo file path
     elo_path = None
     if elo_file:
@@ -1494,22 +1493,22 @@ def report(
             # Use the most recent one
             elo_path = max(elo_candidates, key=lambda p: p.stat().st_mtime)
             console.print(f"[dim]Auto-detected elo file: {elo_path.name}[/dim]")
-    
+
     # Load data to get query
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             data = json.load(f)
     except json.JSONDecodeError as e:
         print_error(f"Invalid JSON in results file: {e}")
         raise typer.Exit(code=1)
-    
+
     query = data.get("query", "Unknown query")
     total_papers = len(data.get("papers", []))
-    
+
     if total_papers == 0:
         print_error("No papers in results file")
         raise typer.Exit(code=1)
-    
+
     print_header("Report Generation", "bold cyan")
     console.print(f"[bold]Query:[/bold] {query}")
     console.print(f"[bold]Available papers:[/bold] {total_papers}")
@@ -1519,12 +1518,12 @@ def report(
     else:
         console.print("[bold]Source:[/bold] Snowball results (by citation count)")
     console.print()
-    
+
     async def run_report_generation():
         try:
             print_step(1, "Selecting top papers...")
             console.print()
-            
+
             print_step(2, "Generating paper cards...")
             with create_spinner_progress() as progress:
                 task = progress.add_task("Processing papers...", total=None)
@@ -1533,13 +1532,13 @@ def report(
                     elo_file=elo_path,
                     top_k=top_k,
                 )
-            
+
             print_success(f"Generated report with {len(report_obj.current_research)} sections")
             console.print()
-            
+
             # Convert to dict for saving
             report_data = report_to_dict(report_obj)
-            
+
             # Save the report
             if output:
                 output_path = Path(output)
@@ -1555,7 +1554,7 @@ def report(
                     top_k=top_k,
                 )
                 print_success(f"Report saved to: {output_path}")
-            
+
             # Display summary
             console.print()
             print_header("Report Summary", "bold green")
@@ -1563,20 +1562,20 @@ def report(
             console.print(f"[bold]Sections:[/bold] {len(report_obj.current_research)}")
             console.print(f"[bold]Open problems:[/bold] {len(report_obj.open_problems)}")
             console.print()
-            
+
             # Show section titles
             console.print("[bold]Sections:[/bold]")
             for i, section in enumerate(report_obj.current_research, 1):
                 citations = len(section.paper_ids)
                 console.print(f"  {i}. {section.title} ({citations} citations)")
-            
+
             console.print()
-            
+
         except Exception as e:
             logger.exception("Report generation failed")
             print_error(f"Report generation failed: {e}")
             raise typer.Exit(code=1)
-    
+
     try:
         asyncio.run(run_report_generation())
     except KeyboardInterrupt:

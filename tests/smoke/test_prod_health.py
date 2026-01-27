@@ -10,9 +10,10 @@ Run with:
     PROD_API_URL=https://xxx.execute-api.eu-central-1.amazonaws.com pytest tests/smoke/ -v -m smoke
 """
 
-import pytest
 import os
+
 import httpx
+import pytest
 
 # Mark all tests in this module as smoke tests
 pytestmark = [

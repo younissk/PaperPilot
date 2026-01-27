@@ -21,10 +21,13 @@ phases:
 
   pre_build:
     commands:
-      - echo "Copying paperpilot package to worker service..."
+      # Copy paperpilot package to both services for shared utilities
+      - echo "Copying paperpilot package to services..."
+      - cp -r paperpilot services/api/
       - cp -r paperpilot services/worker/
       - echo "Verifying service directories..."
       - ls -la services/api/
+      - ls -la services/api/paperpilot/
       - ls -la services/worker/
       - ls -la services/worker/paperpilot/
 

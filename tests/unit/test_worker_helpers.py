@@ -1,9 +1,11 @@
 """Unit tests for Worker Lambda helper functions."""
 
-import pytest
-from datetime import datetime, timezone
-from hypothesis import given, strategies as st, settings
+from datetime import datetime
 from decimal import Decimal
+
+import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 # Mark all tests in this module as unit tests
 pytestmark = pytest.mark.unit
@@ -83,8 +85,9 @@ class TestSlugify:
     @settings(max_examples=50)
     def test_no_special_chars_in_output(self, query):
         """Property test: output contains only word chars and underscores."""
-        from services.worker.handler import slugify
         import re
+
+        from services.worker.handler import slugify
 
         result = slugify(query)
         if result:  # Non-empty result
@@ -140,7 +143,7 @@ class TestAppendEvent:
 
     def test_bounds_events_list(self):
         """Events list is bounded to MAX_EVENTS."""
-        from services.worker.handler import append_event, MAX_EVENTS
+        from services.worker.handler import MAX_EVENTS, append_event
 
         # Create list with MAX_EVENTS items
         events = [{"type": f"event{i}", "phase": "test", "message": f"msg{i}", "ts": "2024-01-01T00:00:00Z"}
@@ -187,7 +190,8 @@ class TestJobStatus:
 
     def test_status_values(self):
         """JobStatus has expected values."""
-        from services.worker.handler import JobStatus
+        # Import from shared module (worker re-exports it)
+        from paperpilot.aws import JobStatus
 
         assert JobStatus.QUEUED.value == "queued"
         assert JobStatus.RUNNING.value == "running"
@@ -196,7 +200,8 @@ class TestJobStatus:
 
     def test_status_is_string_enum(self):
         """JobStatus values are strings."""
-        from services.worker.handler import JobStatus
+        from paperpilot.aws import JobStatus
 
         assert isinstance(JobStatus.QUEUED.value, str)
-        assert str(JobStatus.RUNNING) == "running"
+        # Use .value for consistent string access
+        assert JobStatus.RUNNING.value == "running"

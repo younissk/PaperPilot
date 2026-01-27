@@ -1,14 +1,13 @@
 """LLM-based match judging with relevance-first prompts."""
 
+import asyncio
 import json
 import os
-import asyncio
-from typing import List, Tuple, Optional
 
 from openai import AsyncOpenAI
 
-from paperpilot.core.models import SnowballCandidate, QueryProfile
 from paperpilot.core.elo_ranker.models import MatchResult
+from paperpilot.core.models import QueryProfile, SnowballCandidate
 
 # Async OpenAI client
 async_client = AsyncOpenAI(
@@ -20,7 +19,7 @@ async def judge_match(
     candidate1: SnowballCandidate,
     candidate2: SnowballCandidate,
     profile: QueryProfile
-) -> Tuple[Optional[int], str]:
+) -> tuple[int | None, str]:
     """Judge a single match between two candidates.
     
     Uses a relevance-first prompt that prioritizes citation usefulness
@@ -37,10 +36,10 @@ async def judge_match(
     # Build relevance-first prompt
     required_concepts_str = ", ".join(profile.required_concepts) if profile.required_concepts else "None specified"
     optional_concepts_str = ", ".join(profile.optional_concepts) if profile.optional_concepts else "None specified"
-    
+
     abstract1 = candidate1.abstract or "(No abstract available)"
     abstract2 = candidate2.abstract or "(No abstract available)"
-    
+
     prompt = f"""You are judging which paper is MORE USEFUL TO CITE for a survey on:
 "{profile.core_query}"
 
@@ -79,13 +78,13 @@ Output ONLY valid JSON with keys:
             max_tokens=150,
             response_format={"type": "json_object"}
         )
-        
+
         content = response.choices[0].message.content.strip()
         data = json.loads(content)
-        
+
         winner = data.get("winner")
         reason = data.get("reason", "")
-        
+
         if winner == 1:
             return 1, reason
         elif winner == 2:
@@ -95,7 +94,7 @@ Output ONLY valid JSON with keys:
         else:
             # Invalid response, treat as draw
             return None, "Invalid response"
-            
+
     except (json.JSONDecodeError, KeyError, AttributeError):
         # On error, treat as draw to avoid skewing ratings
         return None, "Parse error"
@@ -105,10 +104,10 @@ Output ONLY valid JSON with keys:
 
 
 async def judge_match_batch(
-    pairs: List[Tuple[SnowballCandidate, SnowballCandidate]],
+    pairs: list[tuple[SnowballCandidate, SnowballCandidate]],
     profile: QueryProfile,
     concurrency: int = 5
-) -> List[MatchResult]:
+) -> list[MatchResult]:
     """Judge multiple matches concurrently.
     
     Args:
@@ -120,8 +119,8 @@ async def judge_match_batch(
         List of MatchResult objects
     """
     semaphore = asyncio.Semaphore(concurrency)
-    
-    async def judge_one(pair: Tuple[SnowballCandidate, SnowballCandidate]) -> MatchResult:
+
+    async def judge_one(pair: tuple[SnowballCandidate, SnowballCandidate]) -> MatchResult:
         async with semaphore:
             candidate1, candidate2 = pair
             winner, reason = await judge_match(candidate1, candidate2, profile)
@@ -131,6 +130,6 @@ async def judge_match_batch(
                 winner=winner,
                 reason=reason
             )
-    
+
     results = await asyncio.gather(*[judge_one(pair) for pair in pairs])
     return list(results)

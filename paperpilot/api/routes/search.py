@@ -1,29 +1,28 @@
 """Search API routes."""
 
-from typing import Dict
 import uuid
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 
 from paperpilot.api.schemas import SearchRequest, SearchResponse
-from paperpilot.core.service import run_search
 from paperpilot.core.models import AcceptedPaper
 from paperpilot.core.results import ResultsManager
+from paperpilot.core.service import run_search
 
 router = APIRouter(prefix="/api/search", tags=["search"])
 
 # In-memory job storage (in production, use a database)
-jobs: Dict[str, Dict] = {}
+jobs: dict[str, dict] = {}
 
 results_manager = ResultsManager()
 
 
 class ApiSearchProgressHandler:
     """Progress handler that updates job state for live search progress updates."""
-    
+
     def __init__(self, job_id: str):
         self.job_id = job_id
-    
+
     def __call__(
         self,
         step: int,
@@ -47,7 +46,7 @@ class ApiSearchProgressHandler:
         """
         if self.job_id not in jobs:
             return
-        
+
         # Update job state with current progress
         jobs[self.job_id]["current_step"] = step
         jobs[self.job_id]["step_name"] = step_name
@@ -78,7 +77,7 @@ async def _run_search_task(job_id: str, request: SearchRequest):
     """Background task to run the search."""
     try:
         jobs[job_id]["status"] = "running"
-        
+
         # Initialize progress fields
         jobs[job_id]["current_step"] = 0
         jobs[job_id]["step_name"] = "Starting search..."
@@ -87,10 +86,10 @@ async def _run_search_task(job_id: str, request: SearchRequest):
         jobs[job_id]["progress_message"] = "Initializing search..."
         jobs[job_id]["current_iteration"] = 0
         jobs[job_id]["total_iterations"] = request.max_iterations
-        
+
         # Create progress handler
         progress_handler = ApiSearchProgressHandler(job_id)
-        
+
         # Run search without output file - we'll save using ResultsManager
         papers = await run_search(
             query=request.query,
@@ -101,14 +100,14 @@ async def _run_search_task(job_id: str, request: SearchRequest):
             top_n=request.top_n,
             progress_callback=progress_handler,
         )
-        
+
         # Save using ResultsManager
         saved_path = results_manager.save_snowball(request.query, {
             "query": request.query,
             "total_accepted": len(papers),
             "papers": [_paper_to_dict(p) for p in papers],
         })
-        
+
         jobs[job_id]["status"] = "completed"
         jobs[job_id]["total_accepted"] = len(papers)
         jobs[job_id]["papers"] = [_paper_to_dict(p) for p in papers]
@@ -132,7 +131,7 @@ async def start_search(
     Returns immediately with a job_id. Use GET /api/search/{job_id} to check status.
     """
     job_id = str(uuid.uuid4())
-    
+
     jobs[job_id] = {
         "status": "queued",
         "query": request.query,
@@ -146,10 +145,10 @@ async def start_search(
         "current_iteration": 0,
         "total_iterations": request.max_iterations,
     }
-    
+
     # Run search in background
     background_tasks.add_task(_run_search_task, job_id, request)
-    
+
     return SearchResponse(
         job_id=job_id,
         status="queued",
@@ -165,13 +164,13 @@ async def get_search_results(job_id: str):
     """Get search results by job ID."""
     if job_id not in jobs:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     job = jobs[job_id]
-    
+
     if job["status"] == "failed":
         error = job.get("error", "Unknown error")
         raise HTTPException(status_code=500, detail=f"Search failed: {error}")
-    
+
     return SearchResponse(
         job_id=job_id,
         status=job["status"],

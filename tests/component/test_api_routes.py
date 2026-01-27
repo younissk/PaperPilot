@@ -1,9 +1,9 @@
 """Component tests for API Lambda routes using FastAPI TestClient and mocked AWS."""
 
-import pytest
-import json
-from unittest.mock import patch, MagicMock
 from decimal import Decimal
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 # Mark all tests in this module as component tests
 pytestmark = pytest.mark.component

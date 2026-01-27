@@ -7,27 +7,27 @@ that can be used by CLI, API, or other interfaces.
 
 import asyncio
 import json
-from typing import List, Optional, Callable
+from collections.abc import Callable
 
 import aiohttp
 
 from paperpilot.core.augment import augment_search
-from paperpilot.core.search import search_all_queries
-from paperpilot.core.profiler import generate_query_profile
+from paperpilot.core.filter import filter_results
 from paperpilot.core.models import (
+    AcceptedPaper,
+    EdgeType,
     ReducedArxivEntry,
     SnowballCandidate,
-    EdgeType,
-    AcceptedPaper,
 )
-from paperpilot.core.filter import filter_results
 from paperpilot.core.openalex import (
-    resolve_arxiv_to_openalex,
-    get_work_details,
-    resolve_by_title,
-    extract_openalex_id,
     extract_arxiv_id,
+    extract_openalex_id,
+    get_work_details,
+    resolve_arxiv_to_openalex,
+    resolve_by_title,
 )
+from paperpilot.core.profiler import generate_query_profile
+from paperpilot.core.search import search_all_queries
 from paperpilot.core.snowball import SnowballEngine
 
 
@@ -38,8 +38,8 @@ async def run_search(
     max_iterations: int = 5,
     max_accepted: int = 200,
     top_n: int = 50,
-    progress_callback: Optional[Callable[[int, str, int, int, str, int, int], None]] = None,
-) -> List[AcceptedPaper]:
+    progress_callback: Callable[[int, str, int, int, str, int, int], None] | None = None,
+) -> list[AcceptedPaper]:
     """Run the full PaperPilot search workflow (async version).
     
     Args:
@@ -60,20 +60,20 @@ async def run_search(
         if progress_callback:
             progress_callback(0, "Generating Query Profile", 0, 0, "Analyzing query to extract concepts...", 0, max_iterations)
         profile = await generate_query_profile(query)
-        
+
         # Step 1: Augment the search query
         if progress_callback:
             progress_callback(1, "Augmenting Search Query", 0, 0, "Creating query variants...", 0, max_iterations)
         augmented_queries, _ = await augment_search(query)
-        
+
         # Step 2: Search arXiv for all query variants CONCURRENTLY
         if progress_callback:
             progress_callback(2, "Searching arXiv", 0, len(augmented_queries), f"Searching {len(augmented_queries)} query variants...", 0, max_iterations)
         feeds = await search_all_queries(session, augmented_queries, num_results)
-        
+
         # Collect all results
-        all_results: List[ReducedArxivEntry] = []
-        
+        all_results: list[ReducedArxivEntry] = []
+
         for idx, (search_query, feed) in enumerate(zip(augmented_queries, feeds), 1):
             for entry in feed.entries:
                 html_link = next(
@@ -82,7 +82,7 @@ async def run_search(
                 pdf_link = next(
                     (link.href for link in entry.links if link.type == "application/pdf"), None
                 )
-                
+
                 all_results.append(ReducedArxivEntry(
                     title=entry.title,
                     updated=entry.updated,
@@ -92,29 +92,29 @@ async def run_search(
                 ))
             if progress_callback:
                 progress_callback(2, "Searching arXiv", idx, len(augmented_queries), f"Completed {idx} of {len(augmented_queries)} queries, found {len(all_results)} papers", 0, max_iterations)
-        
+
         # Step 3: Filter results for relevance (CONCURRENT LLM calls)
         if progress_callback:
             progress_callback(3, "Filtering Results", 0, len(all_results), f"Filtering {len(all_results)} papers for relevance...", 0, max_iterations)
         filtered_results, _, _ = await filter_results(profile, all_results)
-        
+
         if progress_callback:
             progress_callback(3, "Filtering Results", len(filtered_results), len(all_results), f"Filtered to {len(filtered_results)} relevant papers", 0, max_iterations)
-        
+
         if not filtered_results:
             return []
-        
+
         # Step 4: Resolve arXiv papers to OpenAlex IDs (CONCURRENT)
         if progress_callback:
             progress_callback(4, "Resolving Paper IDs", 0, len(filtered_results), f"Resolving {len(filtered_results)} papers to OpenAlex IDs...", 0, max_iterations)
         seeds = await _resolve_papers_to_openalex(session, filtered_results, progress_callback)
-        
+
         if progress_callback:
             progress_callback(4, "Resolving Paper IDs", len(seeds), len(filtered_results), f"Resolved {len(seeds)} papers to OpenAlex IDs", 0, max_iterations)
-        
+
         if not seeds:
             return []
-        
+
         # Step 5: Run the Snowball Engine
         if progress_callback:
             progress_callback(5, "Running Snowball Search", 0, 0, f"Starting snowball search with {len(seeds)} seed papers...", 0, max_iterations)
@@ -125,25 +125,25 @@ async def run_search(
             min_new_papers_threshold=3,
             max_total_accepted=max_accepted,
         )
-        
+
         accepted_papers = await engine.run(session, seeds, progress_callback, max_iterations)
-        
+
         # Step 6: Export results
         if progress_callback:
             progress_callback(6, "Exporting Results", 0, 0, f"Saving {len(accepted_papers)} papers to file...", max_iterations, max_iterations)
         export_results(accepted_papers, query, output_file)
-        
+
         if progress_callback:
             progress_callback(6, "Exporting Results", 1, 1, f"Completed! Found {len(accepted_papers)} papers", max_iterations, max_iterations)
-        
+
         return accepted_papers
 
 
 async def _resolve_papers_to_openalex(
     session: aiohttp.ClientSession,
-    filtered_results: List[ReducedArxivEntry],
-    progress_callback: Optional[Callable[[int, str, int, int, str, int, int], None]] = None,
-) -> List[SnowballCandidate]:
+    filtered_results: list[ReducedArxivEntry],
+    progress_callback: Callable[[int, str, int, int, str, int, int], None] | None = None,
+) -> list[SnowballCandidate]:
     """Resolve arXiv papers to OpenAlex IDs concurrently.
     
     Args:
@@ -153,22 +153,22 @@ async def _resolve_papers_to_openalex(
     Returns:
         List of SnowballCandidate objects (successfully resolved papers)
     """
-    
+
     async def resolve_single_paper(result: ReducedArxivEntry) -> tuple[ReducedArxivEntry, SnowballCandidate | None]:
         """Resolve a single paper, returning (result, candidate or None)."""
         # Try to resolve via arXiv DOI first
         openalex_id = await resolve_arxiv_to_openalex(session, result.link) if result.link else None
-        
+
         # Fallback: search by title
         if not openalex_id:
             paper_data = await resolve_by_title(session, result.title)
             if paper_data:
                 openalex_id = extract_openalex_id(paper_data)
-        
+
         if openalex_id:
             details = await get_work_details(session, openalex_id)
             arxiv_id = extract_arxiv_id(result.link) if result.link else None
-            
+
             seed = SnowballCandidate(
                 paper_id=openalex_id,
                 title=result.title,
@@ -182,26 +182,26 @@ async def _resolve_papers_to_openalex(
                 arxiv_id=arxiv_id,
             )
             return result, seed
-        
+
         return result, None
-    
+
     # Resolve all papers concurrently
     tasks = [resolve_single_paper(result) for result in filtered_results]
     results = await asyncio.gather(*tasks)
-    
+
     # Collect seeds
-    seeds: List[SnowballCandidate] = []
-    
+    seeds: list[SnowballCandidate] = []
+
     for idx, (result, seed) in enumerate(results, 1):
         if seed:
             seeds.append(seed)
         if progress_callback and idx % 5 == 0:  # Update every 5 papers
             progress_callback(4, "Resolving Paper IDs", idx, len(filtered_results), f"Resolved {idx} of {len(filtered_results)} papers...", 0, 0)
-    
+
     return seeds
 
 
-def export_results(papers: List[AcceptedPaper], query: str, output_file: str) -> None:
+def export_results(papers: list[AcceptedPaper], query: str, output_file: str) -> None:
     """Export accepted papers to a JSON file for further analysis.
     
     Args:
@@ -211,7 +211,7 @@ def export_results(papers: List[AcceptedPaper], query: str, output_file: str) ->
     """
     if not output_file:
         return  # Skip export if output_file is empty
-    
+
     results = {
         "query": query,
         "total_accepted": len(papers),
@@ -231,6 +231,6 @@ def export_results(papers: List[AcceptedPaper], query: str, output_file: str) ->
             for p in papers
         ],
     }
-    
+
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2, ensure_ascii=False)

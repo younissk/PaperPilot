@@ -10,12 +10,13 @@ HOW: Creates Plotly scatter plots with color-coded clusters and hover tooltips
 """
 
 from pathlib import Path
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
 if TYPE_CHECKING:
     from plotly.graph_objects import Figure
+
     from paperpilot.core.cluster import ClusteringResult
 
 
@@ -58,21 +59,21 @@ def create_cluster_plot(
         Plotly Figure object
     """
     import plotly.graph_objects as go
-    
+
     # Get unique labels
     unique_labels = sorted(set(labels))
-    
+
     traces = []
-    
+
     for label in unique_labels:
         # Get indices for this cluster
         mask = labels == label
         indices = np.where(mask)[0]
-        
+
         # Get data for this cluster
         x = coords[mask, 0]
         y = coords[mask, 1]
-        
+
         # Build hover text
         hover_texts = []
         for idx in indices:
@@ -81,10 +82,10 @@ def create_cluster_plot(
             # Truncate long titles
             if len(paper_title) > 80:
                 paper_title = paper_title[:77] + "..."
-            
+
             year = paper.get("year", "N/A")
             citations = paper.get("citation_count", 0)
-            
+
             hover_text = (
                 f"<b>{paper_title}</b><br>"
                 f"Year: {year}<br>"
@@ -92,7 +93,7 @@ def create_cluster_plot(
                 f"Cluster: {label if label != -1 else 'Noise'}"
             )
             hover_texts.append(hover_text)
-        
+
         # Determine color
         if label == -1:
             color = NOISE_COLOR
@@ -100,7 +101,7 @@ def create_cluster_plot(
         else:
             color = CLUSTER_COLORS[label % len(CLUSTER_COLORS)]
             name = f"Cluster {label}"
-        
+
         # Create trace
         trace = go.Scatter(
             x=x,
@@ -117,10 +118,10 @@ def create_cluster_plot(
             customdata=hover_texts,
         )
         traces.append(trace)
-    
+
     # Create figure
     fig = go.Figure(data=traces)
-    
+
     # Update layout
     fig.update_layout(
         title=dict(
@@ -153,7 +154,7 @@ def create_cluster_plot(
         width=1000,
         height=700,
     )
-    
+
     return fig
 
 
@@ -173,7 +174,7 @@ def create_cluster_plot_from_result(
         Plotly Figure object
     """
     plot_title = title or f"Paper Clusters ({result.method.upper()}, {result.n_clusters} clusters)"
-    
+
     return create_cluster_plot(
         papers=result.papers,
         coords=result.coords_2d,
@@ -227,18 +228,18 @@ def create_timeline_visualization(
         Plotly Figure object
     """
     import plotly.graph_objects as go
-    
+
     timeline = timeline_data.get("timeline", [])
     if not timeline:
         # Empty timeline
         fig = go.Figure()
         fig.update_layout(title=title)
         return fig
-    
+
     # Extract years and counts
     years = [entry["year"] for entry in timeline]
     counts = [entry["count"] for entry in timeline]
-    
+
     # Build hover text
     hover_texts = []
     for entry in timeline:
@@ -253,7 +254,7 @@ def create_timeline_visualization(
             f"Top papers:<br>" + "<br>".join(f"• {t}" for t in paper_titles)
         )
         hover_texts.append(hover_text)
-    
+
     # Create bar chart
     fig = go.Figure(data=[
         go.Bar(
@@ -271,7 +272,7 @@ def create_timeline_visualization(
             ),
         )
     ])
-    
+
     fig.update_layout(
         title=dict(
             text=title,
@@ -294,7 +295,7 @@ def create_timeline_visualization(
         width=1000,
         height=600,
     )
-    
+
     return fig
 
 
@@ -329,20 +330,20 @@ def create_graph_visualization(
         Plotly Figure object
     """
     import plotly.graph_objects as go
-    
+
     nodes = graph_data.get("nodes", [])
     edges = graph_data.get("edges", [])
-    
+
     if not nodes:
         # Empty graph
         fig = go.Figure()
         fig.update_layout(title=title)
         return fig
-    
+
     # Create node positions using a simple layout (could use networkx for better layout)
     # For now, use a simple circular or force-directed-like layout
     import numpy as np
-    
+
     n_nodes = len(nodes)
     if n_nodes == 1:
         node_x = [0]
@@ -352,7 +353,7 @@ def create_graph_visualization(
         angles = np.linspace(0, 2 * np.pi, n_nodes, endpoint=False)
         node_x = np.cos(angles).tolist()
         node_y = np.sin(angles).tolist()
-    
+
     # Build node trace
     node_texts = []
     node_sizes = []
@@ -365,32 +366,32 @@ def create_graph_visualization(
         node_texts.append(f"<b>{title}</b><br>Year: {year}<br>Citations: {citations}")
         # Size based on citations (min 10, max 30)
         node_sizes.append(max(10, min(30, 10 + citations / 10)))
-    
+
     # Create edge traces
     edge_traces = []
     node_map = {node["id"]: i for i, node in enumerate(nodes)}
-    
+
     # Group edges by type for different colors
     cite_edges = []
     cited_by_edges = []
-    
+
     for edge in edges:
         source_id = edge["source"]
         target_id = edge["target"]
         if source_id in node_map and target_id in node_map:
             source_idx = node_map[source_id]
             target_idx = node_map[target_id]
-            
+
             edge_data = {
                 "x": [node_x[source_idx], node_x[target_idx], None],
                 "y": [node_y[source_idx], node_y[target_idx], None],
             }
-            
+
             if edge.get("type") == "cites":
                 cite_edges.append(edge_data)
             else:
                 cited_by_edges.append(edge_data)
-    
+
     # Add edge traces
     if cite_edges:
         cite_x = []
@@ -398,7 +399,7 @@ def create_graph_visualization(
         for edge in cite_edges:
             cite_x.extend(edge["x"])
             cite_y.extend(edge["y"])
-        
+
         edge_trace_cites = go.Scatter(
             x=cite_x,
             y=cite_y,
@@ -409,14 +410,14 @@ def create_graph_visualization(
             name="Cites",
         )
         edge_traces.append(edge_trace_cites)
-    
+
     if cited_by_edges:
         cited_x = []
         cited_y = []
         for edge in cited_by_edges:
             cited_x.extend(edge["x"])
             cited_y.extend(edge["y"])
-        
+
         edge_trace_cited = go.Scatter(
             x=cited_x,
             y=cited_y,
@@ -427,7 +428,7 @@ def create_graph_visualization(
             name="Cited by",
         )
         edge_traces.append(edge_trace_cited)
-    
+
     # Create node trace
     node_trace = go.Scatter(
         x=node_x,
@@ -445,10 +446,10 @@ def create_graph_visualization(
         hovertemplate="%{customdata}<extra></extra>",
         customdata=node_texts,
     )
-    
+
     # Combine all traces
     fig = go.Figure(data=edge_traces + [node_trace])
-    
+
     fig.update_layout(
         title=dict(
             text=title,
@@ -465,7 +466,7 @@ def create_graph_visualization(
         width=1200,
         height=800,
     )
-    
+
     return fig
 
 

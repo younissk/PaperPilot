@@ -6,7 +6,7 @@ layers. Presentation layers (CLI, API) can subscribe to these events
 and render them appropriately.
 """
 
-from typing import Protocol, List, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Protocol
 
 from paperpilot.core.models import AcceptedPaper, SnowballCandidate
 
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 class EventHandler(Protocol):
     """Protocol for event handlers that process events from core modules."""
-    
+
     def on_progress(
         self,
         current: int,
@@ -33,7 +33,7 @@ class EventHandler(Protocol):
             **kwargs: Additional context
         """
         ...
-    
+
     def on_paper_accepted(
         self,
         paper: AcceptedPaper,
@@ -46,7 +46,7 @@ class EventHandler(Protocol):
             **kwargs: Additional context
         """
         ...
-    
+
     def on_paper_rejected(
         self,
         paper: SnowballCandidate,
@@ -61,7 +61,7 @@ class EventHandler(Protocol):
             **kwargs: Additional context
         """
         ...
-    
+
     def on_match_complete(
         self,
         match: "MatchResult",
@@ -74,7 +74,7 @@ class EventHandler(Protocol):
             **kwargs: Additional context
         """
         ...
-    
+
     def on_match_start(
         self,
         paper1_title: str,
@@ -89,10 +89,10 @@ class EventHandler(Protocol):
             **kwargs: Additional context
         """
         ...
-    
+
     def on_elo_update(
         self,
-        candidates: List["CandidateElo"],
+        candidates: list["CandidateElo"],
         match_num: int,
         total_matches: int,
         **kwargs: Any
@@ -106,7 +106,7 @@ class EventHandler(Protocol):
             **kwargs: Additional context
         """
         ...
-    
+
     def on_iteration_start(
         self,
         iteration: int,
@@ -121,7 +121,7 @@ class EventHandler(Protocol):
             **kwargs: Additional context
         """
         ...
-    
+
     def on_iteration_complete(
         self,
         iteration: int,
@@ -140,7 +140,7 @@ class EventHandler(Protocol):
             **kwargs: Additional context
         """
         ...
-    
+
     def on_snowball_stop(
         self,
         reason: str,
@@ -164,30 +164,30 @@ class NullEventHandler:
     
     Useful as a default when no event handling is needed.
     """
-    
+
     def on_progress(self, *args: Any, **kwargs: Any) -> None:
         pass
-    
+
     def on_paper_accepted(self, *args: Any, **kwargs: Any) -> None:
         pass
-    
+
     def on_paper_rejected(self, *args: Any, **kwargs: Any) -> None:
         pass
-    
+
     def on_match_complete(self, *args: Any, **kwargs: Any) -> None:
         pass
-    
+
     def on_match_start(self, *args: Any, **kwargs: Any) -> None:
         pass
-    
+
     def on_elo_update(self, *args: Any, **kwargs: Any) -> None:
         pass
-    
+
     def on_iteration_start(self, *args: Any, **kwargs: Any) -> None:
         pass
-    
+
     def on_iteration_complete(self, *args: Any, **kwargs: Any) -> None:
         pass
-    
+
     def on_snowball_stop(self, *args: Any, **kwargs: Any) -> None:
         pass

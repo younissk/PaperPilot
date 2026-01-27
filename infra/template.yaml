@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: '2010-09-09'
+AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
 Description: PaperPilot - AI-powered academic literature discovery (Serverless)
 
@@ -59,7 +59,7 @@ Globals:
   Function:
     Runtime: python3.13
     MemorySize: 512
-    Timeout: 300  # 5 minutes; adjust based on job duration
+    Timeout: 300 # 5 minutes; adjust based on job duration
     Environment:
       Variables:
         ENVIRONMENT: !Ref Environment
@@ -74,7 +74,6 @@ Globals:
 # Resources
 # ============================================================================
 Resources:
-
   # --------------------------------------------------------------------------
   # S3 Bucket for Pipeline Artifacts (results, reports, etc.)
   # --------------------------------------------------------------------------
@@ -91,7 +90,7 @@ Resources:
         Rules:
           - Id: ExpireOldArtifacts
             Status: Enabled
-            ExpirationInDays: 90  # Auto-delete artifacts after 90 days
+            ExpirationInDays: 90 # Auto-delete artifacts after 90 days
       Tags:
         - Key: Application
           Value: PaperPilot
@@ -183,8 +182,8 @@ Resources:
       Description: PaperPilot API (FastAPI on Lambda)
       CodeUri: ../services/api/
       Handler: handler.handler
-      MemorySize: 1024  # FastAPI benefits from more memory
-      Timeout: 30  # API Gateway has 29s limit
+      MemorySize: 1024 # FastAPI benefits from more memory
+      Timeout: 30 # API Gateway has 29s limit
       Events:
         ApiGatewayProxy:
           Type: HttpApi
@@ -205,6 +204,15 @@ Resources:
                 - sqs:SendMessage
                 - sqs:GetQueueAttributes
               Resource: !Ref SqsQueueArn
+        # S3 read access for /api/results endpoints
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:GetObject
+                - s3:ListBucket
+              Resource:
+                - !GetAtt ArtifactsBucket.Arn
+                - !Sub "${ArtifactsBucket.Arn}/*"
         - CloudWatchLogsFullAccess
       Environment:
         Variables:
@@ -223,15 +231,15 @@ Resources:
       Description: PaperPilot Worker (SQS job processor)
       CodeUri: ../services/worker/
       Handler: handler.handler
-      MemorySize: 2048  # Worker may need more memory for ML/processing
-      Timeout: 900  # 15 minutes max for SQS Lambda
+      MemorySize: 2048 # Worker may need more memory for ML/processing
+      Timeout: 900 # 15 minutes max for SQS Lambda
       # Note: ReservedConcurrentExecutions removed - requires sufficient account capacity
       Events:
         SqsEvent:
           Type: SQS
           Properties:
             Queue: !Ref SqsQueueArn
-            BatchSize: 1  # Process one job at a time for simplicity
+            BatchSize: 1 # Process one job at a time for simplicity
             FunctionResponseTypes:
               - ReportBatchItemFailures
       Policies:
@@ -267,7 +275,8 @@ Resources:
         Variables:
           LOG_LEVEL: INFO
           # OpenAI API key fetched from Secrets Manager at runtime
-          OPENAI_API_KEY_SECRET_ARN: !If [HasOpenAISecret, !Ref OpenAIApiKeySecretArn, ""]
+          OPENAI_API_KEY_SECRET_ARN:
+            !If [HasOpenAISecret, !Ref OpenAIApiKeySecretArn, ""]
 
   # --------------------------------------------------------------------------
   # SNS Topic for Alarm Notifications
@@ -317,7 +326,7 @@ Resources:
     Properties:
       RoleName: !Sub paperpilot-canary-role-${Environment}
       AssumeRolePolicyDocument:
-        Version: '2012-10-17'
+        Version: "2012-10-17"
         Statement:
           - Effect: Allow
             Principal:
@@ -328,7 +337,7 @@ Resources:
       Policies:
         - PolicyName: CanaryS3Access
           PolicyDocument:
-            Version: '2012-10-17'
+            Version: "2012-10-17"
             Statement:
               - Effect: Allow
                 Action:
@@ -348,7 +357,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - cloudwatch:PutMetricData
-                Resource: '*'
+                Resource: "*"
                 Condition:
                   StringEquals:
                     cloudwatch:namespace: CloudWatchSynthetics
@@ -363,7 +372,7 @@ Resources:
       ExecutionRoleArn: !GetAtt CanaryExecutionRole.Arn
       Schedule:
         Expression: rate(5 minutes)
-        DurationInSeconds: 0  # Run indefinitely
+        DurationInSeconds: 0 # Run indefinitely
       StartCanaryAfterCreation: true
       SuccessRetentionPeriod: 7
       FailureRetentionPeriod: 14
@@ -416,7 +425,7 @@ Resources:
       MetricName: 5xx
       Namespace: AWS/ApiGateway
       Statistic: Sum
-      Period: 300  # 5 minutes
+      Period: 300 # 5 minutes
       EvaluationPeriods: 2
       Threshold: 10
       ComparisonOperator: GreaterThanThreshold
@@ -425,7 +434,11 @@ Resources:
           Value: !Ref ServerlessHttpApi
       TreatMissingData: notBreaching
       AlarmActions:
-        - !If [CreateAlarmTopic, !Ref AlarmNotificationTopic, !Ref "AWS::NoValue"]
+        - !If [
+            CreateAlarmTopic,
+            !Ref AlarmNotificationTopic,
+            !Ref "AWS::NoValue",
+          ]
 
   ApiLatencyAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -438,14 +451,18 @@ Resources:
       ExtendedStatistic: p99
       Period: 300
       EvaluationPeriods: 3
-      Threshold: 5000  # 5 seconds
+      Threshold: 5000 # 5 seconds
       ComparisonOperator: GreaterThanThreshold
       Dimensions:
         - Name: ApiId
           Value: !Ref ServerlessHttpApi
       TreatMissingData: notBreaching
       AlarmActions:
-        - !If [CreateAlarmTopic, !Ref AlarmNotificationTopic, !Ref "AWS::NoValue"]
+        - !If [
+            CreateAlarmTopic,
+            !Ref AlarmNotificationTopic,
+            !Ref "AWS::NoValue",
+          ]
 
   # --------------------------------------------------------------------------
   # CloudWatch Alarms - API Lambda
@@ -468,7 +485,11 @@ Resources:
           Value: !Ref ApiFunction
       TreatMissingData: notBreaching
       AlarmActions:
-        - !If [CreateAlarmTopic, !Ref AlarmNotificationTopic, !Ref "AWS::NoValue"]
+        - !If [
+            CreateAlarmTopic,
+            !Ref AlarmNotificationTopic,
+            !Ref "AWS::NoValue",
+          ]
 
   # --------------------------------------------------------------------------
   # CloudWatch Alarms - Worker Lambda
@@ -491,7 +512,11 @@ Resources:
           Value: !Ref WorkerFunction
       TreatMissingData: notBreaching
       AlarmActions:
-        - !If [CreateAlarmTopic, !Ref AlarmNotificationTopic, !Ref "AWS::NoValue"]
+        - !If [
+            CreateAlarmTopic,
+            !Ref AlarmNotificationTopic,
+            !Ref "AWS::NoValue",
+          ]
 
   WorkerDurationAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -504,14 +529,18 @@ Resources:
       Statistic: Average
       Period: 300
       EvaluationPeriods: 2
-      Threshold: 600000  # 10 minutes (out of 15 min timeout)
+      Threshold: 600000 # 10 minutes (out of 15 min timeout)
       ComparisonOperator: GreaterThanThreshold
       Dimensions:
         - Name: FunctionName
           Value: !Ref WorkerFunction
       TreatMissingData: notBreaching
       AlarmActions:
-        - !If [CreateAlarmTopic, !Ref AlarmNotificationTopic, !Ref "AWS::NoValue"]
+        - !If [
+            CreateAlarmTopic,
+            !Ref AlarmNotificationTopic,
+            !Ref "AWS::NoValue",
+          ]
 
   WorkerThrottlesAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -531,7 +560,11 @@ Resources:
           Value: !Ref WorkerFunction
       TreatMissingData: notBreaching
       AlarmActions:
-        - !If [CreateAlarmTopic, !Ref AlarmNotificationTopic, !Ref "AWS::NoValue"]
+        - !If [
+            CreateAlarmTopic,
+            !Ref AlarmNotificationTopic,
+            !Ref "AWS::NoValue",
+          ]
 
   # --------------------------------------------------------------------------
   # CloudWatch Alarms - SQS Queue
@@ -547,14 +580,18 @@ Resources:
       Statistic: Maximum
       Period: 300
       EvaluationPeriods: 2
-      Threshold: 1800  # 30 minutes
+      Threshold: 1800 # 30 minutes
       ComparisonOperator: GreaterThanThreshold
       Dimensions:
         - Name: QueueName
           Value: !Sub paperpilot-jobs-${Environment}
       TreatMissingData: notBreaching
       AlarmActions:
-        - !If [CreateAlarmTopic, !Ref AlarmNotificationTopic, !Ref "AWS::NoValue"]
+        - !If [
+            CreateAlarmTopic,
+            !Ref AlarmNotificationTopic,
+            !Ref "AWS::NoValue",
+          ]
 
   # --------------------------------------------------------------------------
   # CloudWatch Alarms - Canary
@@ -577,7 +614,11 @@ Resources:
           Value: !Sub paperpilot-health-${Environment}
       TreatMissingData: breaching
       AlarmActions:
-        - !If [CreateAlarmTopic, !Ref AlarmNotificationTopic, !Ref "AWS::NoValue"]
+        - !If [
+            CreateAlarmTopic,
+            !Ref AlarmNotificationTopic,
+            !Ref "AWS::NoValue",
+          ]
 
 # ============================================================================
 # Outputs

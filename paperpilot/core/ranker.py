@@ -6,8 +6,8 @@ before expensive LLM calls, reducing cost and noise.
 
 import math
 import re
-from typing import List, Tuple
-from paperpilot.core.models import SnowballCandidate, QueryProfile
+
+from paperpilot.core.models import QueryProfile, SnowballCandidate
 
 
 def passes_keyword_gate(
@@ -36,12 +36,12 @@ def passes_keyword_gate(
     text = candidate.title or ""
     if candidate.abstract:
         text += " " + candidate.abstract
-    
+
     if not text.strip():
         return False  # No text to match against
-    
+
     text_lower = text.lower()
-    
+
     # Use required_concept_groups if available (preferred)
     if profile.required_concept_groups:
         if relaxed:
@@ -59,11 +59,11 @@ def passes_keyword_gate(
                 if not group_matched:
                     return False
             return True
-    
+
     # Fallback: use keyword_patterns if groups not available
     if not profile.keyword_patterns:
         return True  # No patterns = everything passes
-    
+
     # All patterns must match (AND logic) for the paper to pass
     for pattern_str in profile.keyword_patterns:
         try:
@@ -73,7 +73,7 @@ def passes_keyword_gate(
         except re.error:
             # Skip invalid patterns
             continue
-    
+
     return True
 
 
@@ -89,25 +89,25 @@ def compute_title_overlap(title: str, profile: QueryProfile) -> float:
     """
     if not title:
         return 0.0
-    
+
     title_lower = title.lower()
     score = 0.0
-    
+
     # Required concepts: +5 points each (max ~20 from these)
     for concept in profile.required_concepts:
         if concept.lower() in title_lower:
             score += 5.0
-    
+
     # Optional concepts: +3 points each
     for concept in profile.optional_concepts:
         if concept.lower() in title_lower:
             score += 3.0
-    
+
     # Penalize exclusion concepts: -10 points each
     for concept in profile.exclusion_concepts:
         if concept.lower() in title_lower:
             score -= 10.0
-    
+
     # Clamp to 0-30 range
     return max(0.0, min(30.0, score))
 
@@ -141,40 +141,40 @@ def compute_priority_score(
     # 1. Keyword gate (must pass)
     if not passes_keyword_gate(candidate, profile, relaxed=relaxed):
         return -1.0  # Filtered out
-    
+
     score = 0.0
-    
+
     # 2. Recency boost (0-20 points)
     # Papers from current year get 20 points, decreases by 2 per year
     if candidate.year:
         age = current_year - candidate.year
         recency_score = max(0, 20 - age * 2)
         score += recency_score
-    
+
     # 3. Citation count boost (0-30 points, log scale)
     # Using log1p to handle 0 citations gracefully
     citation_score = min(30, math.log1p(candidate.citation_count) * 5)
     score += citation_score
-    
+
     # 4. Influential citation boost (0-20 points)
     # Influential citations are weighted more heavily
     influential_score = min(20, candidate.influential_citation_count * 2)
     score += influential_score
-    
+
     # 5. Title overlap with query keywords (0-30 points)
     title_score = compute_title_overlap(candidate.title, profile)
     score += title_score
-    
+
     return score
 
 
 def rank_candidates(
-    candidates: List[SnowballCandidate],
+    candidates: list[SnowballCandidate],
     profile: QueryProfile,
     top_n: int = 50,
     current_year: int = 2026,
     relaxed: bool = False
-) -> Tuple[List[SnowballCandidate], int, int]:
+) -> tuple[list[SnowballCandidate], int, int]:
     """Rank and filter candidates, returning top N for LLM judgment.
     
     Args:
@@ -190,18 +190,18 @@ def rank_candidates(
     """
     scored_candidates = []
     passed_gate_count = 0
-    
+
     for candidate in candidates:
         score = compute_priority_score(candidate, profile, current_year, relaxed=relaxed)
-        
+
         if score >= 0:  # Passed keyword gate
             passed_gate_count += 1
             candidate.priority_score = score
             scored_candidates.append(candidate)
-    
+
     # Sort by priority score descending
     scored_candidates.sort(key=lambda c: c.priority_score, reverse=True)
-    
+
     # Return top N
     return scored_candidates[:top_n], passed_gate_count, len(candidates)
 

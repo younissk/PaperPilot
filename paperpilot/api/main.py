@@ -3,15 +3,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from paperpilot.api.routes.search import router as search_router
-from paperpilot.api.routes.results import router as results_router
-from paperpilot.api.routes.ranking import router as ranking_router
 from paperpilot.api.routes.clustering import router as clustering_router
-from paperpilot.api.routes.timeline import router as timeline_router
-from paperpilot.api.routes.graph import router as graph_router
-from paperpilot.api.routes.report import router as report_router
-from paperpilot.api.routes.pipeline import router as pipeline_router
 from paperpilot.api.routes.everything import router as everything_router
+from paperpilot.api.routes.graph import router as graph_router
+from paperpilot.api.routes.pipeline import router as pipeline_router
+from paperpilot.api.routes.ranking import router as ranking_router
+from paperpilot.api.routes.report import router as report_router
+from paperpilot.api.routes.results import router as results_router
+from paperpilot.api.routes.search import router as search_router
+from paperpilot.api.routes.timeline import router as timeline_router
 from paperpilot.api.schemas import HealthResponse
 
 app = FastAPI(

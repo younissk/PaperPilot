@@ -1,18 +1,18 @@
-from pydantic import BaseModel, Field
-from typing import List, Optional
 from enum import Enum
+
+from pydantic import BaseModel, Field
 
 
 class Author(BaseModel):
     name: str
-    affiliation: Optional[str] = None
+    affiliation: str | None = None
 
 
 class Link(BaseModel):
     href: str
     rel: str
-    type: Optional[str] = None
-    title: Optional[str] = None
+    type: str | None = None
+    title: str | None = None
 
 
 class Category(BaseModel):
@@ -26,13 +26,13 @@ class ArxivEntry(BaseModel):
     updated: str
     published: str
     summary: str
-    authors: List[Author] = Field(default_factory=list)
-    links: List[Link] = Field(default_factory=list)
-    categories: List[Category] = Field(default_factory=list)
-    comment: Optional[str] = None
-    journal_ref: Optional[str] = None
-    doi: Optional[str] = None
-    primary_category: Optional[str] = None
+    authors: list[Author] = Field(default_factory=list)
+    links: list[Link] = Field(default_factory=list)
+    categories: list[Category] = Field(default_factory=list)
+    comment: str | None = None
+    journal_ref: str | None = None
+    doi: str | None = None
+    primary_category: str | None = None
 
 
 class ArxivFeed(BaseModel):
@@ -42,7 +42,7 @@ class ArxivFeed(BaseModel):
     totalResults: int
     startIndex: int
     itemsPerPage: int
-    entries: List[ArxivEntry] = Field(default_factory=list)
+    entries: list[ArxivEntry] = Field(default_factory=list)
 
 
 class ReducedArxivEntry(BaseModel):
@@ -62,24 +62,24 @@ class QueryProfile(BaseModel):
     core_query: str  # The original user query
     domain_description: str  # Human-readable description of the research domain
     # Concepts that MUST appear (e.g., ["LLM", "recommender systems"])
-    required_concepts: List[str]
+    required_concepts: list[str]
     # Grouped concepts: OR within group, AND across groups
     # e.g., [["LLM", "large language model"], ["recommender", "recommendation"]]
-    required_concept_groups: List[List[str]] = Field(default_factory=list)
-    optional_concepts: List[str]  # Concepts that boost relevance if present
+    required_concept_groups: list[list[str]] = Field(default_factory=list)
+    optional_concepts: list[str]  # Concepts that boost relevance if present
     # Concepts that indicate irrelevance (negative filter)
-    exclusion_concepts: List[str]
-    keyword_patterns: List[str]  # Regex patterns for fast keyword gating
+    exclusion_concepts: list[str]
+    keyword_patterns: list[str]  # Regex patterns for fast keyword gating
     domain_boundaries: str  # Description of what is IN vs OUT of scope
     # Fallback queries for discovering foundational papers in each concept domain
-    fallback_queries: List[str] = Field(default_factory=list)
+    fallback_queries: list[str] = Field(default_factory=list)
 
 
 class QueueItem(BaseModel):
     # Canonical identifier (e.g., Semantic Scholar paperId or DOI)
     paper_id: str
     # Which seed paper and which edge type (reference or citation)
-    discovered_from: Optional[str] = None
+    discovered_from: str | None = None
     depth: int  # Exploration depth in citation/reference graph
     score: float  # Priority score for processing
 
@@ -95,25 +95,25 @@ class SnowballCandidate(BaseModel):
     """A candidate paper discovered during snowballing expansion."""
     paper_id: str                              # OpenAlex or Semantic Scholar ID
     title: str
-    abstract: Optional[str] = None
-    year: Optional[int] = None
+    abstract: str | None = None
+    year: int | None = None
     citation_count: int = 0
     influential_citation_count: int = 0
-    discovered_from: Optional[str] = None      # parent paper_id
+    discovered_from: str | None = None      # parent paper_id
     edge_type: EdgeType
     depth: int
     priority_score: float = 0.0
-    arxiv_id: Optional[str] = None             # arXiv ID for S2 fallback
+    arxiv_id: str | None = None             # arXiv ID for S2 fallback
 
 
 class AcceptedPaper(BaseModel):
     """A paper that passed LLM relevance judgment."""
     paper_id: str
     title: str
-    abstract: Optional[str] = None
-    year: Optional[int] = None
+    abstract: str | None = None
+    year: int | None = None
     citation_count: int = 0
-    discovered_from: Optional[str] = None
+    discovered_from: str | None = None
     edge_type: EdgeType
     depth: int
     judge_reason: str

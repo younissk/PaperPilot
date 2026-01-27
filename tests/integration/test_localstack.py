@@ -7,11 +7,12 @@ Run with:
     pytest tests/integration/ -v -m integration
 """
 
-import pytest
+import json
 import os
 import time
-import json
+
 import boto3
+import pytest
 from botocore.config import Config
 
 # Mark all tests in this module as integration tests

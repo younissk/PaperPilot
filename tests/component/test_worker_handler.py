@@ -1,9 +1,9 @@
 """Component tests for Worker Lambda handler with mocked AWS and pipeline modules."""
 
-import pytest
 import json
-from unittest.mock import patch, MagicMock, AsyncMock
-from decimal import Decimal
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 # Mark all tests in this module as component tests
 pytestmark = pytest.mark.component
@@ -341,7 +341,7 @@ class TestJobStatusEnum:
 
     def test_job_status_values_used_correctly(self, mock_aws_worker):
         """JobStatus enum values are used in updates."""
-        from services.worker.handler import update_job_progress, JobStatus
+        from services.worker.handler import JobStatus, update_job_progress
 
         update_job_progress(
             job_id="test",

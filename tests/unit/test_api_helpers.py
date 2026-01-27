@@ -1,8 +1,10 @@
 """Unit tests for API Lambda helper functions."""
 
-import pytest
 from decimal import Decimal
-from hypothesis import given, strategies as st
+
+import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 
 # Mark all tests in this module as unit tests
 pytestmark = pytest.mark.unit
@@ -145,7 +147,7 @@ class TestConvertDecimalToNative:
 
     def test_roundtrip_conversion(self, sample_job_payload):
         """Roundtrip: float -> Decimal -> native preserves values."""
-        from services.api.handler import convert_floats_to_decimal, convert_decimal_to_native
+        from services.api.handler import convert_decimal_to_native, convert_floats_to_decimal
 
         decimalized = convert_floats_to_decimal(sample_job_payload)
         restored = convert_decimal_to_native(decimalized)
@@ -190,8 +192,8 @@ class TestPydanticSchemas:
 
     def test_pipeline_request_validation_bounds(self):
         """PipelineRequest enforces field bounds."""
-        from services.api.handler import PipelineRequest
         from pydantic import ValidationError
+        from services.api.handler import PipelineRequest
 
         # num_results out of bounds
         with pytest.raises(ValidationError):

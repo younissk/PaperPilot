@@ -8,7 +8,7 @@ It also ensures citations are preserved and added where missing.
 import json
 import os
 import re
-from typing import Optional, Callable
+from collections.abc import Callable
 
 from openai import AsyncOpenAI
 
@@ -40,7 +40,7 @@ def extract_cited_ids(text: str) -> list[str]:
 log = get_logger(__name__)
 
 # Async OpenAI client
-_async_client: Optional[AsyncOpenAI] = None
+_async_client: AsyncOpenAI | None = None
 
 
 def _get_async_client() -> AsyncOpenAI:
@@ -66,9 +66,9 @@ def _format_cards_for_audit(cards: list[PaperCard]) -> str:
             parts.append(f"  Data: {card.data_benchmark}")
         if card.measured:
             parts.append(f"  Measured: {card.measured}")
-        
+
         card_strs.append("\n".join(parts))
-    
+
     return "\n\n".join(card_strs)
 
 
@@ -76,10 +76,10 @@ def _build_audit_prompt(section: WrittenSection, cards: list[PaperCard]) -> str:
     """Build the prompt for auditing a section."""
     cards_text = _format_cards_for_audit(cards)
     valid_ids = [c.id for c in cards]
-    
+
     # Extract existing citations from original text
     original_citations = extract_cited_ids(section.content)
-    
+
     return f"""You are auditing a research survey section for citation accuracy.
 
 SECTION TITLE: {section.title}
@@ -148,7 +148,7 @@ async def audit_section(
         text_length=len(section.content),
         num_cards=len(cards)
     )
-    
+
     if not section.content or section.content.startswith("Error") or not cards:
         log.warning("skipping_audit", section=section.title, reason="empty or error content")
         return AuditResult(
@@ -160,10 +160,10 @@ async def audit_section(
             unsupported_count=0,
             revised_count=0
         )
-    
+
     prompt = _build_audit_prompt(section, cards)
     client = _get_async_client()
-    
+
     try:
         response = await client.chat.completions.create(
             model="gpt-4o-mini",
@@ -172,15 +172,15 @@ async def audit_section(
             max_tokens=2500,
             response_format={"type": "json_object"}
         )
-        
+
         content = response.choices[0].message.content.strip()
         data = json.loads(content)
-        
+
         # Parse sentence audits
         sentence_audits = []
         supported_count = 0
         unsupported_count = 0
-        
+
         for s_data in data.get("sentences", []):
             audit = SentenceAudit(
                 sentence=s_data.get("sentence", ""),
@@ -190,15 +190,15 @@ async def audit_section(
                 suggested_fix=s_data.get("suggested_fix")
             )
             sentence_audits.append(audit)
-            
+
             if audit.supported:
                 supported_count += 1
             else:
                 unsupported_count += 1
-        
+
         revised_text = data.get("revised_text", section.content)
         revised_count = sum(1 for s in sentence_audits if s.suggested_fix)
-        
+
         log.info(
             "citation_audit_complete",
             section=section.title,
@@ -206,7 +206,7 @@ async def audit_section(
             unsupported=unsupported_count,
             revised=revised_count
         )
-        
+
         if unsupported_count > 0:
             log.warning(
                 "unsupported_claims_found",
@@ -214,7 +214,7 @@ async def audit_section(
                 count=unsupported_count,
                 issues=[s.issue for s in sentence_audits if not s.supported and s.issue]
             )
-        
+
         return AuditResult(
             section_title=section.title,
             original_text=section.content,
@@ -224,7 +224,7 @@ async def audit_section(
             unsupported_count=unsupported_count,
             revised_count=revised_count
         )
-        
+
     except json.JSONDecodeError as e:
         log.error("audit_json_parse_error", section=section.title, error=str(e))
         # Return original text without revision
@@ -253,7 +253,7 @@ async def audit_section(
 async def audit_all_sections(
     sections: list[WrittenSection],
     all_cards: list[PaperCard],
-    progress_callback: Optional[Callable[[int, int, str], None]] = None,
+    progress_callback: Callable[[int, int, str], None] | None = None,
 ) -> list[AuditResult]:
     """Audit all written sections.
     
@@ -267,20 +267,20 @@ async def audit_all_sections(
     if not sections:
         log.warning("no_sections_to_audit")
         return []
-    
+
     log.info("batch_audit_start", num_sections=len(sections))
-    
+
     # Create card lookup by ID
     card_lookup = {c.id: c for c in all_cards}
-    
+
     results = []
     total_supported = 0
     total_unsupported = 0
     total_sections = len(sections)
-    
+
     if progress_callback:
         progress_callback(0, total_sections, f"Starting to audit {total_sections} sections...")
-    
+
     for i, section in enumerate(sections):
         # Get cards that were used in this section
         section_cards = [
@@ -288,30 +288,30 @@ async def audit_all_sections(
             for pid in section.paper_ids_used
             if pid in card_lookup
         ]
-        
+
         # If no specific cards, use all cards
         if not section_cards:
             section_cards = all_cards
-        
+
         if progress_callback:
             progress_callback(i, total_sections, f"Auditing section {i+1}/{total_sections}: {section.title}")
-        
+
         result = await audit_section(section, section_cards)
         results.append(result)
-        
+
         total_supported += result.supported_count
         total_unsupported += result.unsupported_count
-        
+
         if progress_callback:
             progress_callback(i + 1, total_sections, f"Completed audit {i+1}/{total_sections}: {section.title}")
-    
+
     log.info(
         "batch_audit_complete",
         num_sections=len(sections),
         total_supported=total_supported,
         total_unsupported=total_unsupported
     )
-    
+
     return results
 
 
@@ -339,44 +339,44 @@ def merge_citations(
     """
     original_citations = set(extract_cited_ids(original_text))
     revised_citations = set(extract_cited_ids(revised_text))
-    
+
     # Valid IDs from cards
     valid_ids = {c.id for c in cards}
-    
+
     # Filter to only valid citations
     original_citations = original_citations & valid_ids
     revised_citations = revised_citations & valid_ids
-    
+
     # If no citations were lost, return revised text as-is
     lost_citations = original_citations - revised_citations
-    
+
     if not lost_citations:
         log.debug("no_citations_lost", original=len(original_citations), revised=len(revised_citations))
         return revised_text
-    
+
     log.warning(
         "citations_lost_during_revision",
         original_count=len(original_citations),
         revised_count=len(revised_citations),
         lost=list(lost_citations)
     )
-    
+
     # Try to restore lost citations
     result_text = revised_text
-    
+
     # Split into paragraphs
     paragraphs = result_text.split('\n\n')
-    
+
     # Distribute lost citations across paragraphs that don't have citations
     lost_list = list(lost_citations)
     citation_index = 0
-    
+
     for i, para in enumerate(paragraphs):
         if not para.strip():
             continue
-            
+
         para_citations = extract_cited_ids(para)
-        
+
         # If paragraph has no citations and we have lost citations to add
         if not para_citations and citation_index < len(lost_list):
             # Find end of first sentence
@@ -388,7 +388,7 @@ def merge_citations(
                 paragraphs[i] = '.'.join(sentences)
                 citation_index += 1
                 log.debug("restored_citation", citation=citation_to_add, paragraph_index=i)
-    
+
     # If we still have lost citations, append them to the last paragraph
     while citation_index < len(lost_list):
         # Find the last non-empty paragraph
@@ -401,13 +401,13 @@ def merge_citations(
                 break
         else:
             break  # No non-empty paragraphs found
-    
+
     result_text = '\n\n'.join(paragraphs)
-    
+
     # Verify restoration
     final_citations = set(extract_cited_ids(result_text))
     restored_count = len(final_citations) - len(revised_citations)
-    
+
     log.info(
         "citations_merged",
         original=len(original_citations),
@@ -415,5 +415,5 @@ def merge_citations(
         final=len(final_citations),
         restored=restored_count
     )
-    
+
     return result_text

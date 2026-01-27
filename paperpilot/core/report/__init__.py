@@ -20,46 +20,41 @@ Example:
     report_data = report_to_dict(report)
 """
 
-from paperpilot.core.report.models import (
-    PaperCard,
-    SectionPlan,
-    ReportOutline,
-    SentenceAudit,
-    AuditResult,
-    WrittenSection,
-    ResearchItem,
-    OpenProblem,
-    Report,
+from paperpilot.core.report.auditor import (
+    audit_all_sections,
+    audit_section,
 )
-
+from paperpilot.core.report.cards import (
+    generate_paper_card,
+    generate_paper_cards,
+)
 from paperpilot.core.report.generator import (
     generate_report,
+    load_papers_from_file,
     report_to_dict,
     select_top_k_papers,
-    load_papers_from_file,
 )
-
-from paperpilot.core.report.cards import (
-    generate_paper_cards,
-    generate_paper_card,
+from paperpilot.core.report.models import (
+    AuditResult,
+    OpenProblem,
+    PaperCard,
+    Report,
+    ReportOutline,
+    ResearchItem,
+    SectionPlan,
+    SentenceAudit,
+    WrittenSection,
 )
-
 from paperpilot.core.report.outline import (
     generate_outline,
     group_by_tags,
 )
-
 from paperpilot.core.report.writer import (
-    write_section,
-    write_all_sections,
-    write_introduction,
-    write_conclusion,
     extract_cited_ids,
-)
-
-from paperpilot.core.report.auditor import (
-    audit_section,
-    audit_all_sections,
+    write_all_sections,
+    write_conclusion,
+    write_introduction,
+    write_section,
 )
 
 __all__ = [

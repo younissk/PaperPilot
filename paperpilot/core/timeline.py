@@ -12,11 +12,11 @@ HOW: 1. Extract papers with year information from snowball.json
      4. Create interactive HTML visualization
 """
 
-from typing import Dict, Any, List
 from collections import defaultdict
+from typing import Any
 
 
-def create_timeline(papers: List[Dict[str, Any]], query: str) -> Dict[str, Any]:
+def create_timeline(papers: list[dict[str, Any]], query: str) -> dict[str, Any]:
     """Create a timeline structure from a list of papers.
     
     Args:
@@ -27,16 +27,16 @@ def create_timeline(papers: List[Dict[str, Any]], query: str) -> Dict[str, Any]:
         Timeline data dictionary with years, timeline array, and metadata
     """
     # Group papers by year
-    papers_by_year: Dict[int, List[Dict[str, Any]]] = defaultdict(list)
-    
+    papers_by_year: dict[int, list[dict[str, Any]]] = defaultdict(list)
+
     for paper in papers:
         year = paper.get("year")
         if year is not None:
             papers_by_year[year].append(paper)
-    
+
     # Sort years
     sorted_years = sorted(papers_by_year.keys())
-    
+
     # Build timeline array
     timeline = []
     for year in sorted_years:
@@ -50,10 +50,10 @@ def create_timeline(papers: List[Dict[str, Any]], query: str) -> Dict[str, Any]:
                 reverse=True
             )
         })
-    
+
     # Convert years dict to string keys for JSON serialization
     years_dict = {str(year): papers for year, papers in papers_by_year.items()}
-    
+
     return {
         "query": query,
         "total_papers": len(papers),

@@ -4,48 +4,54 @@ This module provides RichEventHandler that implements the EventHandler
 protocol and renders events using Rich console components.
 """
 
-from typing import List, Any, Optional
+from typing import Any
+
+from rich import box
 from rich.console import Console
 from rich.live import Live
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskID
 from rich.panel import Panel
-from rich import box
+from rich.progress import BarColumn, Progress, SpinnerColumn, TaskID, TextColumn
 
-from paperpilot.core.events import EventHandler
-from paperpilot.core.models import AcceptedPaper, SnowballCandidate
-from paperpilot.core.elo_ranker.models import CandidateElo, MatchResult  # Import here to avoid circular import
 from paperpilot.cli.console import (
     display_accept_reject,
     display_iteration_header,
     display_iteration_result,
+    display_snowball_summary,
     display_status,
     display_stop_reason,
-    display_snowball_summary,
 )
 from paperpilot.core.elo_ranker.display import (
     create_display as create_elo_display,
+)
+from paperpilot.core.elo_ranker.display import (
     print_final_standings,
 )
+from paperpilot.core.elo_ranker.models import (  # Import here to avoid circular import
+    CandidateElo,
+    MatchResult,
+)
+from paperpilot.core.events import EventHandler
+from paperpilot.core.models import AcceptedPaper, SnowballCandidate
 
 
 class RichEventHandler(EventHandler):
     """Rich-based event handler for CLI presentation."""
-    
-    def __init__(self, console: Optional[Console] = None):
+
+    def __init__(self, console: Console | None = None):
         """Initialize the Rich event handler.
         
         Args:
             console: Rich Console instance (uses default if None)
         """
         self.console = console or Console()
-        self._elo_progress: Optional[Progress] = None
-        self._elo_task_id: Optional[TaskID] = None
-        self._elo_live: Optional[Live] = None
-        self._elo_match_history: List[MatchResult] = []
-        self._elo_current_match: Optional[MatchResult] = None
+        self._elo_progress: Progress | None = None
+        self._elo_task_id: TaskID | None = None
+        self._elo_live: Live | None = None
+        self._elo_match_history: list[MatchResult] = []
+        self._elo_current_match: MatchResult | None = None
         self._elo_initial_elo: float = 1500.0
         self._elo_max_matches: int = 0
-    
+
     def on_progress(
         self,
         current: int,
@@ -59,7 +65,7 @@ class RichEventHandler(EventHandler):
         else:
             # Simple progress display
             self.console.print(f"[dim]{message}: {current}/{total}[/dim]")
-    
+
     def on_paper_accepted(
         self,
         paper: AcceptedPaper,
@@ -71,7 +77,7 @@ class RichEventHandler(EventHandler):
             accepted=True,
             reason=paper.judge_reason or "Accepted",
         )
-    
+
     def on_paper_rejected(
         self,
         paper: SnowballCandidate,
@@ -84,7 +90,7 @@ class RichEventHandler(EventHandler):
             accepted=False,
             reason=reason,
         )
-    
+
     def on_match_complete(
         self,
         match: MatchResult,
@@ -93,7 +99,7 @@ class RichEventHandler(EventHandler):
         """Handle match completion."""
         self._elo_match_history.append(match)
         self._elo_current_match = None
-        
+
         # Update display if live
         if self._elo_live and self._elo_progress and self._elo_task_id is not None:
             match_num = len(self._elo_match_history)
@@ -110,7 +116,7 @@ class RichEventHandler(EventHandler):
                     self._elo_match_history,
                 )
             )
-    
+
     def on_match_start(
         self,
         paper1_title: str,
@@ -124,7 +130,7 @@ class RichEventHandler(EventHandler):
             winner=None,
             reason="",
         )
-        
+
         # Update display if live
         if self._elo_live and self._elo_progress and self._elo_task_id is not None:
             match_num = len(self._elo_match_history)
@@ -141,10 +147,10 @@ class RichEventHandler(EventHandler):
                     self._elo_match_history,
                 )
             )
-    
+
     def on_elo_update(
         self,
-        candidates: List[CandidateElo],
+        candidates: list[CandidateElo],
         match_num: int,
         total_matches: int,
         **kwargs: Any
@@ -164,7 +170,7 @@ class RichEventHandler(EventHandler):
                     self._elo_match_history,
                 )
             )
-    
+
     def on_iteration_start(
         self,
         iteration: int,
@@ -173,7 +179,7 @@ class RichEventHandler(EventHandler):
     ) -> None:
         """Display iteration start."""
         display_iteration_header(iteration, frontier_size)
-    
+
     def on_iteration_complete(
         self,
         iteration: int,
@@ -189,7 +195,7 @@ class RichEventHandler(EventHandler):
             total_visited=kwargs.get("total_visited", 0),
             new_this_iteration=accepted,
         )
-    
+
     def on_snowball_stop(
         self,
         reason: str,
@@ -203,13 +209,13 @@ class RichEventHandler(EventHandler):
         paper_titles = kwargs.get("paper_titles", {})
         if accepted_papers:
             display_snowball_summary(accepted_papers, total_visited, paper_titles)
-    
+
     def start_elo_display(
         self,
-        candidates: List[CandidateElo],
+        candidates: list[CandidateElo],
         max_matches: int,
         initial_elo: float = 1500.0,
-        config_info: Optional[dict] = None,
+        config_info: dict | None = None,
     ) -> None:
         """Start the Elo ranking live display.
         
@@ -219,12 +225,12 @@ class RichEventHandler(EventHandler):
             initial_elo: Initial Elo rating
             config_info: Optional configuration info to display
         """
-        
+
         self._elo_initial_elo = initial_elo
         self._elo_max_matches = max_matches
         self._elo_match_history = []
         self._elo_current_match = None
-        
+
         # Create progress bar
         self._elo_progress = Progress(
             SpinnerColumn(),
@@ -238,7 +244,7 @@ class RichEventHandler(EventHandler):
             "[cyan]Running Elo matches...",
             total=max_matches
         )
-        
+
         # Print header
         if config_info:
             self.console.print()
@@ -254,7 +260,7 @@ class RichEventHandler(EventHandler):
                 box=box.DOUBLE,
             ))
             self.console.print()
-        
+
         # Start live display
         self._elo_live = Live(
             create_elo_display(
@@ -272,8 +278,8 @@ class RichEventHandler(EventHandler):
             transient=False,
         )
         self._elo_live.__enter__()
-    
-    def stop_elo_display(self, candidates: List[CandidateElo], final: bool = True) -> None:
+
+    def stop_elo_display(self, candidates: list[CandidateElo], final: bool = True) -> None:
         """Stop the Elo ranking live display.
         
         Args:
@@ -283,7 +289,7 @@ class RichEventHandler(EventHandler):
         if self._elo_live:
             self._elo_live.__exit__(None, None, None)
             self._elo_live = None
-        
+
         if final:
             self.console.print()
             self.console.print(Panel(
@@ -293,7 +299,7 @@ class RichEventHandler(EventHandler):
             ))
             self.console.print()
             print_final_standings(candidates, self._elo_initial_elo)
-        
+
         self._elo_progress = None
         self._elo_task_id = None
         self._elo_match_history = []

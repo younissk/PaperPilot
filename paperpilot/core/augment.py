@@ -7,7 +7,6 @@ for better coverage of the research topic.
 import json
 import os
 import time
-from typing import List, Tuple
 
 from openai import AsyncOpenAI
 from pydantic import TypeAdapter, ValidationError
@@ -17,7 +16,7 @@ async_client = AsyncOpenAI(
 )
 
 
-async def augment_search(query: str, k: int = 6) -> Tuple[List[str], float]:
+async def augment_search(query: str, k: int = 6) -> tuple[list[str], float]:
     """Expand a single query into multiple search variants.
     
     Args:
@@ -80,7 +79,7 @@ async def augment_search(query: str, k: int = 6) -> Tuple[List[str], float]:
         messages=[{"role": "user", "content": prompt}],
     )
     end_time = time.time()
-    
+
     content = response.choices[0].message.content.strip()
 
     try:
@@ -91,15 +90,15 @@ async def augment_search(query: str, k: int = 6) -> Tuple[List[str], float]:
 
         data = json.loads(content)
 
-        validator = TypeAdapter(List[str])
+        validator = TypeAdapter(list[str])
         validated_data = validator.validate_python(data)
         augmented_queries = list(set(validated_data + [query]))
-        
+
         time_taken = end_time - start_time
-        
+
         return augmented_queries, time_taken
 
     except (json.JSONDecodeError, ValidationError) as e:
-        # If it's still not right, we could try more aggressive cleaning 
+        # If it's still not right, we could try more aggressive cleaning
         # but for now, we'll raise an error or return a fallback
         raise ValueError(f"Failed to parse LLM response into List[str]: {e}\nRaw content: {content}")

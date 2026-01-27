@@ -6,7 +6,7 @@ enforcement to prevent hallucinations and ensure traceability.
 
 import os
 import re
-from typing import Optional, Callable
+from collections.abc import Callable
 
 from openai import AsyncOpenAI
 
@@ -16,7 +16,7 @@ from paperpilot.core.report.models import PaperCard, SectionPlan, WrittenSection
 log = get_logger(__name__)
 
 # Async OpenAI client
-_async_client: Optional[AsyncOpenAI] = None
+_async_client: AsyncOpenAI | None = None
 
 
 def _get_async_client() -> AsyncOpenAI:
@@ -43,9 +43,9 @@ def _format_cards_for_prompt(cards: list[PaperCard]) -> str:
             parts.append(f"  Limitation: {card.limitation}")
         if card.key_quote:
             parts.append(f"  Key Quote: \"{card.key_quote}\"")
-        
+
         card_strs.append("\n".join(parts))
-    
+
     return "\n\n".join(card_strs)
 
 
@@ -54,10 +54,10 @@ def _build_section_prompt(section: SectionPlan, cards: list[PaperCard]) -> str:
     cards_text = _format_cards_for_prompt(cards)
     bullets = "\n".join([f"- {b}" for b in section.bullet_claims])
     valid_ids = ", ".join([c.id for c in cards])
-    
+
     # Get example IDs for the prompt
     example_ids = [c.id for c in cards[:2]] if len(cards) >= 2 else [c.id for c in cards]
-    
+
     return f"""You are writing a section for a research survey report. 
 
 SECTION TITLE: {section.title}
@@ -131,7 +131,7 @@ async def write_section(
         num_cards=len(cards),
         planned_ids=len(section.relevant_paper_ids)
     )
-    
+
     if not cards:
         log.warning("no_cards_for_section", section=section.title)
         return WrittenSection(
@@ -139,10 +139,10 @@ async def write_section(
             content="No papers available for this section.",
             paper_ids_used=[]
         )
-    
+
     prompt = _build_section_prompt(section, cards)
     client = _get_async_client()
-    
+
     try:
         response = await client.chat.completions.create(
             model="gpt-4o-mini",
@@ -150,41 +150,41 @@ async def write_section(
             temperature=0.2,  # Low temperature for factual accuracy
             max_tokens=1500,
         )
-        
+
         content = response.choices[0].message.content.strip()
         cited_ids = extract_cited_ids(content)
-        
+
         # Validate cited IDs against available cards
         valid_ids = {c.id for c in cards}
         invalid_ids = [cid for cid in cited_ids if cid not in valid_ids]
-        
+
         if invalid_ids:
             log.warning(
                 "invalid_citations_found",
                 section=section.title,
                 invalid_ids=invalid_ids
             )
-        
+
         valid_cited = [cid for cid in cited_ids if cid in valid_ids]
         word_count = len(content.split())
-        
+
         log.info(
             "section_writing_complete",
             section=section.title,
             word_count=word_count,
             citations=len(valid_cited)
         )
-        
+
         # Check citation density
         if len(valid_cited) == 0 and cards:
             log.warning("low_citation_density", section=section.title, word_count=word_count)
-        
+
         return WrittenSection(
             title=section.title,
             content=content,
             paper_ids_used=valid_cited
         )
-        
+
     except Exception as e:
         log.error("section_writing_failed", section=section.title, error=str(e))
         return WrittenSection(
@@ -210,10 +210,10 @@ async def rewrite_with_strict_citations(
         Rewritten section with citations
     """
     log.info("rewriting_with_strict_citations", section=section.title)
-    
+
     cards_text = _format_cards_for_prompt(cards)
     valid_ids = ", ".join([c.id for c in cards])
-    
+
     prompt = f"""TASK: Rewrite this section to include proper citations.
 
 ORIGINAL SECTION TITLE: {section.title}
@@ -236,7 +236,7 @@ EXAMPLE OUTPUT FORMAT:
 Return ONLY the rewritten text with citations. Do not include any explanation."""
 
     client = _get_async_client()
-    
+
     try:
         response = await client.chat.completions.create(
             model="gpt-4o-mini",
@@ -244,26 +244,26 @@ Return ONLY the rewritten text with citations. Do not include any explanation.""
             temperature=0.1,
             max_tokens=1500,
         )
-        
+
         content = response.choices[0].message.content.strip()
         cited_ids = extract_cited_ids(content)
-        
+
         # Validate cited IDs
         valid_id_set = {c.id for c in cards}
         valid_cited = [cid for cid in cited_ids if cid in valid_id_set]
-        
+
         log.info(
             "rewrite_complete",
             section=section.title,
             citations=len(valid_cited)
         )
-        
+
         return WrittenSection(
             title=section.title,
             content=content,
             paper_ids_used=valid_cited
         )
-        
+
     except Exception as e:
         log.error("rewrite_failed", section=section.title, error=str(e))
         return section  # Return original if rewrite fails
@@ -287,7 +287,7 @@ async def validate_and_rewrite_if_needed(
     citations = extract_cited_ids(section.content)
     words = len(section.content.split())
     density = len(citations) / (words / 100) if words > 0 else 0
-    
+
     if density < min_citations_per_100_words:
         log.warning(
             "low_citation_density_rewriting",
@@ -299,7 +299,7 @@ async def validate_and_rewrite_if_needed(
         )
         # Re-write with stronger enforcement
         return await rewrite_with_strict_citations(section, cards)
-    
+
     log.debug(
         "citation_density_ok",
         section=section.title,
@@ -311,7 +311,7 @@ async def validate_and_rewrite_if_needed(
 async def write_all_sections(
     outline_sections: list[SectionPlan],
     all_cards: list[PaperCard],
-    progress_callback: Optional[Callable[[int, int, str], None]] = None,
+    progress_callback: Callable[[int, int, str], None] | None = None,
 ) -> list[WrittenSection]:
     """Write all sections from the outline.
     
@@ -325,44 +325,44 @@ async def write_all_sections(
     if not outline_sections:
         log.warning("no_sections_to_write")
         return []
-    
+
     # Create a lookup for cards by ID
     card_lookup = {c.id: c for c in all_cards}
-    
+
     # Write sections sequentially to maintain coherence
     # (Could parallelize if needed, but sections may reference each other)
     written_sections = []
     total_sections = len(outline_sections)
-    
+
     if progress_callback:
         progress_callback(0, total_sections, f"Starting to write {total_sections} sections...")
-    
+
     for i, section in enumerate(outline_sections):
         # Get cards for this section
         section_cards = [
-            card_lookup[pid] 
-            for pid in section.relevant_paper_ids 
+            card_lookup[pid]
+            for pid in section.relevant_paper_ids
             if pid in card_lookup
         ]
-        
+
         # If no specific cards assigned, use all cards
         if not section_cards:
             section_cards = all_cards
             log.debug("using_all_cards_for_section", section=section.title)
-        
+
         if progress_callback:
             progress_callback(i, total_sections, f"Writing section {i+1}/{total_sections}: {section.title}")
-        
+
         written = await write_section(section, section_cards)
-        
+
         # Validate and rewrite if citation density is too low
         written = await validate_and_rewrite_if_needed(written, section_cards)
-        
+
         written_sections.append(written)
-        
+
         if progress_callback:
             progress_callback(i + 1, total_sections, f"Completed section {i+1}/{total_sections}: {section.title}")
-    
+
     return written_sections
 
 
@@ -377,11 +377,11 @@ async def write_introduction(query: str, cards: list[PaperCard]) -> str:
         Introduction text
     """
     log.info("writing_introduction", query=query, num_cards=len(cards))
-    
+
     # Get a sample of claims for context
     claims = [f"- {c.claim} [{c.id}]" for c in cards[:10]]
     claims_text = "\n".join(claims)
-    
+
     prompt = f"""Write a brief introduction (2-3 paragraphs) for a research survey on:
 
 Query: {query}
@@ -397,7 +397,7 @@ The introduction should:
 Write concise, academic prose. Return only the introduction text."""
 
     client = _get_async_client()
-    
+
     try:
         response = await client.chat.completions.create(
             model="gpt-4o-mini",
@@ -405,18 +405,18 @@ Write concise, academic prose. Return only the introduction text."""
             temperature=0.3,
             max_tokens=800,
         )
-        
+
         content = response.choices[0].message.content.strip()
         log.info("introduction_complete", word_count=len(content.split()))
         return content
-        
+
     except Exception as e:
         log.error("introduction_failed", error=str(e))
         return f"This report surveys research on: {query}"
 
 
 async def write_conclusion(
-    query: str, 
+    query: str,
     cards: list[PaperCard],
     sections: list[WrittenSection]
 ) -> str:
@@ -431,17 +431,17 @@ async def write_conclusion(
         Conclusion text
     """
     log.info("writing_conclusion", query=query, num_sections=len(sections))
-    
+
     # Summarize sections
     section_summaries = "\n".join([
         f"- {s.title}: {len(s.paper_ids_used)} papers cited"
         for s in sections
     ])
-    
+
     # Get limitations from cards
     limitations = [c.limitation for c in cards if c.limitation][:5]
     limitations_text = "\n".join([f"- {l}" for l in limitations]) if limitations else "No explicit limitations noted."
-    
+
     prompt = f"""Write a brief conclusion (2 paragraphs) for a research survey on:
 
 Query: {query}
@@ -460,7 +460,7 @@ The conclusion should:
 Write academic prose. Return only the conclusion text (no citations needed in conclusion)."""
 
     client = _get_async_client()
-    
+
     try:
         response = await client.chat.completions.create(
             model="gpt-4o-mini",
@@ -468,17 +468,17 @@ Write academic prose. Return only the conclusion text (no citations needed in co
             temperature=0.3,
             max_tokens=500,
         )
-        
+
         content = response.choices[0].message.content.strip()
         log.info("conclusion_complete", word_count=len(content.split()))
         return content
-        
+
     except Exception as e:
         log.error("conclusion_failed", error=str(e))
         return f"This survey covered research on {query}. Further investigation is warranted."
 
 
-def find_most_relevant_card(text: str, cards: list[PaperCard]) -> Optional[PaperCard]:
+def find_most_relevant_card(text: str, cards: list[PaperCard]) -> PaperCard | None:
     """Find most relevant card for a text snippet using keyword matching.
     
     Uses simple keyword overlap between text and card title/claim.
@@ -492,10 +492,10 @@ def find_most_relevant_card(text: str, cards: list[PaperCard]) -> Optional[Paper
     """
     if not cards:
         return None
-    
+
     text_lower = text.lower()
     text_words = set(text_lower.split())
-    
+
     # Remove common stop words
     stop_words = {
         'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
@@ -509,25 +509,25 @@ def find_most_relevant_card(text: str, cards: list[PaperCard]) -> Optional[Paper
         'this', 'that', 'these', 'those', 'which', 'who', 'whom', 'what',
     }
     text_words = text_words - stop_words
-    
+
     best_match = None
     best_score = 0
-    
+
     for card in cards:
         # Score based on keyword overlap
         title_words = set(card.title.lower().split()) - stop_words
         claim_words = set(card.claim.lower().split()) - stop_words
-        
+
         title_overlap = len(title_words & text_words)
         claim_overlap = len(claim_words & text_words)
-        
+
         # Weight title matches more heavily
         score = title_overlap * 2 + claim_overlap
-        
+
         if score > best_score:
             best_score = score
             best_match = card
-    
+
     return best_match if best_score > 0 else (cards[0] if cards else None)
 
 
@@ -555,27 +555,27 @@ def inject_citations_if_missing(
     """
     if not cards:
         return text
-    
+
     paragraphs = text.split('\n\n')
     result_paragraphs = []
     injected_count = 0
-    
+
     for para in paragraphs:
         if not para.strip():
             result_paragraphs.append(para)
             continue
-        
+
         existing = extract_cited_ids(para)
-        
+
         if len(existing) < min_per_paragraph:
             # Find most relevant card for this paragraph
             best_card = find_most_relevant_card(para, cards)
-            
+
             if best_card and best_card.id not in existing:
                 # Find end of first sentence and inject citation
                 # Handle multiple sentence endings
                 first_period = para.find('.')
-                
+
                 if first_period > 0:
                     # Insert citation before the period
                     para = para[:first_period] + f" [{best_card.id}]" + para[first_period:]
@@ -585,10 +585,10 @@ def inject_citations_if_missing(
                     # No period found, append to end
                     para = para.rstrip() + f" [{best_card.id}]"
                     injected_count += 1
-        
+
         result_paragraphs.append(para)
-    
+
     if injected_count > 0:
         log.info("citations_injected", count=injected_count)
-    
+
     return '\n\n'.join(result_paragraphs)

@@ -11,26 +11,25 @@ Uses async/await for concurrent API calls to improve performance.
 """
 
 import asyncio
-from typing import List, Set, Dict, Tuple, Optional, Callable
+from collections.abc import Callable
 
 import aiohttp
 
+from paperpilot.core.judge import judge_candidate
 from paperpilot.core.models import (
-    QueryProfile,
-    SnowballCandidate,
     AcceptedPaper,
     EdgeType,
     JudgmentResult,
+    QueryProfile,
+    SnowballCandidate,
 )
 from paperpilot.core.openalex import (
-    get_references_with_fallback,
-    get_citations,
     extract_openalex_id,
+    get_citations,
+    get_references_with_fallback,
     search_related_works,
 )
 from paperpilot.core.ranker import rank_candidates
-from paperpilot.core.judge import judge_candidate
-
 
 # Configuration defaults
 DEFAULT_MAX_ITERATIONS = 5
@@ -43,7 +42,7 @@ DEFAULT_MAX_CITATIONS_PER_PAPER = 100
 
 class SnowballEngine:
     """Orchestrates iterative snowballing for literature discovery (Async version)."""
-    
+
     def __init__(
         self,
         profile: QueryProfile,
@@ -72,19 +71,19 @@ class SnowballEngine:
         self.max_total_accepted = max_total_accepted
         self.max_refs_per_paper = max_refs_per_paper
         self.max_citations_per_paper = max_citations_per_paper
-        
+
         # State
-        self.visited: Set[str] = set()  # paper_ids we've seen
-        self.accepted: List[AcceptedPaper] = []  # papers that passed judgment
-        self.paper_titles: Dict[str, str] = {}  # paper_id -> title for logging
-        
+        self.visited: set[str] = set()  # paper_ids we've seen
+        self.accepted: list[AcceptedPaper] = []  # papers that passed judgment
+        self.paper_titles: dict[str, str] = {}  # paper_id -> title for logging
+
     async def run(
         self,
         session: aiohttp.ClientSession,
-        seeds: List[SnowballCandidate],
-        progress_callback: Optional[Callable[[int, str, int, int, str, int, int], None]] = None,
+        seeds: list[SnowballCandidate],
+        progress_callback: Callable[[int, str, int, int, str, int, int], None] | None = None,
         total_iterations: int = 0,
-    ) -> List[AcceptedPaper]:
+    ) -> list[AcceptedPaper]:
         """Run the iterative snowballing algorithm.
         
         Args:
@@ -99,16 +98,16 @@ class SnowballEngine:
         # Iteration 0: Accept all seeds (they already passed initial filtering)
         if progress_callback:
             progress_callback(5, "Running Snowball Search", 0, len(seeds), f"Processing {len(seeds)} seed papers...", 0, total_iterations)
-        
-        current_frontier: List[SnowballCandidate] = []
-        
+
+        current_frontier: list[SnowballCandidate] = []
+
         for idx, seed in enumerate(seeds, 1):
             if seed.paper_id in self.visited:
                 continue
-                
+
             self.visited.add(seed.paper_id)
             self.paper_titles[seed.paper_id] = seed.title
-            
+
             # Seeds are pre-accepted (they came from initial search + filtering)
             accepted = AcceptedPaper(
                 paper_id=seed.paper_id,
@@ -124,31 +123,31 @@ class SnowballEngine:
             )
             self.accepted.append(accepted)
             current_frontier.append(seed)
-            
+
             if progress_callback:
                 progress_callback(5, "Running Snowball Search", idx, len(seeds), f"Accepted {idx} of {len(seeds)} seed papers", 0, total_iterations)
-        
+
         # Iterations 1..N: Expand, rank, judge
         for iteration in range(1, self.max_iterations + 1):
             if not current_frontier:
                 break
-                
+
             if len(self.accepted) >= self.max_total_accepted:
                 break
-            
+
             if progress_callback:
                 progress_callback(5, "Running Snowball Search", 0, 0, f"Iteration {iteration}: Expanding frontier...", iteration, total_iterations)
-            
+
             # Phase 1: Expand - get refs and citations (CONCURRENT)
             all_candidates = await self._expand_frontier(session, current_frontier, depth=iteration, progress_callback=progress_callback, iteration=iteration, total_iterations=total_iterations)
-            
+
             if not all_candidates:
                 # Fallback: Try to find established related papers if iteration 1 failed
                 if iteration == 1:
                     if progress_callback:
                         progress_callback(5, "Running Snowball Search", 0, 0, "Iteration 1: No candidates found, trying fallback search...", iteration, total_iterations)
                     fallback_candidates = await self._search_established_papers(session)
-                    
+
                     if fallback_candidates:
                         all_candidates = fallback_candidates
                         if progress_callback:
@@ -157,10 +156,10 @@ class SnowballEngine:
                         break
                 else:
                     break
-            
+
             if progress_callback:
                 progress_callback(5, "Running Snowball Search", 0, len(all_candidates), f"Iteration {iteration}: Ranking {len(all_candidates)} candidates...", iteration, total_iterations)
-            
+
             # Phase 2: Rank - cheap scoring before LLM (sync, CPU-bound)
             ranked, passed_gate, total = rank_candidates(
                 all_candidates,
@@ -168,22 +167,22 @@ class SnowballEngine:
                 top_n=self.top_n_per_iteration,
                 relaxed=True  # Allow papers matching ANY concept group
             )
-            
+
             if progress_callback:
                 progress_callback(5, "Running Snowball Search", len(ranked), len(all_candidates), f"Iteration {iteration}: Ranked {len(ranked)} top candidates for judging", iteration, total_iterations)
-            
+
             if not ranked:
                 break
-            
+
             if progress_callback:
                 progress_callback(5, "Running Snowball Search", 0, len(ranked), f"Iteration {iteration}: Judging {len(ranked)} candidates...", iteration, total_iterations)
-            
+
             # Phase 3: Judge - LLM evaluation of top N (CONCURRENT)
             new_accepted = await self._judge_candidates(ranked, progress_callback=progress_callback, iteration=iteration, total_iterations=total_iterations)
-            
+
             if progress_callback:
                 progress_callback(5, "Running Snowball Search", len(new_accepted), len(ranked), f"Iteration {iteration}: Accepted {len(new_accepted)} papers (total: {len(self.accepted)})", iteration, total_iterations)
-            
+
             # Update frontier for next iteration
             current_frontier = [
                 SnowballCandidate(
@@ -199,24 +198,24 @@ class SnowballEngine:
                 )
                 for p in new_accepted
             ]
-            
+
             # Check convergence
             if len(new_accepted) < self.min_new_papers_threshold:
                 if progress_callback:
                     progress_callback(5, "Running Snowball Search", len(self.accepted), len(self.accepted), f"Converged: Only {len(new_accepted)} new papers (threshold: {self.min_new_papers_threshold})", iteration, total_iterations)
                 break
-        
+
         return self.accepted
-    
+
     async def _expand_frontier(
         self,
         session: aiohttp.ClientSession,
-        frontier: List[SnowballCandidate],
+        frontier: list[SnowballCandidate],
         depth: int,
-        progress_callback: Optional[Callable[[int, str, int, int, str, int, int], None]] = None,
+        progress_callback: Callable[[int, str, int, int, str, int, int], None] | None = None,
         iteration: int = 0,
         total_iterations: int = 0,
-    ) -> List[SnowballCandidate]:
+    ) -> list[SnowballCandidate]:
         """Expand all papers in the frontier by fetching refs and citations concurrently.
         
         Args:
@@ -229,10 +228,10 @@ class SnowballEngine:
         """
         async def expand_single_paper(
             paper: SnowballCandidate
-        ) -> Tuple[List[SnowballCandidate], List[SnowballCandidate]]:
+        ) -> tuple[list[SnowballCandidate], list[SnowballCandidate]]:
             """Expand a single paper, returning (ref_candidates, cite_candidates)."""
             paper_id = paper.paper_id
-            
+
             # Get references and citations concurrently for this paper
             refs_task = get_references_with_fallback(
                 session,
@@ -247,44 +246,44 @@ class SnowballEngine:
                 limit=self.max_citations_per_paper,
                 verbose=False
             )
-            
+
             refs, cites = await asyncio.gather(refs_task, cites_task)
-            
+
             ref_candidates = self._process_linked_papers(refs, paper_id, EdgeType.REFERENCE, depth)
             cite_candidates = self._process_linked_papers(cites, paper_id, EdgeType.CITATION, depth)
-            
+
             return ref_candidates, cite_candidates
-        
+
         # Expand all frontier papers concurrently
         tasks = [expand_single_paper(paper) for paper in frontier]
         results = await asyncio.gather(*tasks)
-        
+
         # Collect all candidates
-        all_candidates: List[SnowballCandidate] = []
-        paper_results: Dict[str, Tuple[int, int]] = {}  # paper_id -> (ref_count, cite_count)
-        
+        all_candidates: list[SnowballCandidate] = []
+        paper_results: dict[str, tuple[int, int]] = {}  # paper_id -> (ref_count, cite_count)
+
         for idx, (paper, (ref_candidates, cite_candidates)) in enumerate(zip(frontier, results), 1):
             all_candidates.extend(ref_candidates)
             all_candidates.extend(cite_candidates)
             paper_results[paper.paper_id] = (len(ref_candidates), len(cite_candidates))
-            
+
             if progress_callback and idx % 5 == 0:  # Update every 5 papers
                 progress_callback(5, "Running Snowball Search", idx, len(frontier), f"Iteration {iteration}: Expanded {idx} of {len(frontier)} papers, found {len(all_candidates)} candidates", iteration, total_iterations)
-        
+
         # Deduplicate candidates by paper_id (keep first occurrence)
-        seen: Set[str] = set()
-        unique_candidates: List[SnowballCandidate] = []
+        seen: set[str] = set()
+        unique_candidates: list[SnowballCandidate] = []
         for c in all_candidates:
             if c.paper_id not in seen:
                 seen.add(c.paper_id)
                 unique_candidates.append(c)
-        
+
         return unique_candidates
-    
+
     async def _search_established_papers(
         self,
         session: aiohttp.ClientSession
-    ) -> List[SnowballCandidate]:
+    ) -> list[SnowballCandidate]:
         """Search for established related papers as fallback when seeds have no refs.
         
         Uses multiple domain-specific queries to find well-cited papers concurrently.
@@ -297,13 +296,13 @@ class SnowballEngine:
         """
         # Build multiple fallback queries for comprehensive coverage
         fallback_queries = self._build_fallback_queries()
-        
-        async def search_single_query(query_info: dict) -> List[SnowballCandidate]:
+
+        async def search_single_query(query_info: dict) -> list[SnowballCandidate]:
             """Search for a single query and return candidates."""
             query = query_info["query"]
             min_cites = query_info.get("min_citations", 20)
             query_type = query_info.get("type", "general")
-            
+
             related_works = await search_related_works(
                 session,
                 query=query,
@@ -311,24 +310,24 @@ class SnowballEngine:
                 min_citations=min_cites,
                 verbose=False
             )
-            
+
             candidates = []
             for work in related_works:
                 paper_id = extract_openalex_id(work)
                 if not paper_id or paper_id in self.visited:
                     continue
-                
+
                 # Check if this paper has indexed references
                 ref_count = work.get("referenced_works_count", 0)
                 cite_count = work.get("cited_by_count", 0)
-                
+
                 if ref_count == 0:
                     continue  # Skip papers without indexed references
-                
+
                 self.visited.add(paper_id)
                 title = work.get("title") or work.get("display_name") or "(No title)"
                 self.paper_titles[paper_id] = title
-                
+
                 candidate = SnowballCandidate(
                     paper_id=paper_id,
                     title=title,
@@ -341,26 +340,26 @@ class SnowballEngine:
                     depth=1,
                 )
                 candidates.append(candidate)
-            
+
             return candidates
-        
+
         # Run all searches concurrently
         tasks = [search_single_query(q) for q in fallback_queries]
         results = await asyncio.gather(*tasks)
-        
+
         # Combine and deduplicate
-        seen_ids: Set[str] = set()
-        all_candidates: List[SnowballCandidate] = []
-        
+        seen_ids: set[str] = set()
+        all_candidates: list[SnowballCandidate] = []
+
         for candidates in results:
             for c in candidates:
                 if c.paper_id not in seen_ids:
                     seen_ids.add(c.paper_id)
                     all_candidates.append(c)
-        
+
         return all_candidates
-    
-    def _build_fallback_queries(self) -> List[dict]:
+
+    def _build_fallback_queries(self) -> list[dict]:
         """Build a list of fallback queries for comprehensive paper discovery.
         
         Strategy:
@@ -374,21 +373,21 @@ class SnowballEngine:
             List of dicts with 'query', 'min_citations', and 'type' keys
         """
         queries = []
-        
+
         # 1. Core query - papers at intersection of all concepts
         queries.append({
             "query": self.profile.core_query,
             "min_citations": 10,
             "type": "core"
         })
-        
+
         # 2. Add survey/review queries
         queries.append({
             "query": f"{self.profile.core_query} survey",
             "min_citations": 20,
             "type": "survey"
         })
-        
+
         # 3. Use LLM-generated fallback queries from profile (most important)
         if self.profile.fallback_queries:
             for i, query in enumerate(self.profile.fallback_queries):
@@ -397,7 +396,7 @@ class SnowballEngine:
                     "min_citations": 20,  # Lower bar to find more papers
                     "type": f"llm_fallback_{i}"
                 })
-        
+
         # 4. Search each concept group separately for foundational papers
         for i, group in enumerate(self.profile.required_concept_groups):
             if group:
@@ -408,24 +407,24 @@ class SnowballEngine:
                     "min_citations": 50,  # Higher bar for foundational
                     "type": f"foundation_group_{i}"
                 })
-        
+
         # 5. Add domain-specific methodological queries based on concepts
         method_queries = self._generate_method_queries()
         queries.extend(method_queries)
-        
+
         return queries
-    
-    def _generate_method_queries(self) -> List[dict]:
+
+    def _generate_method_queries(self) -> list[dict]:
         """Generate methodological queries based on the domain.
         
         Returns common methodological papers that might be foundational
         for the research domain.
         """
         queries = []
-        
+
         # Check for common patterns in required concepts
         all_concepts = " ".join(self.profile.required_concepts).lower()
-        
+
         # If about language models / LLMs
         if any(term in all_concepts for term in ["llm", "language model", "transformer", "gpt", "bert"]):
             queries.append({
@@ -438,7 +437,7 @@ class SnowballEngine:
                 "min_citations": 100,
                 "type": "foundation_nlp"
             })
-        
+
         # If about recommender systems
         if any(term in all_concepts for term in ["recommend", "personalized", "collaborative", "user-item"]):
             queries.append({
@@ -456,7 +455,7 @@ class SnowballEngine:
                 "min_citations": 50,
                 "type": "foundation_recsys"
             })
-        
+
         # If about neural networks / deep learning
         if any(term in all_concepts for term in ["neural", "deep learning", "embedding"]):
             queries.append({
@@ -464,16 +463,16 @@ class SnowballEngine:
                 "min_citations": 100,
                 "type": "foundation_ml"
             })
-        
+
         return queries
-    
+
     def _process_linked_papers(
         self,
-        papers: List[dict],
+        papers: list[dict],
         parent_id: str,
         edge_type: EdgeType,
         depth: int
-    ) -> List[SnowballCandidate]:
+    ) -> list[SnowballCandidate]:
         """Convert OpenAlex API response to SnowballCandidate objects.
         
         Args:
@@ -486,24 +485,24 @@ class SnowballEngine:
             List of SnowballCandidate objects for papers not yet visited
         """
         candidates = []
-        
+
         for p in papers:
             # Extract OpenAlex ID (format: W1234567890)
             paper_id = extract_openalex_id(p)
             if not paper_id:
                 continue
-                
+
             # Skip if already visited
             if paper_id in self.visited:
                 continue
-            
+
             # Mark as visited to avoid duplicates
             self.visited.add(paper_id)
-            
+
             # OpenAlex uses different field names
             title = p.get("title") or p.get("display_name") or "(No title)"
             self.paper_titles[paper_id] = title
-            
+
             candidate = SnowballCandidate(
                 paper_id=paper_id,
                 title=title,
@@ -516,16 +515,16 @@ class SnowballEngine:
                 depth=depth,
             )
             candidates.append(candidate)
-        
+
         return candidates
-    
+
     async def _judge_candidates(
         self,
-        candidates: List[SnowballCandidate],
-        progress_callback: Optional[Callable[[int, str, int, int, str, int, int], None]] = None,
+        candidates: list[SnowballCandidate],
+        progress_callback: Callable[[int, str, int, int, str, int, int], None] | None = None,
         iteration: int = 0,
         total_iterations: int = 0,
-    ) -> List[AcceptedPaper]:
+    ) -> list[AcceptedPaper]:
         """Send candidates to LLM judge concurrently and collect accepted papers.
         
         Args:
@@ -535,35 +534,35 @@ class SnowballEngine:
             List of accepted papers
         """
         # Build contexts for all candidates
-        candidates_with_context: List[Tuple[SnowballCandidate, str]] = []
-        
+        candidates_with_context: list[tuple[SnowballCandidate, str]] = []
+
         for candidate in candidates:
             # Check budget before adding
             if len(self.accepted) + len(candidates_with_context) >= self.max_total_accepted:
                 break
-            
+
             parent_title = self.paper_titles.get(candidate.discovered_from, "Unknown")
             context = (f"Found as {candidate.edge_type.value} of '{parent_title[:50]}' "
                       f"at depth {candidate.depth}")
             candidates_with_context.append((candidate, context))
-        
+
         # Judge all candidates concurrently
         tasks = [
             judge_candidate(self.profile, candidate, context)
             for candidate, context in candidates_with_context
         ]
-        
-        results: List[JudgmentResult] = await asyncio.gather(*tasks)
-        
+
+        results: list[JudgmentResult] = await asyncio.gather(*tasks)
+
         # Process results
-        new_accepted: List[AcceptedPaper] = []
-        
+        new_accepted: list[AcceptedPaper] = []
+
         for idx, ((candidate, _), result) in enumerate(zip(candidates_with_context, results), 1):
             if result.relevant:
                 # Check budget
                 if len(self.accepted) >= self.max_total_accepted:
                     break
-                    
+
                 accepted = AcceptedPaper(
                     paper_id=candidate.paper_id,
                     title=candidate.title,
@@ -578,8 +577,8 @@ class SnowballEngine:
                 )
                 self.accepted.append(accepted)
                 new_accepted.append(accepted)
-            
+
             if progress_callback and idx % 5 == 0:  # Update every 5 judgments
                 progress_callback(5, "Running Snowball Search", idx, len(candidates_with_context), f"Iteration {iteration}: Judged {idx} of {len(candidates_with_context)} candidates, accepted {len(new_accepted)}", iteration, total_iterations)
-        
+
         return new_accepted

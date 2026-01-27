@@ -3,10 +3,10 @@
 # Serverless infrastructure helpers (available when boto3 is installed)
 try:
     from paperpilot.core.job_repository import (
+        JobProgress,
         JobRepository,
         JobState,
         JobStatus,
-        JobProgress,
         get_job_repository,
     )
     from paperpilot.core.queue_service import (

@@ -8,7 +8,7 @@ import asyncio
 import json
 import os
 import time
-from typing import Optional, Callable
+from collections.abc import Callable
 
 from openai import AsyncOpenAI
 
@@ -18,11 +18,11 @@ from paperpilot.core.report.models import PaperCard
 log = get_logger(__name__)
 
 # Async OpenAI client
-_async_client: Optional[AsyncOpenAI] = None
+_async_client: AsyncOpenAI | None = None
 
 # Concurrency limits
 OPENAI_MAX_CONCURRENT = 20
-_openai_semaphore: Optional[asyncio.Semaphore] = None
+_openai_semaphore: asyncio.Semaphore | None = None
 
 
 def _get_async_client() -> AsyncOpenAI:
@@ -45,7 +45,7 @@ def _build_card_prompt(paper: dict) -> str:
     """Build the prompt for extracting a paper card."""
     title = paper.get("title", "Unknown")
     abstract = paper.get("abstract", "") or "(No abstract available)"
-    
+
     return f"""Given this academic paper's title and abstract, extract structured information.
 
 Title: {title}
@@ -66,7 +66,7 @@ Extract the following as JSON:
 Return ONLY valid JSON with these exact keys. Use null for missing values."""
 
 
-async def generate_paper_card(paper: dict) -> Optional[PaperCard]:
+async def generate_paper_card(paper: dict) -> PaperCard | None:
     """Extract a structured card from a single paper using LLM.
     
     Args:
@@ -77,13 +77,13 @@ async def generate_paper_card(paper: dict) -> Optional[PaperCard]:
     """
     paper_id = paper.get("paper_id", "unknown")
     title = paper.get("title", "Unknown")[:50]
-    
+
     log.debug("generating_card", paper_id=paper_id, title=title)
-    
+
     prompt = _build_card_prompt(paper)
     client = _get_async_client()
     semaphore = _get_semaphore()
-    
+
     try:
         async with semaphore:
             response = await client.chat.completions.create(
@@ -93,10 +93,10 @@ async def generate_paper_card(paper: dict) -> Optional[PaperCard]:
                 max_tokens=500,
                 response_format={"type": "json_object"}
             )
-        
+
         content = response.choices[0].message.content.strip()
         data = json.loads(content)
-        
+
         # Build the PaperCard with extracted data + original metadata
         card = PaperCard(
             id=paper_id,
@@ -111,10 +111,10 @@ async def generate_paper_card(paper: dict) -> Optional[PaperCard]:
             citation_count=paper.get("citation_count", 0),
             elo_rating=paper.get("elo_rating"),
         )
-        
+
         log.info("card_generated", paper_id=paper_id, tags=card.paradigm_tags)
         return card
-        
+
     except json.JSONDecodeError as e:
         log.error("card_json_parse_error", paper_id=paper_id, error=str(e))
         return None
@@ -125,7 +125,7 @@ async def generate_paper_card(paper: dict) -> Optional[PaperCard]:
 
 async def generate_paper_cards(
     papers: list[dict],
-    progress_callback: Optional[Callable[[int, int, str], None]] = None
+    progress_callback: Callable[[int, int, str], None] | None = None
 ) -> list[PaperCard]:
     """Generate paper cards for a batch of papers concurrently.
     
@@ -139,21 +139,21 @@ async def generate_paper_cards(
     if not papers:
         log.warning("no_papers_to_process")
         return []
-    
+
     log.info("batch_card_generation_start", total_papers=len(papers))
     start_time = time.time()
-    
+
     if progress_callback:
         progress_callback(0, len(papers), "Starting paper card generation...")
-    
+
     # Process all papers concurrently
     tasks = [generate_paper_card(paper) for paper in papers]
     results = await asyncio.gather(*tasks, return_exceptions=True)
-    
+
     # Filter successful results
     cards: list[PaperCard] = []
     failed = 0
-    
+
     for i, result in enumerate(results):
         if isinstance(result, PaperCard):
             cards.append(result)
@@ -169,7 +169,7 @@ async def generate_paper_cards(
             failed += 1
             if progress_callback:
                 progress_callback(len(cards), len(papers), f"Processing... ({len(cards)}/{len(papers)} successful)")
-    
+
     duration = time.time() - start_time
     log.info(
         "batch_card_generation_complete",
@@ -177,5 +177,5 @@ async def generate_paper_cards(
         failed=failed,
         duration_sec=round(duration, 2)
     )
-    
+
     return cards

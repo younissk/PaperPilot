@@ -14,7 +14,8 @@ Note: UMAP and HDBSCAN are optional dependencies that require Python < 3.13.
 """
 
 from dataclasses import dataclass
-from typing import Literal, Any
+from typing import Any, Literal
+
 import numpy as np
 from openai import OpenAI
 
@@ -26,19 +27,19 @@ _HAS_HDBSCAN = False
 def _check_optional_deps() -> tuple[bool, bool]:
     """Check availability of optional dependencies."""
     global _HAS_UMAP, _HAS_HDBSCAN
-    
+
     try:
         import umap  # noqa: F401
         _HAS_UMAP = True
     except ImportError:
         _HAS_UMAP = False
-    
+
     try:
         import hdbscan  # noqa: F401
         _HAS_HDBSCAN = True
     except ImportError:
         _HAS_HDBSCAN = False
-    
+
     return _HAS_UMAP, _HAS_HDBSCAN
 
 
@@ -74,12 +75,12 @@ class EmbeddingService:
     Uses text-embedding-3-small model which is cost-effective (1536 dims).
     Handles batching and text truncation automatically.
     """
-    
+
     MODEL = "text-embedding-3-small"
     MAX_TOKENS = 8191  # Model limit
     MAX_CHARS = 8000 * 4  # Approximate character limit (4 chars per token avg)
     BATCH_SIZE = 100  # OpenAI recommends batching
-    
+
     def __init__(self, client: OpenAI | None = None):
         """Initialize embedding service.
         
@@ -87,7 +88,7 @@ class EmbeddingService:
             client: Optional OpenAI client. If None, creates a new one.
         """
         self.client = client or OpenAI()
-    
+
     def _prepare_text(self, title: str, abstract: str | None) -> str:
         """Combine and truncate title + abstract for embedding.
         
@@ -101,13 +102,13 @@ class EmbeddingService:
         text = title
         if abstract:
             text = f"{title}\n\n{abstract}"
-        
+
         # Truncate if too long
         if len(text) > self.MAX_CHARS:
             text = text[:self.MAX_CHARS]
-        
+
         return text
-    
+
     def embed_texts(self, texts: list[str]) -> np.ndarray:
         """Generate embeddings for a list of texts.
         
@@ -118,7 +119,7 @@ class EmbeddingService:
             numpy array of shape (n_texts, 1536)
         """
         all_embeddings = []
-        
+
         # Process in batches
         for i in range(0, len(texts), self.BATCH_SIZE):
             batch = texts[i:i + self.BATCH_SIZE]
@@ -128,9 +129,9 @@ class EmbeddingService:
             )
             batch_embeddings = [item.embedding for item in response.data]
             all_embeddings.extend(batch_embeddings)
-        
+
         return np.array(all_embeddings)
-    
+
     def embed_papers(self, papers: list[dict[str, Any]]) -> np.ndarray:
         """Generate embeddings for a list of paper dictionaries.
         
@@ -156,19 +157,19 @@ class ClusteringEngine:
     Supports HDBSCAN (automatic cluster detection) and KMeans (manual k).
     Uses UMAP or t-SNE for dimensionality reduction before visualization.
     """
-    
+
     # HDBSCAN defaults
     HDBSCAN_MIN_CLUSTER_SIZE = 3
     HDBSCAN_MIN_SAMPLES = 2
-    
+
     # KMeans default
     DEFAULT_N_CLUSTERS = 5
-    
+
     # Dimensionality reduction defaults
     UMAP_N_NEIGHBORS = 15
     UMAP_MIN_DIST = 0.1
     TSNE_PERPLEXITY = 30
-    
+
     def __init__(self, embedding_service: EmbeddingService | None = None):
         """Initialize clustering engine.
         
@@ -177,7 +178,7 @@ class ClusteringEngine:
         """
         self.embedding_service = embedding_service or EmbeddingService()
         self._last_eps: float | None = None
-    
+
     def embed_papers(self, papers: list[dict[str, Any]]) -> np.ndarray:
         """Generate embeddings for papers.
         
@@ -188,7 +189,7 @@ class ClusteringEngine:
             numpy array of embeddings
         """
         return self.embedding_service.embed_papers(papers)
-    
+
     def reduce_dimensions(
         self,
         embeddings: np.ndarray,
@@ -209,7 +210,7 @@ class ClusteringEngine:
         """
         from sklearn.decomposition import PCA
         from sklearn.manifold import TSNE
-        
+
         if method == "umap":
             if not _HAS_UMAP:
                 # Fallback to PCA when UMAP not available
@@ -221,7 +222,7 @@ class ClusteringEngine:
                 )
                 reducer = PCA(n_components=2, random_state=42)
                 return reducer.fit_transform(embeddings)
-            
+
             import umap
             reducer = umap.UMAP(
                 n_components=2,
@@ -231,7 +232,7 @@ class ClusteringEngine:
                 random_state=42,
             )
             return reducer.fit_transform(embeddings)
-        
+
         elif method == "tsne":
             # Perplexity must be less than n_samples
             perplexity = min(self.TSNE_PERPLEXITY, len(embeddings) - 1)
@@ -241,14 +242,14 @@ class ClusteringEngine:
                 random_state=42,
             )
             return reducer.fit_transform(embeddings)
-        
+
         elif method == "pca":
             reducer = PCA(n_components=2, random_state=42)
             return reducer.fit_transform(embeddings)
-        
+
         else:
             raise ValueError(f"Unknown method: {method}. Use 'umap', 'tsne', or 'pca'.")
-    
+
     def _find_optimal_eps(self, normalized_embeddings: np.ndarray, min_samples: int) -> float:
         """Find optimal eps for DBSCAN using knee detection on k-distance graph.
         
@@ -264,44 +265,44 @@ class ClusteringEngine:
             Optimal eps value
         """
         from sklearn.neighbors import NearestNeighbors
-        
+
         k = min(min_samples + 1, len(normalized_embeddings) - 1)
         nn = NearestNeighbors(n_neighbors=k)
         nn.fit(normalized_embeddings)
         distances, _ = nn.kneighbors(normalized_embeddings)
-        
+
         # Get k-th neighbor distances (sorted)
         k_distances = np.sort(distances[:, -1])
-        
+
         # Find knee point using simple curvature method
         # Calculate second derivative (curvature) at each point
         n = len(k_distances)
         if n < 3:
             # Fallback to median if too few points
             return float(np.median(k_distances))
-        
+
         # Use a sliding window to find maximum curvature
         # Curvature approximated as second difference
         diffs1 = np.diff(k_distances)
         diffs2 = np.diff(diffs1)
-        
+
         # Find point of maximum curvature (knee)
         # Add small epsilon to avoid division by zero
         curvature = np.abs(diffs2) / (diffs1[1:] + 1e-10)
-        
+
         # Find index of maximum curvature
         knee_idx = np.argmax(curvature)
-        
+
         # Use the distance at the knee point
         eps = float(k_distances[knee_idx])
-        
+
         # Ensure eps is reasonable (not too small or too large)
         min_eps = float(np.percentile(k_distances, 10))
         max_eps = float(np.percentile(k_distances, 80))
         eps = np.clip(eps, min_eps, max_eps)
-        
+
         return eps
-    
+
     def cluster(
         self,
         embeddings: np.ndarray,
@@ -326,11 +327,11 @@ class ClusteringEngine:
             HDBSCAN requires the optional hdbscan package.
             Falls back to DBSCAN if HDBSCAN is requested but unavailable.
         """
-        from sklearn.cluster import KMeans, DBSCAN
+        from sklearn.cluster import DBSCAN, KMeans
         from sklearn.preprocessing import StandardScaler
-        
+
         min_samples = min_samples or self.HDBSCAN_MIN_SAMPLES
-        
+
         if method == "hdbscan":
             if not _HAS_HDBSCAN:
                 # Fallback to DBSCAN when HDBSCAN not available
@@ -343,7 +344,7 @@ class ClusteringEngine:
                 # Normalize for DBSCAN
                 scaler = StandardScaler()
                 normalized = scaler.fit_transform(embeddings)
-                
+
                 # Auto-select eps if not provided
                 if eps is None:
                     eps = self._find_optimal_eps(normalized, min_samples)
@@ -351,14 +352,14 @@ class ClusteringEngine:
                     self._last_eps = eps
                 else:
                     self._last_eps = eps
-                
+
                 clusterer = DBSCAN(
                     eps=eps,
                     min_samples=min_samples,
                     metric="euclidean",
                 )
                 return clusterer.fit_predict(normalized)
-            
+
             import hdbscan
             clusterer = hdbscan.HDBSCAN(
                 min_cluster_size=max(self.HDBSCAN_MIN_CLUSTER_SIZE, 2),
@@ -366,11 +367,11 @@ class ClusteringEngine:
                 metric="euclidean",
             )
             return clusterer.fit_predict(embeddings)
-        
+
         elif method == "dbscan":
             scaler = StandardScaler()
             normalized = scaler.fit_transform(embeddings)
-            
+
             # Auto-select eps if not provided
             if eps is None:
                 eps = self._find_optimal_eps(normalized, min_samples)
@@ -378,29 +379,29 @@ class ClusteringEngine:
                 self._last_eps = eps
             else:
                 self._last_eps = eps
-            
+
             clusterer = DBSCAN(
                 eps=eps,
                 min_samples=min_samples,
                 metric="euclidean",
             )
             return clusterer.fit_predict(normalized)
-        
+
         elif method == "kmeans":
             k = n_clusters or self.DEFAULT_N_CLUSTERS
             # Ensure k doesn't exceed number of samples
             k = min(k, len(embeddings))
-            
+
             clusterer = KMeans(
                 n_clusters=k,
                 random_state=42,
                 n_init=10,
             )
             return clusterer.fit_predict(embeddings)
-        
+
         else:
             raise ValueError(f"Unknown method: {method}. Use 'hdbscan', 'dbscan', or 'kmeans'.")
-    
+
     def get_cluster_summaries(
         self,
         papers: list[dict[str, Any]],
@@ -417,21 +418,21 @@ class ClusteringEngine:
         """
         unique_labels = sorted(set(labels))
         summaries = []
-        
+
         for cluster_id in unique_labels:
             # Get indices of papers in this cluster
             indices = [i for i, l in enumerate(labels) if l == cluster_id]
-            
+
             # Get papers in this cluster
             cluster_papers = [papers[i] for i in indices]
-            
+
             # Sort by citation count descending
             sorted_papers = sorted(
                 cluster_papers,
                 key=lambda p: p.get("citation_count", 0),
                 reverse=True,
             )
-            
+
             # Take top 3 for summary
             top_papers = [
                 {
@@ -441,13 +442,13 @@ class ClusteringEngine:
                 }
                 for p in sorted_papers[:3]
             ]
-            
+
             # Generate label
             if cluster_id == -1:
                 label = "Noise (unclustered)"
             else:
                 label = f"Cluster {cluster_id}"
-            
+
             summaries.append(ClusterSummary(
                 cluster_id=cluster_id,
                 label=label,
@@ -455,9 +456,9 @@ class ClusteringEngine:
                 paper_indices=indices,
                 top_papers=top_papers,
             ))
-        
+
         return summaries
-    
+
     @staticmethod
     def get_available_features() -> dict[str, bool]:
         """Check which optional clustering features are available.
@@ -469,7 +470,7 @@ class ClusteringEngine:
             "umap": _HAS_UMAP,
             "hdbscan": _HAS_HDBSCAN,
         }
-    
+
     def run_full_pipeline(
         self,
         papers: list[dict[str, Any]],
@@ -498,10 +499,10 @@ class ClusteringEngine:
         """
         # Step 1: Embed papers
         embeddings = self.embed_papers(papers)
-        
+
         # Step 2: Reduce dimensions for visualization
         coords_2d = self.reduce_dimensions(embeddings, method=dim_method)
-        
+
         # Step 3: Cluster (on full embeddings, not 2D)
         labels = self.cluster(
             embeddings,
@@ -510,13 +511,13 @@ class ClusteringEngine:
             eps=eps,
             min_samples=min_samples,
         )
-        
+
         # Step 4: Generate summaries
         summaries = self.get_cluster_summaries(papers, labels)
-        
+
         # Count actual clusters (excluding noise for HDBSCAN)
         actual_n_clusters = len([s for s in summaries if s.cluster_id != -1])
-        
+
         return ClusteringResult(
             method=cluster_method,
             dim_reduction=dim_method,
@@ -526,7 +527,7 @@ class ClusteringEngine:
             cluster_summaries=summaries,
             papers=papers,
         )
-    
+
     def to_json(self, result: ClusteringResult) -> dict[str, Any]:
         """Convert ClusteringResult to JSON-serializable dict.
         
@@ -545,7 +546,7 @@ class ClusteringEngine:
             elif isinstance(val, np.ndarray):
                 return val.tolist()
             return val
-        
+
         clusters_json = []
         for summary in result.cluster_summaries:
             cluster_papers = [result.papers[i] for i in summary.paper_indices]
@@ -566,7 +567,7 @@ class ClusteringEngine:
                     for i, p in zip(summary.paper_indices, cluster_papers)
                 ],
             })
-        
+
         return {
             "method": result.method,
             "dim_reduction": result.dim_reduction,

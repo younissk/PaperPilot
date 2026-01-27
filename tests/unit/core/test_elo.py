@@ -1,7 +1,8 @@
 """Unit tests for ELO rating calculations."""
 
 import pytest
-from hypothesis import given, strategies as st, assume, settings
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 from paperpilot.core.elo_ranker.elo import expected_score, update_elo
 from paperpilot.core.elo_ranker.models import CandidateElo, SnowballCandidate

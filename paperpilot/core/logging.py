@@ -12,11 +12,11 @@ import logging
 
 import structlog
 from structlog.processors import (
-    add_log_level,
-    TimeStamper,
-    StackInfoRenderer,
-    format_exc_info,
     JSONRenderer,
+    StackInfoRenderer,
+    TimeStamper,
+    add_log_level,
+    format_exc_info,
 )
 
 # structlog.dev.ConsoleRenderer automatically uses Rich if available
@@ -41,7 +41,7 @@ def configure_logging(cli_mode: bool = False, log_level: str = "INFO") -> None:
         # Format exceptions
         format_exc_info,
     ]
-    
+
     # Choose renderer based on mode
     if cli_mode:
         # ConsoleRenderer automatically uses Rich if available for pretty output
@@ -50,12 +50,12 @@ def configure_logging(cli_mode: bool = False, log_level: str = "INFO") -> None:
     else:
         # JSON renderer for backend/API consumption
         renderer = JSONRenderer()
-    
+
     processors.append(renderer)
-    
+
     # Convert log level string to logging constant
     level = getattr(logging, log_level.upper(), logging.INFO)
-    
+
     # Configure structlog
     structlog.configure(
         processors=processors,

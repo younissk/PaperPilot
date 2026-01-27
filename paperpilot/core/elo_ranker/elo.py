@@ -1,7 +1,6 @@
 """Pure Elo rating calculations."""
 
 import math
-from typing import Optional
 
 from paperpilot.core.elo_ranker.models import CandidateElo
 
@@ -24,7 +23,7 @@ def expected_score(elo_a: float, elo_b: float) -> float:
 def update_elo(
     candidate_elo1: CandidateElo,
     candidate_elo2: CandidateElo,
-    winner: Optional[int],
+    winner: int | None,
     k_factor: float = 32.0
 ) -> None:
     """Update Elo ratings after a match.
@@ -37,11 +36,11 @@ def update_elo(
     """
     elo1 = candidate_elo1.elo
     elo2 = candidate_elo2.elo
-    
+
     # Calculate expected scores
     expected1 = expected_score(elo1, elo2)
     expected2 = expected_score(elo2, elo1)
-    
+
     # Determine actual scores and update W/L/D records
     if winner == 1:
         # Candidate 1 won
@@ -61,7 +60,7 @@ def update_elo(
         actual2 = 0.5
         candidate_elo1.draws += 1
         candidate_elo2.draws += 1
-    
+
     # Update ratings: R' = R + K * (S - E)
     candidate_elo1.elo = elo1 + k_factor * (actual1 - expected1)
     candidate_elo2.elo = elo2 + k_factor * (actual2 - expected2)
