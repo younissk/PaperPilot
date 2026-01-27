@@ -50,6 +50,18 @@ phases:
         cd infra
         sam build --use-container --parallel
         echo "Build complete, deploying..."
+        
+        # Clean up any failed companion stacks (ROLLBACK_COMPLETE state cannot be updated)
+        echo "Checking for failed companion stacks..."
+        FAILED_STACKS=$(aws cloudformation list-stacks --stack-status-filter ROLLBACK_COMPLETE --query "StackSummaries[?contains(StackName, 'paperpilot') && contains(StackName, 'CompanionStack')].StackName" --output text 2>/dev/null || true)
+        if [ -n "$FAILED_STACKS" ]; then
+          for STACK in $FAILED_STACKS; do
+            echo "Deleting failed companion stack: $STACK"
+            aws cloudformation delete-stack --stack-name "$STACK"
+            aws cloudformation wait stack-delete-complete --stack-name "$STACK" || true
+          done
+        fi
+        
         # Deploy with updates in place (no stack deletion to preserve API Gateway URL)
         sam deploy --config-file samconfig.toml --config-env default --no-fail-on-empty-changeset
 
