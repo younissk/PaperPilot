@@ -22,9 +22,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize DynamoDB
-dynamodb = boto3.resource("dynamodb")
+# Environment configuration
 JOBS_TABLE_NAME = os.environ.get("JOBS_TABLE_NAME", "paperpilot-jobs-prod")
+AWS_ENDPOINT_URL = os.environ.get("AWS_ENDPOINT_URL", "")  # For LocalStack
+
+# Initialize DynamoDB (with optional LocalStack endpoint for local dev)
+boto_kwargs: dict[str, str] = {}
+if AWS_ENDPOINT_URL:
+    logger.info(f"Using custom AWS endpoint: {AWS_ENDPOINT_URL}")
+    boto_kwargs["endpoint_url"] = AWS_ENDPOINT_URL
+
+dynamodb = boto3.resource("dynamodb", **boto_kwargs)
 jobs_table = dynamodb.Table(JOBS_TABLE_NAME)
 
 

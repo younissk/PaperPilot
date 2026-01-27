@@ -1,0 +1,39 @@
+# Local development environment for PaperPilot
+# Provides LocalStack (DynamoDB + SQS) to emulate AWS services locally
+#
+# Usage:
+#   docker-compose -f infra/docker-compose.local.yml up -d
+#   docker-compose -f infra/docker-compose.local.yml down
+#
+# Or use: make dev-infra / make dev-infra-stop
+
+version: '3.8'
+
+services:
+  localstack:
+    image: localstack/localstack:latest
+    container_name: paperpilot-localstack
+    ports:
+      - "4566:4566"            # LocalStack Gateway
+      - "4510-4559:4510-4559"  # External service ports
+    environment:
+      # Services to enable
+      - SERVICES=sqs,dynamodb
+      # Region to match prod
+      - DEFAULT_REGION=eu-central-1
+      - AWS_DEFAULT_REGION=eu-central-1
+      # Debug logging (optional, set to 1 for more verbose output)
+      - DEBUG=0
+      # Persistence (optional - uncomment to persist data across restarts)
+      # - PERSISTENCE=1
+    volumes:
+      # Mount init scripts to auto-create resources on startup
+      - ./init-localstack:/etc/localstack/init/ready.d:ro
+      # Docker socket for Lambda container support (if needed later)
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s

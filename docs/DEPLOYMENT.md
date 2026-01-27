@@ -49,60 +49,237 @@ This guide covers deploying PaperPilot to AWS using SAM (Serverless Application 
 
 ## Local Development
 
-### Install SAM CLI
+The local development environment mirrors the production AWS setup as closely as possible using:
+
+- **SAM CLI** - Runs Lambda functions locally with API Gateway emulation
+- **LocalStack** - Emulates DynamoDB and SQS locally
+- **Local Worker Poller** - Polls SQS and invokes the worker handler
+
+### Prerequisites
+
+1. **Docker** - Required for LocalStack and SAM local
+   ```bash
+   docker --version  # Should be 20.10+
+   ```
+
+2. **SAM CLI** - AWS Serverless Application Model CLI
+   ```bash
+   pip install aws-sam-cli
+   sam --version  # Should be 1.100+
+   ```
+
+3. **AWS CLI** - For verifying LocalStack resources (optional but helpful)
+   ```bash
+   pip install awscli
+   aws --version
+   ```
+
+4. **Node.js** - For the frontend
+   ```bash
+   node --version  # Should be 18+
+   ```
+
+5. **tmux** - For the unified dev environment
+   ```bash
+   # macOS
+   brew install tmux
+   
+   # Ubuntu/Debian
+   sudo apt install tmux
+   ```
+
+### Quick Start
+
+The easiest way to start the full local environment:
 
 ```bash
-pip install aws-sam-cli
-sam --version
+# Start everything: LocalStack, SAM API, Worker, Frontend
+make dev
+
+# This opens a tmux session with 4 panes:
+# - LocalStack logs
+# - SAM local API (port 8000)
+# - Worker poller
+# - Frontend (port 5173)
 ```
 
-### Build Locally
+To stop everything:
 
 ```bash
-# Navigate to infra directory
-cd infra
-
-# Copy paperpilot package to services (needed for SAM)
-cp -r ../paperpilot ../services/api/
-cp -r ../paperpilot ../services/worker/
-
-# Build with container (recommended for consistent builds)
-sam build --use-container
-
-# Or build natively (requires Python 3.13)
-sam build
+make dev-stop
 ```
 
-### Test Locally
+### Individual Components
+
+You can also run components individually for debugging:
 
 ```bash
-# Start local API Gateway + Lambda
-cd infra
-sam local start-api
+# 1. Start LocalStack (DynamoDB + SQS)
+make dev-infra
 
-# The API will be available at http://127.0.0.1:3000
+# 2. Build SAM application
+make dev-sam-build
 
-# Test health endpoint
-curl http://127.0.0.1:3000/api/health
+# 3. Start SAM local API (in a separate terminal)
+make dev-api
 
-# Invoke a single function
-sam local invoke ApiFunction --event events/api-event.json
+# 4. Start worker poller (in a separate terminal)
+make dev-worker
 
-# Invoke worker with SQS event
-sam local invoke WorkerFunction --event events/sqs-event.json
+# 5. Start frontend (in a separate terminal)
+make frontend
 ```
 
-### Local DynamoDB (Optional)
-
-For testing DynamoDB locally:
+### Verify Local Setup
 
 ```bash
-# Start local DynamoDB
-docker run -p 8000:8000 amazon/dynamodb-local
+# Check LocalStack status and resources
+make dev-check
 
-# Set endpoint for local testing
-export AWS_SAM_LOCAL=true
-export DYNAMODB_ENDPOINT=http://localhost:8000
+# Test the API health endpoint
+curl http://localhost:8000/api/health
+
+# Create a test job
+curl -X POST http://localhost:8000/api/pipeline \
+  -H "Content-Type: application/json" \
+  -d '{"query": "Test Query"}'
+
+# Check DynamoDB tables
+aws --endpoint-url http://localhost:4566 dynamodb list-tables --region eu-central-1
+
+# Check SQS queues
+aws --endpoint-url http://localhost:4566 sqs list-queues --region eu-central-1
+```
+
+### Architecture (Local)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Local Development                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌──────────────┐          ┌────────────────────────────────┐   │
+│  │   Frontend   │──────────│    SAM Local API (port 8000)   │   │
+│  │ (port 5173)  │          │    (Lambda + API Gateway)      │   │
+│  └──────────────┘          └────────────────────────────────┘   │
+│                                       │                          │
+│                                       │ enqueue                  │
+│                                       ▼                          │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                   LocalStack (port 4566)                    │ │
+│  │  ┌────────────────┐          ┌────────────────────────┐    │ │
+│  │  │   DynamoDB     │          │         SQS            │    │ │
+│  │  │ (jobs table)   │          │    (jobs queue)        │    │ │
+│  │  └────────────────┘          └────────────────────────┘    │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                       │                          │
+│                                       │ poll                     │
+│                                       ▼                          │
+│                          ┌────────────────────────┐              │
+│                          │   Local Worker Poller  │              │
+│                          │   (Python process)     │              │
+│                          └────────────────────────┘              │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Environment Variables (Local)
+
+The local environment uses these settings (set automatically by `make dev`):
+
+| Variable | Local Value | Description |
+|----------|-------------|-------------|
+| `AWS_ENDPOINT_URL` | `http://localhost:4566` | LocalStack endpoint |
+| `JOBS_TABLE_NAME` | `paperpilot-jobs-prod` | DynamoDB table name |
+| `SQS_QUEUE_URL` | `http://localhost:4566/000000000000/paperpilot-jobs-prod` | SQS queue URL |
+| `AWS_DEFAULT_REGION` | `eu-central-1` | AWS region |
+| `AWS_ACCESS_KEY_ID` | `test` | Dummy credentials for LocalStack |
+| `AWS_SECRET_ACCESS_KEY` | `test` | Dummy credentials for LocalStack |
+| `LOG_LEVEL` | `DEBUG` | Verbose logging for debugging |
+
+### Files Overview
+
+| File | Purpose |
+|------|---------|
+| `infra/docker-compose.local.yml` | Docker Compose for LocalStack |
+| `infra/init-localstack/01-init-aws-resources.sh` | Auto-creates DynamoDB table + SQS queue |
+| `infra/env.local.json` | Environment variables for SAM local |
+| `services/worker/local_poller.py` | SQS poller that invokes worker handler |
+
+### Troubleshooting (Local)
+
+#### LocalStack not starting
+
+```bash
+# Check Docker is running
+docker ps
+
+# Check LocalStack logs
+docker-compose -f infra/docker-compose.local.yml logs
+
+# Restart LocalStack
+make dev-infra-stop && make dev-infra
+```
+
+#### SAM local API errors
+
+```bash
+# Make sure LocalStack is running first
+make dev-check
+
+# Rebuild SAM application
+make dev-sam-build
+
+# Check SAM local is using the right env vars
+cat infra/env.local.json
+```
+
+#### "Queue does not exist" error
+
+```bash
+# The init script should create the queue automatically
+# If it didn't, check LocalStack logs:
+docker-compose -f infra/docker-compose.local.yml logs localstack
+
+# Manually create the queue:
+aws --endpoint-url http://localhost:4566 sqs create-queue \
+  --queue-name paperpilot-jobs-prod \
+  --region eu-central-1
+```
+
+#### Port 8000 already in use
+
+```bash
+# Find what's using port 8000
+lsof -i :8000
+
+# Kill the process or use a different port
+SAM_PORT=3000 make dev-api
+```
+
+#### Worker not processing messages
+
+```bash
+# Check if messages are in the queue
+aws --endpoint-url http://localhost:4566 sqs get-queue-attributes \
+  --queue-url http://localhost:4566/000000000000/paperpilot-jobs-prod \
+  --attribute-names ApproximateNumberOfMessages \
+  --region eu-central-1
+
+# Check worker poller logs for errors
+# The poller should print each message it receives
+```
+
+### Hot Reload Limitations
+
+- **Frontend**: Full hot reload via Vite
+- **SAM Local API**: Partial hot reload - code changes are picked up, but heavy changes may require `make dev-sam-build`
+- **Worker Poller**: Requires restart on code changes (Ctrl+C and `make dev-worker`)
+
+For faster iteration on Lambda code, consider running the FastAPI app directly with uvicorn:
+
+```bash
+# Direct FastAPI (without Lambda/SAM wrapper)
+make api
 ```
 
 ## Manual Deployment
