@@ -1,4 +1,5 @@
 # Astro SSR Frontend Docker image for Lambda Web Adapter
+
 FROM public.ecr.aws/docker/library/node:22-slim AS builder
 
 WORKDIR /app
@@ -18,8 +19,14 @@ RUN npm run build
 # Production image
 FROM public.ecr.aws/docker/library/node:22-slim AS runtime
 
-# Lambda Web Adapter
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.8.4 /lambda-adapter /opt/extensions/lambda-adapter
+# Install curl for downloading lambda adapter
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Download Lambda Web Adapter directly (workaround for BuildKit cross-arch COPY --from bug)
+RUN curl -Lo /opt/extensions/lambda-adapter \
+    https://github.com/awslabs/aws-lambda-web-adapter/releases/download/v0.8.4/lambda-adapter-x86_64 \
+    && chmod +x /opt/extensions/lambda-adapter
 
 WORKDIR /app
 
