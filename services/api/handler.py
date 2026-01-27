@@ -14,6 +14,7 @@ import json
 import uuid
 import logging
 from datetime import datetime, timezone, timedelta
+from decimal import Decimal
 from typing import Any, Optional
 from enum import Enum
 
@@ -126,18 +127,46 @@ app.add_middleware(
 # Helper Functions
 # ==============================================================================
 
+def convert_floats_to_decimal(obj: Any) -> Any:
+    """Recursively convert floats to Decimals for DynamoDB compatibility."""
+    if isinstance(obj, float):
+        return Decimal(str(obj))
+    elif isinstance(obj, dict):
+        return {k: convert_floats_to_decimal(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_floats_to_decimal(item) for item in obj]
+    return obj
+
+
+def convert_decimal_to_native(obj: Any) -> Any:
+    """Recursively convert Decimals back to int/float for JSON serialization."""
+    if isinstance(obj, Decimal):
+        # Convert to int if it's a whole number, otherwise float
+        if obj % 1 == 0:
+            return int(obj)
+        return float(obj)
+    elif isinstance(obj, dict):
+        return {k: convert_decimal_to_native(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_decimal_to_native(item) for item in obj]
+    return obj
+
+
 def create_job(job_type: str, query: str, payload: dict) -> str:
     """Create a job in DynamoDB and return job_id."""
     job_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     expires_at = int((datetime.now(timezone.utc) + timedelta(days=TTL_DAYS)).timestamp())
     
+    # Convert floats to Decimals for DynamoDB compatibility
+    safe_payload = convert_floats_to_decimal(payload)
+    
     item = {
         "job_id": job_id,
         "job_type": job_type,
         "status": JobStatus.QUEUED.value,
         "query": query,
-        "payload": payload,
+        "payload": safe_payload,
         "created_at": now,
         "updated_at": now,
         "expires_at": expires_at,
@@ -249,6 +278,9 @@ async def get_job_status(job_id: str):
     
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
+    
+    # Convert Decimals back to native types for JSON serialization
+    job = convert_decimal_to_native(job)
     
     return JobResponse(
         job_id=job["job_id"],
