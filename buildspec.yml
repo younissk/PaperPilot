@@ -27,29 +27,21 @@ phases:
 
   pre_build:
     commands:
-      # Copy the paperpilot package to each service directory
-      # This is needed because SAM packages each function from its CodeUri
-      - echo "Copying paperpilot package to service directories..."
-      - cp -r paperpilot services/api/
-      - cp -r paperpilot services/worker/
-      # Verify the copy
+      # Both API and Worker are now self-contained to minimize package size
+      # Heavy processing will be added later via Lambda Layers or Container Images
+      - echo "Verifying service directories (self-contained, no paperpilot copy)..."
       - ls -la services/api/
       - ls -la services/worker/
 
   build:
     commands:
       - echo "Building SAM application..."
-      - cd infra && sam build --use-container --parallel
-      # The --use-container flag builds inside a Lambda-like Docker container
-      # This ensures dependencies are compiled for the Lambda runtime
-
-  post_build:
-    commands:
-      - echo "Deploying SAM application..."
-      - cd infra
-      - sam deploy --config-file samconfig.toml --config-env default
-      # Uses samconfig.toml for deployment parameters
-      # --config-env default uses the [default] section
+      # Build and deploy in one block to maintain working directory
+      - |
+        cd infra
+        sam build --use-container --parallel
+        echo "Build complete, deploying..."
+        sam deploy --config-file samconfig.toml --config-env default
 
 artifacts:
   files:

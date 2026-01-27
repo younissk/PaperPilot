@@ -1,23 +1,12 @@
-# API Lambda dependencies
-# Note: paperpilot package is copied during build (see buildspec.yml)
+# API Lambda dependencies (MINIMAL)
+# The API only handles HTTP requests, DynamoDB, and SQS
 
 # ASGI adapter for Lambda
 mangum>=0.17.0
 
-# Core dependencies (from pyproject.toml)
-openai>=2.15.0
-pydantic>=2.12.5
-tqdm>=4.67.1
-rich>=13.0.0
-typer>=0.15.0
-aiohttp>=3.9.0
+# Web framework
 fastapi>=0.115.0
-numpy>=1.26.0
-scikit-learn>=1.4.0
-plotly>=5.18.0
-structlog>=24.0.0
+pydantic>=2.12.5
 
 # AWS SDK for DynamoDB and SQS
 boto3>=1.35.0
-
-# Note: uvicorn is NOT needed for Lambda (Mangum handles the ASGI interface)

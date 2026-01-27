@@ -1,18 +1,21 @@
-# Worker Lambda dependencies
-# Note: paperpilot package is copied during build (see buildspec.yml)
-
-# Core dependencies (from pyproject.toml)
-openai>=2.15.0
-pydantic>=2.12.5
-tqdm>=4.67.1
-rich>=13.0.0
-typer>=0.15.0
-aiohttp>=3.9.0
-fastapi>=0.115.0
-numpy>=1.26.0
-scikit-learn>=1.4.0
-plotly>=5.18.0
-structlog>=24.0.0
+# Worker Lambda dependencies (SLIM for initial deployment)
+# Heavy ML dependencies will be added later via Lambda Layers or Container Images
 
 # AWS SDK for DynamoDB
 boto3>=1.35.0
+
+# Data validation
+pydantic>=2.12.5
+
+# Logging
+structlog>=24.0.0
+
+# Note: The following are COMMENTED OUT until we implement actual job processing
+# They exceed Lambda's 250MB limit when combined
+# Solution: Use Lambda Layers or Container Images for ML workloads
+#
+# numpy>=1.26.0
+# scikit-learn>=1.4.0
+# plotly>=5.18.0
+# aiohttp>=3.9.0
+# openai>=2.15.0
