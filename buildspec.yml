@@ -60,6 +60,30 @@ phases:
         echo "Ensuring ECR repository exists: ${ECR_REPO}"
         aws ecr describe-repositories --repository-names ${ECR_REPO} 2>/dev/null || \
           aws ecr create-repository --repository-name ${ECR_REPO} --image-scanning-configuration scanOnPush=true
+
+        # Allow Lambda service to pull the image from this repository
+        echo "Setting ECR repository policy for Lambda image access..."
+        cat > /tmp/ecr-lambda-policy.json <<EOF
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "LambdaECRImageRetrievalPolicy",
+              "Effect": "Allow",
+              "Principal": { "Service": "lambda.amazonaws.com" },
+              "Action": [
+                "ecr:BatchGetImage",
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:BatchCheckLayerAvailability"
+              ],
+              "Condition": {
+                "StringEquals": { "aws:sourceAccount": "${AWS_ACCOUNT}" }
+              }
+            }
+          ]
+        }
+        EOF
+        aws ecr set-repository-policy --repository-name ${ECR_REPO} --policy-text file:///tmp/ecr-lambda-policy.json
         
         # Clean up any failed stacks (ROLLBACK_COMPLETE state cannot be updated)
         echo "Checking for failed stacks..."
