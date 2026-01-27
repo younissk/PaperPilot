@@ -11,6 +11,7 @@ Environment variables:
     AWS_ENDPOINT_URL: LocalStack endpoint (default: http://localhost:4566)
     SQS_QUEUE_URL: Full queue URL (default: http://localhost:4566/000000000000/paperpilot-jobs-prod)
     JOBS_TABLE_NAME: DynamoDB table name (default: paperpilot-jobs-prod)
+    RESULTS_BUCKET: S3 bucket for artifacts (default: paperpilot-artifacts-local)
     AWS_DEFAULT_REGION: AWS region (default: eu-central-1)
     LOG_LEVEL: Logging level (default: INFO)
 """
@@ -189,6 +190,7 @@ def main() -> NoReturn:
     # Verify environment
     logger.info("Environment configuration:")
     logger.info(f"  JOBS_TABLE_NAME: {os.environ.get('JOBS_TABLE_NAME', 'paperpilot-jobs-prod')}")
+    logger.info(f"  RESULTS_BUCKET: {os.environ.get('RESULTS_BUCKET', 'paperpilot-artifacts-local')}")
     logger.info(f"  SQS_QUEUE_URL: {SQS_QUEUE_URL}")
     logger.info(f"  AWS_ENDPOINT_URL: {AWS_ENDPOINT_URL}")
     print("")

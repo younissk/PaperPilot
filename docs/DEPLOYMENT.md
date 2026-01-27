@@ -433,8 +433,121 @@ Repeat for `paperpilot-worker-prod`.
 | `OPENAI_API_KEY` | OpenAI API key for LLM calls | Yes |
 | `JOBS_TABLE_NAME` | DynamoDB table name (auto-set by SAM) | No |
 | `SQS_QUEUE_URL` | SQS queue URL (auto-set by SAM) | No |
+| `RESULTS_BUCKET` | S3 bucket for pipeline artifacts (auto-set by SAM) | No |
 | `ENVIRONMENT` | Environment name (dev/staging/prod) | No |
 | `LOG_LEVEL` | Logging level (INFO/DEBUG/WARNING) | No |
+| `AWS_ENDPOINT_URL` | Custom AWS endpoint for LocalStack (local dev only) | No |
+
+## S3 Artifacts
+
+Pipeline results are stored in S3 under a structured prefix:
+
+```
+s3://paperpilot-artifacts-{environment}-{account-id}/
+└── results/
+    └── {query_slug}/
+        └── {job_id}/
+            ├── metadata.json      # Index of all artifacts
+            ├── snowball.json      # Search results (all papers found)
+            ├── elo_ranked_*.json  # Ranked papers with ELO scores
+            └── report_top_k*.json # Generated research report
+```
+
+### Inspecting Artifacts (Prod)
+
+```bash
+# List all results for a query
+aws s3 ls s3://paperpilot-artifacts-prod-<account-id>/results/<query_slug>/
+
+# Download a specific job's artifacts
+aws s3 sync s3://paperpilot-artifacts-prod-<account-id>/results/<query_slug>/<job-id>/ ./local-results/
+
+# View metadata for a job
+aws s3 cp s3://paperpilot-artifacts-prod-<account-id>/results/<query_slug>/<job-id>/metadata.json -
+```
+
+### Inspecting Artifacts (Local Dev)
+
+```bash
+# List buckets
+aws --endpoint-url http://localhost:4566 s3 ls
+
+# List results
+aws --endpoint-url http://localhost:4566 s3 ls s3://paperpilot-artifacts-local/results/ --recursive
+
+# Download a job's results
+aws --endpoint-url http://localhost:4566 s3 sync \
+  s3://paperpilot-artifacts-local/results/<query_slug>/<job-id>/ ./local-results/
+```
+
+## Job Progress and Events
+
+The pipeline updates DynamoDB with progress information that can be used by frontends for real-time updates.
+
+### Progress Model
+
+Each job has these fields in DynamoDB:
+
+| Field | Description |
+|-------|-------------|
+| `status` | `queued`, `running`, `completed`, or `failed` |
+| `progress` | Current progress snapshot: `{phase, step, message, current, total}` |
+| `events` | Bounded list (last 100) of progress events for replay |
+| `result` | On completion: summary + S3 pointers |
+| `error_message` | On failure: error details |
+
+### Progress Phases
+
+The pipeline progresses through these phases:
+
+1. **search** - Query profile, arXiv search, filtering, snowball expansion
+2. **ranking** - ELO-based pairwise paper ranking
+3. **report** - Paper cards, outline, section writing, auditing
+4. **upload** - Upload artifacts to S3
+
+### Events List (for Real-Time UX)
+
+The `events` field contains an append-only list (bounded to last 100 events):
+
+```json
+{
+  "events": [
+    {"ts": "2026-01-27T10:00:00Z", "type": "phase_start", "phase": "search", "message": "Starting search..."},
+    {"ts": "2026-01-27T10:00:05Z", "type": "progress", "phase": "search", "message": "Found 50 papers", "step": 2},
+    {"ts": "2026-01-27T10:01:00Z", "type": "phase_complete", "phase": "search", "message": "Search complete: 150 papers"},
+    {"ts": "2026-01-27T10:01:01Z", "type": "phase_start", "phase": "ranking", "message": "Starting ranking..."},
+    ...
+  ]
+}
+```
+
+### Polling for Progress
+
+Frontend can poll `GET /api/jobs/{job_id}` to get current status:
+
+```bash
+# Check job status
+curl https://<api-url>/api/jobs/<job-id>
+
+# Response includes progress and events
+{
+  "job_id": "abc-123",
+  "status": "running",
+  "progress": {
+    "phase": "ranking",
+    "step": 1,
+    "message": "Running ELO matches...",
+    "current": 25,
+    "total": 100
+  },
+  "events": [...],
+  "result": null
+}
+```
+
+### Future: Real-Time Streaming
+
+The events model is designed so that later you can add SSE/WebSocket streaming without changing the worker. The worker writes events to DynamoDB; a streaming API can then watch for changes and push them to clients.
 
 ## Monitoring
 

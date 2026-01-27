@@ -62,6 +62,7 @@ export AWS_DEFAULT_REGION ?= eu-central-1
 export AWS_ENDPOINT_URL ?= http://localhost:4566
 export JOBS_TABLE_NAME ?= paperpilot-jobs-prod
 export SQS_QUEUE_URL ?= http://localhost:4566/000000000000/paperpilot-jobs-prod
+export RESULTS_BUCKET ?= paperpilot-artifacts-local
 export LOG_LEVEL ?= DEBUG
 
 # Start LocalStack (DynamoDB + SQS)
@@ -94,6 +95,9 @@ dev-check:
 	@echo ""
 	@echo "SQS queues:"
 	@aws --endpoint-url http://localhost:4566 sqs list-queues --region eu-central-1 2>/dev/null || echo "  (none or error)"
+	@echo ""
+	@echo "S3 buckets:"
+	@aws --endpoint-url http://localhost:4566 s3 ls --region eu-central-1 2>/dev/null || echo "  (none or error)"
 
 # Build SAM application
 dev-sam-build:

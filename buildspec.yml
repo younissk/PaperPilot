@@ -27,11 +27,14 @@ phases:
 
   pre_build:
     commands:
-      # Both API and Worker are now self-contained to minimize package size
-      # Heavy processing will be added later via Lambda Layers or Container Images
-      - echo "Verifying service directories (self-contained, no paperpilot copy)..."
+      # Copy paperpilot package to worker service for core pipeline modules
+      # (search, ranking, report generation)
+      - echo "Copying paperpilot package to worker service..."
+      - cp -r paperpilot services/worker/
+      - echo "Verifying service directories..."
       - ls -la services/api/
       - ls -la services/worker/
+      - ls -la services/worker/paperpilot/
 
   build:
     commands:

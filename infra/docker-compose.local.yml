@@ -18,7 +18,7 @@ services:
       - "4510-4559:4510-4559"  # External service ports
     environment:
       # Services to enable
-      - SERVICES=sqs,dynamodb
+      - SERVICES=sqs,dynamodb,s3
       # Region to match prod
       - DEFAULT_REGION=eu-central-1
       - AWS_DEFAULT_REGION=eu-central-1

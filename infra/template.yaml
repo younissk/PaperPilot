@@ -43,6 +43,7 @@ Globals:
         ENVIRONMENT: !Ref Environment
         JOBS_TABLE_NAME: !Ref JobsTable
         SQS_QUEUE_URL: !Ref SqsQueueUrl
+        RESULTS_BUCKET: !Ref ArtifactsBucket
         # OPENAI_API_KEY should be set via Lambda env vars or fetched from Secrets Manager
     Architectures:
       - x86_64
@@ -51,6 +52,29 @@ Globals:
 # Resources
 # ============================================================================
 Resources:
+
+  # --------------------------------------------------------------------------
+  # S3 Bucket for Pipeline Artifacts (results, reports, etc.)
+  # --------------------------------------------------------------------------
+  ArtifactsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub paperpilot-artifacts-${Environment}-${AWS::AccountId}
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireOldArtifacts
+            Status: Enabled
+            ExpirationInDays: 90  # Auto-delete artifacts after 90 days
+      Tags:
+        - Key: Application
+          Value: PaperPilot
+        - Key: Environment
+          Value: !Ref Environment
 
   # --------------------------------------------------------------------------
   # DynamoDB Table for Job State
@@ -149,6 +173,15 @@ Resources:
                 - sqs:GetQueueAttributes
                 - sqs:ChangeMessageVisibility
               Resource: !Ref SqsQueueArn
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+                - s3:GetObject
+                - s3:ListBucket
+              Resource:
+                - !GetAtt ArtifactsBucket.Arn
+                - !Sub "${ArtifactsBucket.Arn}/*"
         - CloudWatchLogsFullAccess
       Environment:
         Variables:
@@ -195,3 +228,15 @@ Outputs:
     Value: !Ref SqsQueueArn
     Export:
       Name: !Sub ${AWS::StackName}-SqsQueueArn
+
+  ArtifactsBucketName:
+    Description: Name of the S3 bucket for pipeline artifacts
+    Value: !Ref ArtifactsBucket
+    Export:
+      Name: !Sub ${AWS::StackName}-ArtifactsBucketName
+
+  ArtifactsBucketArn:
+    Description: ARN of the S3 artifacts bucket
+    Value: !GetAtt ArtifactsBucket.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-ArtifactsBucketArn
