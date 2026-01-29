@@ -96,17 +96,22 @@ def create_job(job_type: str, query: str, payload: dict[str, Any]) -> str | None
 
 def get_job(job_id: str) -> dict[str, Any] | None:
     """Retrieve a job from Cosmos DB. Returns None if not found or on error."""
-    from azure.cosmos import exceptions as cosmos_exceptions
-
     if not COSMOS_ENDPOINT or not COSMOS_KEY:
         logger.warning("Cannot get job: Cosmos DB not configured")
         return None
 
     try:
         container = get_jobs_container()
-        return container.read_item(item=job_id, partition_key=job_id)
-    except cosmos_exceptions.CosmosResourceNotFoundError:
-        return None
+        # IMPORTANT: Avoid read_item(id, partition_key=...) because an incorrect partition_key
+        # yields a 404 even when the document exists. We query by id/job_id instead.
+        items = list(
+            container.query_items(
+                query="SELECT TOP 1 * FROM c WHERE c.id = @id OR c.job_id = @id",
+                parameters=[{"name": "@id", "value": job_id}],
+                enable_cross_partition_query=True,
+            )
+        )
+        return items[0] if items else None
     except Exception as exc:
         logger.error("Failed to get job %s from Cosmos DB: %s", job_id, exc)
         return None
@@ -114,20 +119,19 @@ def get_job(job_id: str) -> dict[str, Any] | None:
 
 def update_job_document(job_id: str, updates: dict[str, Any]) -> dict[str, Any] | None:
     """Update a job document in Cosmos DB. Returns updated job or None on failure."""
-    from azure.cosmos import exceptions as cosmos_exceptions
-
     if not COSMOS_ENDPOINT or not COSMOS_KEY:
         logger.warning("Cannot update job: Cosmos DB not configured")
         return None
 
     try:
         container = get_jobs_container()
-        job = container.read_item(item=job_id, partition_key=job_id)
+        job = get_job(job_id)
+        if not job:
+            return None
         job.update(updates)
-        container.replace_item(item=job_id, body=job)
+        # Use upsert to avoid needing to know the container's partition key value here.
+        container.upsert_item(job)
         return job
-    except cosmos_exceptions.CosmosResourceNotFoundError:
-        return None
     except Exception as exc:
         logger.error("Failed to update job %s in Cosmos DB: %s", job_id, exc)
         return None
