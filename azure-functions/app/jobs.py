@@ -7,8 +7,23 @@ import uuid
 from typing import Any
 
 from .clients import get_jobs_container, get_service_bus_client
-from .config import MAX_EVENTS, QUEUE_NAME, SERVICE_BUS_CONNECTION, logger
+from .config import COSMOS_ENDPOINT, COSMOS_KEY, MAX_EVENTS, QUEUE_NAME, SERVICE_BUS_CONNECTION, logger
 from .utils import expires_at, now_iso
+
+
+def test_cosmos_connection() -> bool:
+    """Test if Cosmos DB is accessible. Returns True if connected, False otherwise."""
+    if not COSMOS_ENDPOINT or not COSMOS_KEY:
+        return False
+
+    try:
+        container = get_jobs_container()
+        # Just check if we can query (lightweight operation)
+        list(container.query_items(query="SELECT TOP 1 c.id FROM c", enable_cross_partition_query=True))
+        return True
+    except Exception as exc:
+        logger.warning("Cosmos DB connection test failed: %s", exc)
+        return False
 
 
 def append_event(
@@ -31,7 +46,12 @@ def append_event(
     return events
 
 
-def create_job(job_type: str, query: str, payload: dict[str, Any]) -> str:
+def create_job(job_type: str, query: str, payload: dict[str, Any]) -> str | None:
+    """Create a new job in Cosmos DB. Returns job_id on success, None on failure."""
+    if not COSMOS_ENDPOINT or not COSMOS_KEY:
+        logger.error("Cannot create job: Cosmos DB not configured")
+        return None
+
     job_id = str(uuid.uuid4())
     now = now_iso()
 
@@ -65,33 +85,52 @@ def create_job(job_type: str, query: str, payload: dict[str, Any]) -> str:
         },
     }
 
-    container = get_jobs_container()
-    container.create_item(job)
-    return job_id
+    try:
+        container = get_jobs_container()
+        container.create_item(job)
+        return job_id
+    except Exception as exc:
+        logger.error("Failed to create job in Cosmos DB: %s", exc)
+        return None
 
 
 def get_job(job_id: str) -> dict[str, Any] | None:
+    """Retrieve a job from Cosmos DB. Returns None if not found or on error."""
     from azure.cosmos import exceptions as cosmos_exceptions
 
-    container = get_jobs_container()
+    if not COSMOS_ENDPOINT or not COSMOS_KEY:
+        logger.warning("Cannot get job: Cosmos DB not configured")
+        return None
+
     try:
+        container = get_jobs_container()
         return container.read_item(item=job_id, partition_key=job_id)
     except cosmos_exceptions.CosmosResourceNotFoundError:
+        return None
+    except Exception as exc:
+        logger.error("Failed to get job %s from Cosmos DB: %s", job_id, exc)
         return None
 
 
 def update_job_document(job_id: str, updates: dict[str, Any]) -> dict[str, Any] | None:
+    """Update a job document in Cosmos DB. Returns updated job or None on failure."""
     from azure.cosmos import exceptions as cosmos_exceptions
 
-    container = get_jobs_container()
-    try:
-        job = container.read_item(item=job_id, partition_key=job_id)
-    except cosmos_exceptions.CosmosResourceNotFoundError:
+    if not COSMOS_ENDPOINT or not COSMOS_KEY:
+        logger.warning("Cannot update job: Cosmos DB not configured")
         return None
 
-    job.update(updates)
-    container.replace_item(item=job_id, body=job)
-    return job
+    try:
+        container = get_jobs_container()
+        job = container.read_item(item=job_id, partition_key=job_id)
+        job.update(updates)
+        container.replace_item(item=job_id, body=job)
+        return job
+    except cosmos_exceptions.CosmosResourceNotFoundError:
+        return None
+    except Exception as exc:
+        logger.error("Failed to update job %s in Cosmos DB: %s", job_id, exc)
+        return None
 
 
 def append_job_event(

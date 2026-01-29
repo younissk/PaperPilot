@@ -118,4 +118,6 @@ export interface PipelineResponse {
 export interface HealthResponse {
   status: string;
   version: string;
+  storage?: string;
+  database?: string;
 }

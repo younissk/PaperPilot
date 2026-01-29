@@ -30,10 +30,16 @@ async function apiRequest<T>(
   });
 
   if (!response.ok) {
-    let errorDetail = `HTTP ${response.status}: ${response.statusText}`;
+    const statusPrefix = `HTTP ${response.status}`;
+    let errorDetail = `${statusPrefix}: ${response.statusText}`;
     try {
       const errorData = await response.json();
-      errorDetail = errorData.detail || errorDetail;
+      // Support multiple error formats: Azure Functions uses 'error', FastAPI uses 'detail'
+      const serverMessage = errorData.error || errorData.detail || errorData.message;
+      if (serverMessage) {
+        // Preserve HTTP status code for retry logic detection
+        errorDetail = `${statusPrefix}: ${serverMessage}`;
+      }
     } catch {
       // If JSON parsing fails, use default error message
     }

@@ -20,11 +20,13 @@ export function useAllResults(queryId: string | undefined): UseAllResultsReturn 
     enabled: !!queryId,
     retry: (failureCount, error) => {
       // Don't retry on 404
-      if (error.message.includes("404") || error.message.includes("not found")) {
+      const message = error.message.toLowerCase();
+      if (message.includes("404") || message.includes("not found")) {
         return false;
       }
       return failureCount < 2;
     },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
   });
 
   const metadataQuery = useQuery({
@@ -34,10 +36,8 @@ export function useAllResults(queryId: string | undefined): UseAllResultsReturn 
     retry: false,
   });
 
-  const notFound =
-    resultsQuery.error?.message.includes("404") ||
-    resultsQuery.error?.message.includes("not found") ||
-    false;
+  const errorMessage = resultsQuery.error?.message.toLowerCase() ?? "";
+  const notFound = errorMessage.includes("404") || errorMessage.includes("not found");
 
   return {
     results: resultsQuery.data ?? null,

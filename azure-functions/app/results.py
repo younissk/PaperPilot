@@ -14,21 +14,40 @@ def results_path(*parts: str) -> str:
     return prefix + "/".join(part.strip("/") for part in parts if part)
 
 
+def test_storage_connection() -> bool:
+    """Test if blob storage is accessible. Returns True if connected, False otherwise."""
+    if not RESULTS_CONNECTION_STRING and not RESULTS_ACCOUNT_URL:
+        return False
+
+    try:
+        container = get_results_container_client()
+        # Just check if we can get container properties (lightweight operation)
+        container.get_container_properties()
+        return True
+    except Exception as exc:
+        logger.warning("Storage connection test failed: %s", exc)
+        return False
+
+
 def list_result_slugs() -> list[str]:
     if not RESULTS_CONNECTION_STRING and not RESULTS_ACCOUNT_URL:
         logger.warning("Blob storage not configured; cannot list results")
         return []
 
-    container = get_results_container_client()
-    slugs: set[str] = set()
-    prefix = results_path("")
+    try:
+        container = get_results_container_client()
+        slugs: set[str] = set()
+        prefix = results_path("")
 
-    for blob in container.list_blobs(name_starts_with=prefix):
-        parts = blob.name.split("/")
-        if len(parts) >= 2:
-            slugs.add(parts[1])
+        for blob in container.list_blobs(name_starts_with=prefix):
+            parts = blob.name.split("/")
+            if len(parts) >= 2:
+                slugs.add(parts[1])
 
-    return sorted(slugs)
+        return sorted(slugs)
+    except Exception as exc:
+        logger.error("Failed to list results from blob storage: %s", exc)
+        return []
 
 
 def get_blob_json(blob_name: str) -> dict[str, Any] | None:
@@ -37,8 +56,8 @@ def get_blob_json(blob_name: str) -> dict[str, Any] | None:
     if not RESULTS_CONNECTION_STRING and not RESULTS_ACCOUNT_URL:
         return None
 
-    container = get_results_container_client()
     try:
+        container = get_results_container_client()
         blob_client = container.get_blob_client(blob_name)
         content = blob_client.download_blob().readall().decode("utf-8")
         return json.loads(content)
@@ -47,25 +66,32 @@ def get_blob_json(blob_name: str) -> dict[str, Any] | None:
     except json.JSONDecodeError as exc:
         logger.error("Invalid JSON in blob %s: %s", blob_name, exc)
         return None
+    except Exception as exc:
+        logger.error("Failed to read blob %s: %s", blob_name, exc)
+        return None
 
 
 def find_latest_job_for_query(query_slug: str) -> str | None:
     if not RESULTS_CONNECTION_STRING and not RESULTS_ACCOUNT_URL:
         return None
 
-    container = get_results_container_client()
-    prefix = results_path(query_slug)
-    job_ids: set[str] = set()
+    try:
+        container = get_results_container_client()
+        prefix = results_path(query_slug)
+        job_ids: set[str] = set()
 
-    for blob in container.list_blobs(name_starts_with=f"{prefix}/"):
-        parts = blob.name.split("/")
-        if len(parts) >= 3:
-            job_ids.add(parts[2])
+        for blob in container.list_blobs(name_starts_with=f"{prefix}/"):
+            parts = blob.name.split("/")
+            if len(parts) >= 3:
+                job_ids.add(parts[2])
 
-    if not job_ids:
+        if not job_ids:
+            return None
+
+        return sorted(job_ids)[-1]
+    except Exception as exc:
+        logger.error("Failed to find jobs for query %s: %s", query_slug, exc)
         return None
-
-    return sorted(job_ids)[-1]
 
 
 def get_query_metadata(query_slug: str) -> dict[str, Any] | None:

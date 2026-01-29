@@ -7,7 +7,8 @@ import azure.functions as func
 from .http_utils import cors_preflight, json_response, safe
 from .jobs import create_job, enqueue_job, get_job
 from .parsing import normalize_pipeline_payload, normalize_search_payload, parse_json
-from .results import get_query_metadata, get_query_results, list_result_slugs
+from .jobs import test_cosmos_connection
+from .results import get_query_metadata, get_query_results, list_result_slugs, test_storage_connection
 
 bp = func.Blueprint()
 
@@ -21,7 +22,20 @@ def preflight_any(req: func.HttpRequest) -> func.HttpResponse:
 def health_check(req: func.HttpRequest) -> func.HttpResponse:
     if req.method == "OPTIONS":
         return cors_preflight()
-    return safe(lambda: json_response({"status": "ok", "version": "0.1.0"}))
+
+    def handler():
+        storage_ok = test_storage_connection()
+        database_ok = test_cosmos_connection()
+        all_ok = storage_ok and database_ok
+
+        return json_response({
+            "status": "ok" if all_ok else "degraded",
+            "version": "0.1.0",
+            "storage": "connected" if storage_ok else "unavailable",
+            "database": "connected" if database_ok else "unavailable",
+        })
+
+    return safe(handler)
 
 
 @bp.route(route="", methods=["GET", "OPTIONS"])
@@ -71,6 +85,9 @@ def create_job_endpoint(req: func.HttpRequest) -> func.HttpResponse:
             return json_response({"error": str(exc)}, status=400)
 
         job_id = create_job(job_type=job_type, query=payload["query"], payload=payload)
+        if not job_id:
+            return json_response({"error": "Failed to create job. Database may be unavailable."}, status=503)
+
         enqueue_job(job_id, job_type, payload)
 
         return json_response(
@@ -101,6 +118,9 @@ def start_pipeline(req: func.HttpRequest) -> func.HttpResponse:
             return json_response({"error": str(exc)}, status=400)
 
         job_id = create_job("pipeline", payload["query"], payload)
+        if not job_id:
+            return json_response({"error": "Failed to create job. Database may be unavailable."}, status=503)
+
         enqueue_job(job_id, "pipeline", payload)
 
         return json_response(
@@ -131,6 +151,9 @@ def start_search(req: func.HttpRequest) -> func.HttpResponse:
             return json_response({"error": str(exc)}, status=400)
 
         job_id = create_job("search", payload["query"], payload)
+        if not job_id:
+            return json_response({"error": "Failed to create job. Database may be unavailable."}, status=503)
+
         enqueue_job(job_id, "search", payload)
 
         return json_response(

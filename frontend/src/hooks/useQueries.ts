@@ -9,5 +9,7 @@ export function useQueries() {
     queryKey: ["queries"],
     queryFn: listQueries,
     staleTime: 1000 * 60, // 1 minute
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
   });
 }
