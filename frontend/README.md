@@ -1,6 +1,15 @@
 # PaperPilot Frontend
 
-Astro SSR frontend for PaperPilot - AI-powered academic literature discovery.
+Vite + React SPA frontend for PaperPilot - AI-powered academic literature discovery.
+
+## Tech Stack
+
+- **React 19** - UI framework
+- **Vite** - Build tool and dev server
+- **React Router v7** - Client-side routing
+- **TanStack Query** - Data fetching and caching
+- **Tailwind CSS** - Styling
+- **react-helmet-async** - SEO meta tags
 
 ## Development
 
@@ -16,6 +25,9 @@ npm run build
 
 # Preview production build
 npm run preview
+
+# Lint code
+npm run lint
 ```
 
 ## Environment Variables
@@ -23,24 +35,22 @@ npm run preview
 Create a `.env` file based on `.env.example`:
 
 ```bash
-# Backend API URL
-API_BASE_URL=http://localhost:8000
+# Backend API URL (VITE_ prefix required for Vite)
+VITE_API_BASE_URL=http://localhost:8000
 ```
 
 ## Pages
 
 - `/` - Search form to start a new research query
-- `/report/{query_id}` - View generated research report (SSR for SEO)
+- `/report/:queryId` - View generated research report
 - `/queries` - List of previous queries
 - `/about` - About page
 
 ## SEO Features
 
-- Server-side rendering for all report pages
-- Dynamic sitemap.xml at `/sitemap.xml`
-- robots.txt at `/robots.txt`
+- Client-side meta tags with react-helmet-async
 - JSON-LD structured data on report pages
-- Canonical URLs to avoid duplicate content
+- Static robots.txt in public folder
 - `noindex` on in-progress/generating pages
 
 ## Deployment
@@ -55,29 +65,35 @@ See `infra/template.yaml` for the SAM configuration.
 docker build -t paperpilot-frontend .
 
 # Run locally
-docker run -p 4321:4321 -e API_BASE_URL=http://host.docker.internal:8000 paperpilot-frontend
+docker run -p 4321:4321 -e VITE_API_BASE_URL=http://host.docker.internal:8000 paperpilot-frontend
 ```
 
 ## Architecture
 
 ```
 src/
-├── components/      # Astro components
-│   └── Header.astro
-├── layouts/         # Page layouts
-│   └── Layout.astro
-├── lib/            # Shared utilities
-│   ├── api.ts      # API client
-│   ├── config.ts   # Configuration
-│   └── types.ts    # TypeScript types
-├── pages/          # Route pages
-│   ├── index.astro
-│   ├── about.astro
-│   ├── queries.astro
-│   ├── report/
-│   │   └── [query_id].astro
-│   ├── robots.txt.ts
-│   └── sitemap.xml.ts
-└── styles/
-    └── global.css
+├── components/          # React components
+│   ├── Header.tsx       # Navigation with health indicator
+│   ├── Layout.tsx       # Main layout wrapper
+│   ├── PaperCard.tsx    # Paper display card
+│   ├── ProgressIndicator.tsx  # Pipeline progress UI
+│   ├── SearchForm.tsx   # Query input form
+│   └── SEO.tsx          # Meta tags component
+├── hooks/               # TanStack Query hooks
+│   ├── useAllResults.ts # Fetch report results
+│   ├── useHealthCheck.ts # API health check
+│   ├── usePipelineStatus.ts # Job polling
+│   └── useQueries.ts    # List queries
+├── lib/                 # Shared utilities
+│   ├── api.ts           # API client
+│   ├── config.ts        # Configuration
+│   └── types.ts         # TypeScript types
+├── pages/               # Route pages
+│   ├── AboutPage.tsx
+│   ├── HomePage.tsx
+│   ├── QueriesPage.tsx
+│   └── ReportPage.tsx
+├── App.tsx              # Router setup
+├── main.tsx             # React entry point
+└── index.css            # Tailwind styles
 ```

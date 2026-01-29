@@ -1,4 +1,4 @@
-# Astro SSR Frontend Docker image for Lambda Web Adapter
+# Vite React Frontend Docker image for Lambda Web Adapter
 
 FROM public.ecr.aws/docker/library/node:22-slim AS builder
 
@@ -13,15 +13,16 @@ RUN npm install
 # Copy source code
 COPY . .
 
-# Build the Astro app
+# Build the Vite app
 RUN npm run build
 
-# Production image
+# Production image - serve static files with a simple Node server
 FROM public.ecr.aws/docker/library/node:22-slim AS runtime
 
-# Install curl for downloading lambda adapter
+# Install curl for downloading lambda adapter and serve for static file serving
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install -g serve
 
 # Download Lambda Web Adapter directly (workaround for BuildKit cross-arch COPY --from bug)
 RUN curl -Lo /opt/extensions/lambda-adapter \
@@ -30,10 +31,8 @@ RUN curl -Lo /opt/extensions/lambda-adapter \
 
 WORKDIR /app
 
-# Copy built application
+# Copy built static files
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
 
 # Set environment variables for Lambda Web Adapter
 ENV PORT=4321
@@ -43,5 +42,5 @@ ENV AWS_LWA_READINESS_CHECK_PATH=/
 # Expose port
 EXPOSE 4321
 
-# Start the Astro server
-CMD ["node", "./dist/server/entry.mjs"]
+# Serve static files with SPA fallback
+CMD ["serve", "-s", "dist", "-l", "4321"]

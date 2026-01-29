@@ -1,5 +1,5 @@
 /**
- * TypeScript types for PaperPilot API.
+ * TypeScript types for Paper Navigator API.
  */
 
 export interface Paper {

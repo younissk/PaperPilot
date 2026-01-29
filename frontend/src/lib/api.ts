@@ -1,5 +1,5 @@
 /**
- * API client for PaperPilot backend.
+ * API client for Paper Navigator backend.
  */
 
 import { API_BASE_URL, API_ENDPOINTS } from "./config";
