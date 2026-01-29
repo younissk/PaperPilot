@@ -11,34 +11,35 @@ PaperPilot helps researchers discover relevant academic papers by:
 3. **ELO Ranking**: Compares papers head-to-head using LLM judgment to create a quality ranking
 4. **Report Generation**: Synthesizes findings into a structured research report
 
-## Architecture
+## Architecture (Azure)
 
-PaperPilot uses a **serverless-first architecture** deployed on AWS:
+PaperPilot runs as a serverless backend on Azure:
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  Astro Frontend │────▶│    API Lambda   │────▶│   Worker Lambda │
-│   (SSR on AWS)  │     │    (FastAPI)    │     │  (Pipeline Jobs)│
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-                               │                        │
-                               ▼                        ▼
-                        ┌─────────────────┐     ┌─────────────────┐
-                        │    DynamoDB     │     │       S3        │
-                        │   (Job State)   │     │   (Artifacts)   │
-                        └─────────────────┘     └─────────────────┘
-                               │
-                               ▼
-                        ┌─────────────────┐
-                        │      SQS        │
-                        │  (Job Queue)    │
-                        └─────────────────┘
+┌────────────────────────────┐     ┌──────────────────────────┐     ┌──────────────────────────┐
+│  React/Vite Frontend       │────▶│  Azure Functions API     │────▶│  Azure Functions Worker  │
+│  (Static Web App)          │     │  (HTTP triggers)         │     │  (Service Bus trigger)   │
+└────────────────────────────┘     └──────────────────────────┘     └──────────────────────────┘
+                                        │            │                         │
+                                        │            │                         ▼
+                                        │            └───────────────┐  ┌──────────────────────┐
+                                        ▼                            └▶│  Azure Service Bus   │
+                               ┌──────────────────────┐                │  (Job queue)         │
+                               │  Azure Cosmos DB     │                └──────────────────────┘
+                               │  (Job state/events)  │
+                               └──────────────────────┘
+                                        │
+                                        ▼
+                               ┌──────────────────────┐
+                               │  Azure Blob Storage  │
+                               │  (Artifacts/results) │
+                               └──────────────────────┘
 ```
 
 ### Components
 
-- **Frontend** (`frontend/`): Astro SSR app for the web interface
-- **API Lambda** (`services/api/`): FastAPI for job creation and status queries
-- **Worker Lambda** (`services/worker/`): Processes search/rank/report jobs from SQS
+- **Frontend** (`frontend/`): React/Vite app for the web interface
+- **Azure Functions** (`azure-functions/`): HTTP API + Service Bus worker
 - **Core Library** (`paperpilot/`): Shared domain logic (search, ranking, reports)
 - **CLI** (`paperpilot/cli/`): Command-line interface for local usage
 
@@ -57,53 +58,35 @@ uv run paperpilot search "LLM Based Recommendation Systems" -n 30
 uv run paperpilot results snowball_results.json
 ```
 
-### Option 2: Local Serverless Development
-
-This mirrors the production AWS setup using LocalStack:
+### Option 2: Frontend Dev
 
 ```bash
-# Start full local environment (LocalStack + SAM API + Worker + Frontend)
-make dev
-
-# This opens a tmux session with:
-# - LocalStack (DynamoDB + SQS + S3)
-# - SAM local API on port 8000
-# - Worker poller
-# - Frontend on port 5173
+cd frontend
+npm install
+npm run dev
 ```
 
-To stop:
-```bash
-make dev-stop
-```
+### Option 3: Azure Functions Local (optional)
 
-### Option 3: Direct API Server (Legacy)
+If you have Azure Functions Core Tools installed:
 
 ```bash
-# Run FastAPI server directly (no AWS emulation)
-make api
-
-# In another terminal, run the frontend
-make frontend
+cd azure-functions
+func start
 ```
 
 ## Project Structure
 
 ```
 PaperPilot/
-├── paperpilot/          # Core library (domain logic)
-│   ├── api/             # Legacy monolith API (deprecated)
-│   ├── aws/             # Shared AWS utilities
-│   ├── cli/             # CLI commands
-│   └── core/            # Search, ranking, reports
-├── services/            # Lambda entrypoints
-│   ├── api/             # API Lambda (job creation, status)
-│   └── worker/          # Worker Lambda (pipeline processing)
-├── frontend/            # Astro SSR frontend
-├── infra/               # SAM templates and local dev config
-├── tests/               # Test suites
-├── docs/                # Documentation
-└── results/             # Example outputs (historical)
+├── azure-functions/      # Azure Functions entrypoint + modules
+├── frontend/             # React/Vite frontend
+├── paperpilot/           # Core library (domain logic)
+│   ├── api/              # Legacy monolith API (deprecated)
+│   ├── cli/              # CLI commands
+│   └── core/             # Search, ranking, reports
+├── tests/                # Test suites
+└── results/              # Example outputs (historical)
 ```
 
 ## Development
@@ -112,9 +95,8 @@ PaperPilot/
 
 - Python 3.13+
 - [uv](https://docs.astral.sh/uv/) for Python package management
-- Docker (for LocalStack and SAM local)
 - Node.js 18+ (for frontend)
-- AWS SAM CLI (for local Lambda emulation)
+- Azure Functions Core Tools (optional, for local Functions)
 
 ### Setup
 
@@ -135,23 +117,18 @@ cd frontend && npm install
 # Run all tests
 uv run pytest
 
-# Run by category
-uv run pytest -m unit          # Fast unit tests
-uv run pytest -m component     # Tests with mocked AWS
-uv run pytest -m integration   # Tests requiring LocalStack
-
 # Run with coverage
-uv run pytest --cov=paperpilot --cov=services
+uv run pytest --cov=paperpilot
 ```
 
 ### Code Quality
 
 ```bash
 # Format code
-uv run ruff format paperpilot services tests
+uv run ruff format paperpilot tests azure-functions
 
 # Lint
-uv run ruff check paperpilot services tests
+uv run ruff check paperpilot tests azure-functions
 
 # Type check
 uv run pyright
@@ -159,42 +136,34 @@ uv run pyright
 
 ## Deployment
 
-PaperPilot uses AWS SAM for deployment via CodePipeline:
-
-1. **Test Stage**: Runs linting, type checks, unit and component tests
-2. **Deploy Staging**: Builds and deploys to staging environment
-3. **E2E Tests**: Runs integration tests against staging
-4. **Manual Approval**: (Optional) Human gate before production
-5. **Deploy Production**: Deploys to production
-6. **Smoke Tests**: Verifies production health
-
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for detailed deployment instructions.
+- **Frontend**: GitHub Actions deploys to Azure Static Web Apps (`.github/workflows/azure-static-web-apps.yml`)
+- **Backend**: GitHub Actions deploys Azure Functions (`.github/workflows/azure-functions-deploy.yml`)
 
 ## Configuration
 
-### Environment Variables
+### Environment Variables (Azure Functions)
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `OPENAI_API_KEY` | OpenAI API key for LLM operations | Yes |
-| `AWS_ENDPOINT_URL` | LocalStack URL for local dev | Local only |
-| `JOBS_TABLE_NAME` | DynamoDB table name | Lambda |
-| `SQS_QUEUE_URL` | SQS queue URL | Lambda |
-| `RESULTS_BUCKET` | S3 bucket for artifacts | Lambda |
+| `OPENAI_API_KEY` | OpenAI API key for LLM operations | Yes (or Key Vault) |
+| `AZURE_COSMOS_ENDPOINT` | Cosmos DB endpoint | Yes |
+| `AZURE_COSMOS_KEY` | Cosmos DB key | Yes |
+| `AZURE_COSMOS_DATABASE` | Cosmos DB database name | Yes |
+| `AZURE_COSMOS_CONTAINER` | Cosmos DB container name | Yes |
+| `AZURE_SERVICE_BUS_CONNECTION_STRING` | Service Bus connection string | Yes |
+| `AZURE_SERVICE_BUS_QUEUE_NAME` | Service Bus queue name | Yes |
+| `AZURE_STORAGE_CONNECTION_STRING` | Blob storage connection string | Yes |
+| `AZURE_RESULTS_CONTAINER` | Blob container for results | Yes |
+| `AZURE_RESULTS_PREFIX` | Blob prefix for results | No |
+| `AZURE_KEY_VAULT_URL` | Key Vault URL (optional) | No |
+| `OPENAI_API_KEY_SECRET_NAME` | Key Vault secret name (optional) | No |
 
-### API Configuration
+## API Endpoints
 
-The frontend connects to the API via `API_BASE_URL`:
-- Local: `http://localhost:8000`
-- Production: Set in Lambda environment
-
-## API Documentation
-
-See [docs/API_CONTRACT.md](docs/API_CONTRACT.md) for the API contract between frontend and backend.
-
-Key endpoints:
 - `POST /api/pipeline` - Start a pipeline job
 - `GET /api/pipeline/{job_id}` - Get job status
+- `GET /api/jobs/{job_id}` - Raw job status
+- `GET /api/jobs/{job_id}/events` - Job event log
 - `GET /api/results` - List completed queries
 - `GET /api/results/{query}/all` - Get all results for a query
 

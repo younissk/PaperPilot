@@ -12,6 +12,11 @@ from .results import get_query_metadata, get_query_results, list_result_slugs
 bp = func.Blueprint()
 
 
+@bp.route(route="{*path}", methods=["OPTIONS"])
+def preflight_any(req: func.HttpRequest) -> func.HttpResponse:
+    return cors_preflight()
+
+
 @bp.route(route="health", methods=["GET", "OPTIONS"])
 def health_check(req: func.HttpRequest) -> func.HttpResponse:
     if req.method == "OPTIONS":

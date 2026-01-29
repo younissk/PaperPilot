@@ -55,18 +55,8 @@ VITE_API_BASE_URL=http://localhost:8000
 
 ## Deployment
 
-The frontend is deployed as a Lambda function using Lambda Web Adapter.
-See `infra/template.yaml` for the SAM configuration.
-
-### Local Docker Build
-
-```bash
-# Build the Docker image
-docker build -t paperpilot-frontend .
-
-# Run locally
-docker run -p 4321:4321 -e VITE_API_BASE_URL=http://host.docker.internal:8000 paperpilot-frontend
-```
+The frontend is deployed via Azure Static Web Apps using GitHub Actions.
+See `.github/workflows/azure-static-web-apps.yml` for the pipeline.
 
 ## Architecture
 

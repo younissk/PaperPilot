@@ -59,9 +59,9 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 markers = [
     "unit: fast unit tests with no external dependencies",
-    "component: component tests with mocked AWS",
-    "integration: integration tests requiring LocalStack or real AWS",
-    "e2e: end-to-end tests against staging AWS",
+    "component: component tests",
+    "integration: integration tests",
+    "e2e: end-to-end tests",
     "smoke: post-deploy smoke tests",
 ]
 filterwarnings = [
@@ -74,7 +74,7 @@ filterwarnings = [
 [tool.ruff]
 target-version = "py313"
 line-length = 100
-src = ["paperpilot", "services", "tests"]
+src = ["paperpilot", "azure-functions", "tests"]
 
 [tool.ruff.lint]
 select = [
@@ -101,7 +101,7 @@ known-first-party = ["paperpilot"]
 # pyright configuration
 # =============================================================================
 [tool.pyright]
-include = ["paperpilot", "services", "tests"]
+include = ["paperpilot", "azure-functions", "tests"]
 exclude = ["**/__pycache__", "results", "frontend", ".venv"]
 pythonVersion = "3.13"
 typeCheckingMode = "basic"
@@ -112,7 +112,7 @@ reportMissingTypeStubs = false
 # coverage configuration
 # =============================================================================
 [tool.coverage.run]
-source = ["paperpilot", "services"]
+source = ["paperpilot"]
 branch = true
 omit = [
     "*/tests/*",

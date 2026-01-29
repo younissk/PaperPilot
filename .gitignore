@@ -87,28 +87,6 @@ azure-functions/__blobstorage__/
 azure-functions/__queuestorage__/
 
 # =============================================================================
-# AWS SAM / Lambda
-# =============================================================================
-# SAM build artifacts
-.aws-sam/
-infra/.aws-sam/
-
-# Copied paperpilot packages during build (see buildspec*.yml)
-# These are vendored at build time for Lambda deployment
-services/api/paperpilot/
-services/worker/paperpilot/
-
-# Lambda layers
-.lambda-layers/
-
-# =============================================================================
-# LocalStack (Local Development)
-# =============================================================================
-# LocalStack volume data (if persistence enabled)
-.localstack/
-volume/
-
-# =============================================================================
 # Node.js / Frontend
 # =============================================================================
 node_modules/
