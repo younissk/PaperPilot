@@ -73,6 +73,15 @@
     display: flex;
     flex-direction: column;
   }
+
+  /* Hide default cursor on desktop for custom cursor */
+  @media (pointer: fine) {
+    *,
+    *::before,
+    *::after {
+      cursor: none !important;
+    }
+  }
 }
 
 /* Component styles */
