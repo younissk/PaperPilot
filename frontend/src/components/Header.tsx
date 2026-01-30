@@ -1,108 +1,126 @@
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router";
-import { useHealthCheck } from "@/hooks";
 
 /**
- * Header component with navigation and API health indicator.
- * Thin, calm design with white background.
+ * Header component with minimal brutalist navigation.
+ * Transparent background, full-screen mobile menu with animation.
  */
 export function Header() {
   const location = useLocation();
-  const { data: health, isLoading, error } = useHealthCheck();
-
-  const getHealthStatus = () => {
-    if (isLoading) {
-      return { status: "checking", text: "Checking...", color: "bg-yellow-400" };
-    }
-    if (error || !health) {
-      return { status: "offline", text: "Offline", color: "bg-red-400" };
-    }
-    return { status: "online", text: "Online", color: "bg-green-400" };
-  };
-
-  const healthStatus = getHealthStatus();
-
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const isActive = (path: string) => location.pathname === path;
-  const isHome = location.pathname === "/";
+
+  // Close menu on route change
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [location.pathname]);
+
+  // Prevent body scroll when menu is open
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isMenuOpen]);
 
   return (
-    <header className="bg-white border-b border-gray-200 h-12 flex items-center sticky top-0 z-50">
-      <div className="w-full max-w-7xl mx-auto flex items-center px-4">
-        {/* Logo */}
-        <Link
-          to="/"
-          className="font-semibold text-lg text-gray-900 no-underline hover:no-underline hover:text-primary-600 transition-colors"
-        >
-          PaperNavigator
-        </Link>
+    <>
+      <header className="bg-transparent h-12 flex items-center sticky top-0 z-50">
+        <div className="w-full max-w-7xl mx-auto flex items-center px-4">
+          {/* Logo */}
+          <Link
+            to="/"
+            className="font-medium text-base text-gray-900 no-underline hover:no-underline lowercase z-50"
+          >
+            paper-navigator
+          </Link>
 
-        {/* Monitoring indicator */}
-        <Link
-          to="/monitoring"
-          className="flex items-center gap-1.5 ml-4 no-underline hover:opacity-80 transition-opacity"
-          title="System status"
-        >
-          <span
-            className={`w-2 h-2 rounded-full ${healthStatus.color} ${
-              healthStatus.status === "checking" ? "animate-pulse" : ""
-            }`}
-          />
-          <span className="text-xs text-gray-500">
-            {healthStatus.text}
-          </span>
-        </Link>
+          {/* Desktop Navigation */}
+          <nav className="hidden sm:flex items-center gap-4 ml-auto">
+            <Link
+              to="/queries"
+              className={`text-sm font-medium no-underline transition-colors duration-200 lowercase ${
+                isActive("/queries")
+                  ? "text-gray-900"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              reports
+            </Link>
+            <Link
+              to="/about"
+              className={`text-sm font-medium no-underline transition-colors duration-200 lowercase ${
+                isActive("/about")
+                  ? "text-gray-900"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              about
+            </Link>
+          </nav>
 
-        {/* Navigation */}
-        <nav className="flex items-center gap-1 ml-auto">
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="sm:hidden ml-auto z-50 p-2 -mr-2"
+            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+          >
+            <div className="w-6 h-5 relative flex flex-col justify-between">
+              <span
+                className={`w-full h-0.5 bg-black transition-all duration-300 origin-center ${
+                  isMenuOpen ? "rotate-45 translate-y-2" : ""
+                }`}
+              />
+              <span
+                className={`w-full h-0.5 bg-black transition-all duration-300 ${
+                  isMenuOpen ? "opacity-0 scale-0" : ""
+                }`}
+              />
+              <span
+                className={`w-full h-0.5 bg-black transition-all duration-300 origin-center ${
+                  isMenuOpen ? "-rotate-45 -translate-y-2" : ""
+                }`}
+              />
+            </div>
+          </button>
+        </div>
+      </header>
+
+      {/* Mobile Menu Overlay */}
+      <div
+        className={`fixed inset-0 bg-white z-40 sm:hidden flex flex-col items-center justify-center transition-all duration-300 ${
+          isMenuOpen
+            ? "opacity-100 visible"
+            : "opacity-0 invisible pointer-events-none"
+        }`}
+      >
+        <nav className="flex flex-col items-center gap-8">
           <Link
             to="/queries"
-            className={`px-3 py-1.5 text-sm font-medium no-underline rounded-md transition-colors duration-200 ${
-              isActive("/queries")
-                ? "bg-primary-50 text-primary-700"
-                : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-            }`}
+            onClick={() => setIsMenuOpen(false)}
+            className={`text-5xl font-bold no-underline transition-all duration-300 lowercase ${
+              isActive("/queries") ? "text-gray-900" : "text-gray-400 hover:text-gray-900"
+            } ${isMenuOpen ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"}`}
+            style={{ transitionDelay: isMenuOpen ? "100ms" : "0ms" }}
           >
-            Public reports
+            reports
           </Link>
-          {isHome ? (
-            <a
-              href="#how-it-works"
-              className="px-3 py-1.5 text-sm font-medium no-underline rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors duration-200"
-            >
-              How it works
-            </a>
-          ) : (
-            <Link
-              to="/#how-it-works"
-              className="px-3 py-1.5 text-sm font-medium no-underline rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors duration-200"
-            >
-              How it works
-            </Link>
-          )}
-          <a
-            href="https://github.com/younisskandah/PaperPilot"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-3 py-1.5 text-sm font-medium no-underline rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors duration-200"
+          <Link
+            to="/about"
+            onClick={() => setIsMenuOpen(false)}
+            className={`text-5xl font-bold no-underline transition-all duration-300 lowercase ${
+              isActive("/about") ? "text-gray-900" : "text-gray-400 hover:text-gray-900"
+            } ${isMenuOpen ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"}`}
+            style={{ transitionDelay: isMenuOpen ? "200ms" : "0ms" }}
           >
-            GitHub
-          </a>
-          {isHome ? (
-            <a
-              href="#privacy"
-              className="px-3 py-1.5 text-sm font-medium no-underline rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors duration-200"
-            >
-              Privacy
-            </a>
-          ) : (
-            <Link
-              to="/#privacy"
-              className="px-3 py-1.5 text-sm font-medium no-underline rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors duration-200"
-            >
-              Privacy
-            </Link>
-          )}
+            about
+          </Link>
         </nav>
       </div>
-    </header>
+    </>
   );
 }

@@ -42,11 +42,19 @@ export default {
           "Arial",
           "sans-serif",
         ],
+        mono: [
+          "JetBrains Mono",
+          "Fira Code",
+          "SF Mono",
+          "Consolas",
+          "monospace",
+        ],
       },
       boxShadow: {
         sm: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
         md: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
         lg: "0 10px 15px -3px rgb(0 0 0 / 0.1)",
+        brutal: "3px 3px 0 #F3787A",
       },
       animation: {
         spin: "spin 0.8s linear infinite",

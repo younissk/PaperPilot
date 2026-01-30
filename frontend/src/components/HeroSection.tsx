@@ -1,18 +1,24 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate, Link } from "react-router";
+import { useNavigate } from "react-router";
 import { useMutation } from "@tanstack/react-query";
 import { startPipeline, slugifyQuery } from "@/lib/api";
 import { DEFAULT_PIPELINE_PARAMS } from "@/lib/config";
 import type { PipelineRequest } from "@/lib/types";
 
 const EXAMPLE_QUERIES = [
+  "effect of chatgpt on students",
   "RAG evaluation for medical QA",
   "synthetic data for recommender systems",
   "prompting for structured extraction",
 ];
 
+// Brutalist coral shadow styles
+const brutalShadow = { boxShadow: "3px 3px 0 #F3787A" };
+const brutalShadowSmall = { boxShadow: "1px 1px 0 #F3787A" };
+
 /**
- * Hero section with search input, example chips, and CTAs.
+ * Hero section with brutalist design.
+ * Full viewport height, large shadow text, marquee examples.
  */
 export function HeroSection() {
   const navigate = useNavigate();
@@ -49,66 +55,54 @@ export function HeroSection() {
     });
   };
 
-  const handleChipClick = (exampleQuery: string) => {
+  const handleExampleClick = (exampleQuery: string) => {
     setQuery(exampleQuery);
   };
 
+  const scrollToNextSection = () => {
+    const nextSection = document.getElementById("how-it-works");
+    if (nextSection) {
+      nextSection.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  // Double the items for seamless marquee loop
+  const marqueeItems = [...EXAMPLE_QUERIES, ...EXAMPLE_QUERIES];
+
   return (
-    <section className="py-16 md:py-24 px-4">
-      <div className="max-w-3xl mx-auto text-center">
-        {/* Headline */}
-        <h1 className="text-4xl md:text-5xl font-bold text-gray-900 leading-tight mb-4">
-          From query to survey, with citations
+    <section className="h-[calc(100vh-3rem)] flex flex-col px-4 pb-6">
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col justify-center max-w-4xl mx-auto w-full text-center">
+        {/* Headline with brutalist shadow */}
+        <h1 className="text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-bold text-gray-900 leading-tight mb-4 md:mb-6 text-shadow-brutal lowercase">
+          from query to full survey in minutes
         </h1>
 
         {/* Subtext */}
-        <p className="text-lg md:text-xl text-gray-600 mb-10 max-w-2xl mx-auto">
-          Get top papers, research angles, and open problems, with traceable
-          sources for every section.
+        <p className="text-sm sm:text-base md:text-lg text-gray-600 mb-8 md:mb-12 lowercase px-2">
+          get top papers, research angles and open problems, with traceable sources
         </p>
 
-        {/* Search Form */}
+        {/* Search Form - full width to match marquee */}
         <form onSubmit={handleSubmit} className="w-full">
-          <div className="flex gap-3 md:flex-col">
+          <div className="flex flex-col sm:flex-row gap-3">
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="form-input form-input-lg flex-1 shadow-md"
-              placeholder="Try: diffusion models for audio generation benchmarks"
+              className="form-input form-input-lg flex-1 border-2 border-black"
+              style={brutalShadow}
+              placeholder="try: effect of chatgpt on students"
               required
             />
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="btn btn-primary btn-lg whitespace-nowrap shadow-md"
+              className="btn btn-brutal btn-lg whitespace-nowrap w-full sm:w-auto"
+              style={brutalShadow}
             >
-              {mutation.isPending ? "Starting..." : "Generate report"}
+              {mutation.isPending ? "..." : "generate"}
             </button>
-          </div>
-
-          {/* Example Chips */}
-          <div className="flex flex-wrap justify-center gap-2 mt-4">
-            {EXAMPLE_QUERIES.map((example) => (
-              <button
-                key={example}
-                type="button"
-                onClick={() => handleChipClick(example)}
-                className="chip"
-              >
-                {example}
-              </button>
-            ))}
-          </div>
-
-          {/* Secondary CTA */}
-          <div className="mt-6">
-            <Link
-              to="/queries"
-              className="btn btn-secondary"
-            >
-              View demo report
-            </Link>
           </div>
         </form>
 
@@ -127,7 +121,49 @@ export function HeroSection() {
             </button>
           </div>
         )}
+
+        {/* Marquee Section - right under form */}
+        <div className="marquee-container mt-4">
+          <div
+            className="marquee-track cursor-pointer"
+            onClick={(e) => {
+              const target = e.target as HTMLElement;
+              if (target.classList.contains("marquee-item")) {
+                handleExampleClick(target.textContent || "");
+              }
+            }}
+          >
+            {marqueeItems.map((item, i) => (
+              <span key={`${item}-${i}`} className="flex items-center gap-6">
+                <span className="marquee-item hover:text-gray-600 transition-colors lowercase">
+                  {item}
+                </span>
+                <span
+                  className="w-3 h-3 rounded-full bg-black shrink-0"
+                  style={brutalShadowSmall}
+                />
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
+
+      {/* Scroll Down Triangle - at bottom of viewport */}
+      <button
+        onClick={scrollToNextSection}
+        className="mx-auto hover:translate-y-1 transition-transform"
+        aria-label="Scroll to next section"
+      >
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="black"
+          className="w-6 h-6"
+        >
+          <polygon points="12,20 2,8 22,8" />
+        </svg>
+      </button>
     </section>
   );
 }

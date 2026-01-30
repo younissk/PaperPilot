@@ -20,7 +20,7 @@
   }
 
   body {
-    font-family: theme("fontFamily.sans");
+    font-family: theme("fontFamily.mono");
     line-height: 1.6;
     color: theme("colors.gray.800");
     background-color: theme("colors.gray.50");
@@ -92,7 +92,7 @@
 
   /* Buttons */
   .btn {
-    @apply inline-flex items-center justify-center px-6 py-2 text-base font-medium border-none rounded-md cursor-pointer transition-all duration-200 no-underline;
+    @apply inline-flex items-center justify-center px-6 py-2 text-base font-medium border-none rounded-none cursor-pointer transition-all duration-200 no-underline;
   }
 
   .btn:disabled {
@@ -134,7 +134,7 @@
   }
 
   .form-input {
-    @apply w-full px-4 py-2 border border-gray-300 rounded-md text-base transition-colors duration-200;
+    @apply w-full px-4 py-2 border border-gray-300 rounded-none text-base transition-colors duration-200;
   }
 
   .form-input:focus {
@@ -320,5 +320,45 @@
 
   .accordion-toggle:hover {
     @apply bg-primary-50;
+  }
+
+  /* Brutalist button variant */
+  .btn-brutal {
+    @apply bg-black text-white;
+  }
+
+  .btn-brutal:hover:not(:disabled) {
+    @apply bg-gray-900;
+  }
+
+  /* Marquee animation for scrolling examples */
+  @keyframes marquee {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  .marquee-container {
+    @apply w-full overflow-hidden border-y border-black py-3;
+  }
+
+  .marquee-track {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    white-space: nowrap;
+    animation: marquee 25s linear infinite;
+  }
+
+  .marquee-track:hover {
+    animation-play-state: paused;
+  }
+
+  /* Brutalist text shadow for headlines */
+  .text-shadow-brutal {
+    text-shadow: 3px 3px 0 #F3787A;
   }
 }
