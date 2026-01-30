@@ -19,6 +19,8 @@ log = get_logger(__name__)
 
 # Timeout for OpenAI API calls (seconds)
 OPENAI_TIMEOUT_SECONDS = int(os.getenv("OPENAI_TIMEOUT_SECONDS", "60"))
+# OpenAI retry attempts for transient errors (429/5xx)
+OPENAI_MAX_RETRIES = int(os.getenv("OPENAI_MAX_RETRIES", "2"))
 
 # Async OpenAI client
 _async_client: AsyncOpenAI | None = None
@@ -31,6 +33,7 @@ def _get_async_client() -> AsyncOpenAI:
         _async_client = AsyncOpenAI(
             api_key=os.getenv("OPENAI_API_KEY"),
             timeout=OPENAI_TIMEOUT_SECONDS,
+            max_retries=OPENAI_MAX_RETRIES,
         )
     return _async_client
 
@@ -58,34 +61,32 @@ def group_by_tags(cards: list[PaperCard]) -> dict[str, list[PaperCard]]:
     return dict(groups)
 
 
+
+
 def _build_outline_prompt(query: str, cards: list[PaperCard]) -> str:
     """Build the prompt for generating the report outline."""
     # Group cards by tags for context
     tag_groups = group_by_tags(cards)
 
-    # Build a summary of papers by tag
-    tag_summary_lines = []
-    for tag, tag_cards in sorted(tag_groups.items(), key=lambda x: -len(x[1])):
-        paper_titles = [f"- {c.title[:60]}... [{c.id}]" for c in tag_cards[:5]]
-        tag_summary_lines.append(f"\n**{tag.upper()}** ({len(tag_cards)} papers):")
-        tag_summary_lines.extend(paper_titles)
-
-    tag_summary = "\n".join(tag_summary_lines)
+    # Compact tag distribution summary
+    tag_summary = ", ".join(
+        [f"{tag}:{len(tag_cards)}" for tag, tag_cards in sorted(tag_groups.items(), key=lambda x: -len(x[1]))]
+    )
 
     # Build cards summary (claims only for brevity)
     cards_summary = "\n".join([
-        f"[{c.id}] {c.claim}" for c in cards
+        f"[{c.id}] tags={','.join(c.paradigm_tags) if c.paradigm_tags else 'general'} | claim={c.claim}"
+        for c in cards
     ])
 
     return f"""You are creating an outline for a research survey report.
 
-Research Query: {query}
+Query: {query}
 
-Available Papers (with their main claims):
+Papers (claims + tags):
 {cards_summary}
 
-Papers grouped by research paradigm:
-{tag_summary}
+Tag distribution: {tag_summary}
 
 Create a report outline with 4-6 sections that organizes these papers into coherent themes.
 

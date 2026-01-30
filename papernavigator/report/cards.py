@@ -26,6 +26,8 @@ _openai_semaphore: asyncio.Semaphore | None = None
 
 # Timeout for OpenAI API calls (seconds)
 OPENAI_TIMEOUT_SECONDS = int(os.getenv("OPENAI_TIMEOUT_SECONDS", "30"))
+# OpenAI retry attempts for transient errors (429/5xx)
+OPENAI_MAX_RETRIES = int(os.getenv("OPENAI_MAX_RETRIES", "2"))
 
 
 def _get_async_client() -> AsyncOpenAI:
@@ -35,6 +37,7 @@ def _get_async_client() -> AsyncOpenAI:
         _async_client = AsyncOpenAI(
             api_key=os.getenv("OPENAI_API_KEY"),
             timeout=OPENAI_TIMEOUT_SECONDS,
+            max_retries=OPENAI_MAX_RETRIES,
         )
     return _async_client
 

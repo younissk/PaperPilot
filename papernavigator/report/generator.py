@@ -111,6 +111,8 @@ def select_top_k_papers(
     return selected, query
 
 
+
+
 def _sections_to_research_items(
     audit_results: list[AuditResult],
     original_sections: list[WrittenSection],

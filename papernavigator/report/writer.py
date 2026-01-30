@@ -19,10 +19,14 @@ log = get_logger(__name__)
 
 # Timeout for OpenAI API calls (seconds)
 OPENAI_TIMEOUT_SECONDS = int(os.getenv("OPENAI_TIMEOUT_SECONDS", "60"))
+# OpenAI retry attempts for transient errors (429/5xx)
+OPENAI_MAX_RETRIES = int(os.getenv("OPENAI_MAX_RETRIES", "2"))
 # Timeout per section write (seconds)
 WRITE_SECTION_TIMEOUT_SECONDS = int(os.getenv("WRITE_SECTION_TIMEOUT_SECONDS", "120"))
 # Retries per section write on timeout/errors
 WRITE_SECTION_MAX_RETRIES = int(os.getenv("WRITE_SECTION_MAX_RETRIES", "1"))
+# Optional concurrency for section writing (1 preserves sequential coherence)
+SECTION_WRITE_CONCURRENCY = int(os.getenv("SECTION_WRITE_CONCURRENCY", "1"))
 
 # Async OpenAI client
 _async_client: AsyncOpenAI | None = None
@@ -35,6 +39,7 @@ def _get_async_client() -> AsyncOpenAI:
         _async_client = AsyncOpenAI(
             api_key=os.getenv("OPENAI_API_KEY"),
             timeout=OPENAI_TIMEOUT_SECONDS,
+            max_retries=OPENAI_MAX_RETRIES,
         )
     return _async_client
 
@@ -45,20 +50,20 @@ def _format_cards_for_prompt(cards: list[PaperCard]) -> str:
     for card in cards:
         parts = [
             f"[{card.id}] {card.title}",
-            f"  Claim: {card.claim}",
+            f"claim={card.claim}",
         ]
         if card.data_benchmark:
-            parts.append(f"  Data/Benchmark: {card.data_benchmark}")
+            parts.append(f"data={card.data_benchmark}")
         if card.measured:
-            parts.append(f"  Measured: {card.measured}")
+            parts.append(f"measured={card.measured}")
         if card.limitation:
-            parts.append(f"  Limitation: {card.limitation}")
+            parts.append(f"limitation={card.limitation}")
         if card.key_quote:
-            parts.append(f"  Key Quote: \"{card.key_quote}\"")
+            parts.append(f"quote=\"{card.key_quote}\"")
 
-        card_strs.append("\n".join(parts))
+        card_strs.append(" | ".join(parts))
 
-    return "\n\n".join(card_strs)
+    return "\n".join(card_strs)
 
 
 def _build_section_prompt(section: SectionPlan, cards: list[PaperCard]) -> str:
@@ -70,41 +75,26 @@ def _build_section_prompt(section: SectionPlan, cards: list[PaperCard]) -> str:
     # Get example IDs for the prompt
     example_ids = [c.id for c in cards[:2]] if len(cards) >= 2 else [c.id for c in cards]
 
-    return f"""You are writing a section for a research survey report. 
+    return f"""Write a section for a research survey.
 
-SECTION TITLE: {section.title}
-
-TOPICS TO COVER:
+TITLE: {section.title}
+TOPICS:
 {bullets}
 
-AVAILABLE PAPERS (use ONLY these for citations):
+PAPERS (cite ONLY these IDs):
 {cards_text}
 
-===== CITATION EXAMPLES =====
+Example:
+"LLMs show promise in recommendation tasks [{example_ids[0] if example_ids else 'paper_id'}]. Recent frameworks combine user history with language models to improve personalization [{example_ids[1] if len(example_ids) > 1 else example_ids[0] if example_ids else 'paper_id'}]."
 
-GOOD EXAMPLE (FOLLOW THIS):
-"LLMs have demonstrated significant potential in recommendation tasks [{example_ids[0] if example_ids else 'paper_id'}]. Building on this, recent frameworks combine user history with language models to improve personalization [{example_ids[1] if len(example_ids) > 1 else example_ids[0] if example_ids else 'paper_id'}]."
+Rules:
+1) Every paragraph must include >=1 citation [paper_id].
+2) Every factual claim about a paper needs an immediate citation.
+3) Use ONLY IDs from: {valid_ids}
+4) If evidence is missing, write: "This aspect remains unclear from available abstracts."
+5) Do not invent citations.
 
-BAD EXAMPLE (DO NOT DO THIS - NO CITATIONS):
-"LLMs have demonstrated significant potential in recommendation tasks. Building on this, recent frameworks combine user history with language models."
-
-===== STRICT CITATION RULES =====
-1. EVERY paragraph MUST contain at least 1 citation in format [paper_id]
-2. EVERY factual claim about a paper MUST have a citation immediately after it
-3. Citations MUST come ONLY from these IDs: {valid_ids}
-4. If you cannot find evidence for a claim, write: "This aspect remains unclear from available abstracts."
-5. Do NOT make up citations or use IDs not in the list above
-6. Use the paper's claim and key quote to accurately represent what each paper contributes
-
-Write 2-4 paragraphs covering the topics above. Each paragraph MUST:
-- Make a clear point about the research theme
-- Include AT LEAST ONE citation [paper_id] per paragraph
-- Support claims with specific citations immediately after the claim
-- Be concise and academic in tone
-
-CRITICAL: Every paragraph MUST have at least one citation. Follow the GOOD EXAMPLE format.
-
-Return ONLY the section content (no title, no JSON wrapper)."""
+Write 2-4 concise, academic paragraphs. Return ONLY the section text."""
 
 
 def extract_cited_ids(text: str) -> list[str]:
@@ -409,7 +399,7 @@ async def write_all_sections(
     if progress_callback:
         progress_callback(0, total_sections, f"Starting to write {total_sections} sections...")
 
-    for i, section in enumerate(outline_sections):
+    async def _write_one(idx: int, section: SectionPlan) -> tuple[int, WrittenSection]:
         # Get cards for this section
         section_cards = [
             card_lookup[pid]
@@ -423,7 +413,7 @@ async def write_all_sections(
             log.debug("using_all_cards_for_section", section=section.title)
 
         if progress_callback:
-            progress_callback(i, total_sections, f"Writing section {i+1}/{total_sections}: {section.title}")
+            progress_callback(idx, total_sections, f"Writing section {idx+1}/{total_sections}: {section.title}")
 
         written: WrittenSection | None = None
         for attempt in range(WRITE_SECTION_MAX_RETRIES + 1):
@@ -447,11 +437,11 @@ async def write_all_sections(
                 )
                 if progress_callback:
                     progress_callback(
-                        i,
+                        idx,
                         total_sections,
                         (
                             "WARNING: Writing timed out for section "
-                            f"{i+1}/{total_sections}: {section.title} "
+                            f"{idx+1}/{total_sections}: {section.title} "
                             f"(attempt {attempt + 1})"
                         ),
                     )
@@ -464,11 +454,11 @@ async def write_all_sections(
                 )
                 if progress_callback:
                     progress_callback(
-                        i,
+                        idx,
                         total_sections,
                         (
                             "WARNING: Writing failed for section "
-                            f"{i+1}/{total_sections}: {section.title} "
+                            f"{idx+1}/{total_sections}: {section.title} "
                             f"(attempt {attempt + 1})"
                         ),
                     )
@@ -490,12 +480,30 @@ async def write_all_sections(
                 paper_ids_used=[],
             )
 
-        written_sections.append(written)
-
         if progress_callback:
-            progress_callback(i + 1, total_sections, f"Completed section {i+1}/{total_sections}: {section.title}")
+            progress_callback(idx + 1, total_sections, f"Completed section {idx+1}/{total_sections}: {section.title}")
 
-    return written_sections
+        return idx, written
+
+    if SECTION_WRITE_CONCURRENCY <= 1:
+        for i, section in enumerate(outline_sections):
+            _, written = await _write_one(i, section)
+            written_sections.append(written)
+        return written_sections
+
+    semaphore = asyncio.Semaphore(SECTION_WRITE_CONCURRENCY)
+
+    async def _runner(idx: int, section: SectionPlan) -> tuple[int, WrittenSection]:
+        async with semaphore:
+            return await _write_one(idx, section)
+
+    tasks = [asyncio.create_task(_runner(i, section)) for i, section in enumerate(outline_sections)]
+    results: list[WrittenSection | None] = [None] * total_sections
+    for task in asyncio.as_completed(tasks):
+        idx, written = await task
+        results[idx] = written
+
+    return [r for r in results if r is not None]
 
 
 async def write_introduction(query: str, cards: list[PaperCard]) -> str:

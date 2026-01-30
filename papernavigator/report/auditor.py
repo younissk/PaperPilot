@@ -16,10 +16,14 @@ from openai import AsyncOpenAI
 
 # Timeout for OpenAI API calls (seconds)
 OPENAI_TIMEOUT_SECONDS = int(os.getenv("OPENAI_TIMEOUT_SECONDS", "60"))
+# OpenAI retry attempts for transient errors (429/5xx)
+OPENAI_MAX_RETRIES = int(os.getenv("OPENAI_MAX_RETRIES", "2"))
 # Timeout per audit section (seconds) to avoid indefinite hangs
 AUDIT_SECTION_TIMEOUT_SECONDS = int(os.getenv("AUDIT_SECTION_TIMEOUT_SECONDS", "120"))
 # Retries for audit timeouts/errors
 AUDIT_SECTION_MAX_RETRIES = int(os.getenv("AUDIT_SECTION_MAX_RETRIES", "1"))
+# Optional concurrency for auditing (no quality impact)
+AUDIT_CONCURRENCY = int(os.getenv("AUDIT_CONCURRENCY", "2"))
 
 from papernavigator.logging import get_logger
 from papernavigator.report.models import (
@@ -59,6 +63,7 @@ def _get_async_client() -> AsyncOpenAI:
         _async_client = AsyncOpenAI(
             api_key=os.getenv("OPENAI_API_KEY"),
             timeout=OPENAI_TIMEOUT_SECONDS,
+            max_retries=OPENAI_MAX_RETRIES,
         )
     return _async_client
 
@@ -68,20 +73,19 @@ def _format_cards_for_audit(cards: list[PaperCard]) -> str:
     card_strs = []
     for card in cards:
         parts = [
-            f"[{card.id}]",
-            f"  Title: {card.title}",
-            f"  Claim: {card.claim}",
+            f"[{card.id}] {card.title}",
+            f"claim={card.claim}",
         ]
         if card.key_quote:
-            parts.append(f"  Quote: \"{card.key_quote}\"")
+            parts.append(f"quote=\"{card.key_quote}\"")
         if card.data_benchmark:
-            parts.append(f"  Data: {card.data_benchmark}")
+            parts.append(f"data={card.data_benchmark}")
         if card.measured:
-            parts.append(f"  Measured: {card.measured}")
+            parts.append(f"measured={card.measured}")
 
-        card_strs.append("\n".join(parts))
+        card_strs.append(" | ".join(parts))
 
-    return "\n\n".join(card_strs)
+    return "\n".join(card_strs)
 
 
 def _build_audit_prompt(section: WrittenSection, cards: list[PaperCard]) -> str:
@@ -92,53 +96,29 @@ def _build_audit_prompt(section: WrittenSection, cards: list[PaperCard]) -> str:
     # Extract existing citations from original text
     original_citations = extract_cited_ids(section.content)
 
-    return f"""You are auditing a research survey section for citation accuracy.
+    return f"""Audit a survey section for citation accuracy.
 
-SECTION TITLE: {section.title}
-
-SECTION TEXT:
+TITLE: {section.title}
+TEXT:
 {section.content}
 
-ORIGINAL CITATIONS FOUND: {original_citations}
+ORIGINAL CITATIONS: {original_citations}
 
-AVAILABLE PAPER EVIDENCE:
+EVIDENCE (use ONLY these IDs):
 {cards_text}
 
-AUDIT TASK:
-For each sentence in the section that makes a factual claim:
-1. If it has a citation [paper_id], check if the paper supports that claim
-2. If the citation doesn't match, suggest a fix with the CORRECT citation
-3. If a factual claim has NO citation, ADD an appropriate citation from: {valid_ids}
-4. Flag sentences with invalid citations not in the list above
+Task:
+- For each factual sentence, verify citations; fix mismatches.
+- Add missing citations from: {valid_ids}
+- Flag invalid citations.
 
-===== CRITICAL CITATION PRESERVATION RULES =====
-1. PRESERVE all existing citations [paper_id] from the original text
-2. If you revise a sentence, KEEP its citation
-3. If you must remove a sentence, MOVE its citation to a related sentence
-4. If a factual claim lacks a citation, ADD one from available papers
-5. The revised_text MUST contain AT LEAST as many citations as the original ({len(original_citations)} citations)
-6. EVERY paragraph in revised_text MUST have at least 1 citation
+Preservation rules (must follow):
+1) Keep all original citations (move if needed).
+2) revised_text must have >= {len(original_citations)} citations.
+3) Every paragraph in revised_text must include >=1 citation.
 
-Return JSON with this structure:
-{{
-  "sentences": [
-    {{
-      "sentence": "The exact sentence from the text",
-      "supported": true/false,
-      "cited_ids": ["W123"],
-      "issue": "Description of problem (null if supported)",
-      "suggested_fix": "Revised sentence WITH CITATION (null if supported)"
-    }}
-  ],
-  "revised_text": "The full section with ALL citations preserved and added where needed"
-}}
-
-Guidelines:
-- NEVER remove a citation without moving it elsewhere
-- Add citations to unsupported factual claims
-- If a sentence says "unclear from abstracts", that's acceptable
-- In revised_text, ensure EVERY paragraph has at least one citation [paper_id]
-- Use the paper's claim and key quote to match citations accurately"""
+Return JSON:
+{{"sentences":[{{"sentence":"","supported":true,"cited_ids":["W123"],"issue":null,"suggested_fix":null}}],"revised_text":""}}"""
 
 
 async def audit_section(
@@ -336,7 +316,7 @@ async def audit_all_sections(
     if progress_callback:
         progress_callback(0, total_sections, f"Starting to audit {total_sections} sections...")
 
-    for i, section in enumerate(sections):
+    async def _audit_one(idx: int, section: WrittenSection) -> tuple[int, AuditResult]:
         # Get cards that were used in this section
         section_cards = [
             card_lookup[pid]
@@ -349,7 +329,7 @@ async def audit_all_sections(
             section_cards = all_cards
 
         if progress_callback:
-            progress_callback(i, total_sections, f"Auditing section {i+1}/{total_sections}: {section.title}")
+            progress_callback(idx, total_sections, f"Auditing section {idx+1}/{total_sections}: {section.title}")
 
         result: AuditResult | None = None
         for attempt in range(AUDIT_SECTION_MAX_RETRIES + 1):
@@ -368,11 +348,11 @@ async def audit_all_sections(
                 )
                 if progress_callback:
                     progress_callback(
-                        i,
+                        idx,
                         total_sections,
                         (
                             "WARNING: Audit timed out for section "
-                            f"{i+1}/{total_sections}: {section.title} "
+                            f"{idx+1}/{total_sections}: {section.title} "
                             f"(attempt {attempt + 1})"
                         ),
                     )
@@ -385,11 +365,11 @@ async def audit_all_sections(
                 )
                 if progress_callback:
                     progress_callback(
-                        i,
+                        idx,
                         total_sections,
                         (
                             "WARNING: Audit failed for section "
-                            f"{i+1}/{total_sections}: {section.title} "
+                            f"{idx+1}/{total_sections}: {section.title} "
                             f"(attempt {attempt + 1})"
                         ),
                     )
@@ -415,13 +395,37 @@ async def audit_all_sections(
                 unsupported_count=0,
                 revised_count=0,
             )
-        results.append(result)
-
-        total_supported += result.supported_count
-        total_unsupported += result.unsupported_count
 
         if progress_callback:
-            progress_callback(i + 1, total_sections, f"Completed audit {i+1}/{total_sections}: {section.title}")
+            progress_callback(idx + 1, total_sections, f"Completed audit {idx+1}/{total_sections}: {section.title}")
+
+        return idx, result
+
+    if AUDIT_CONCURRENCY <= 1:
+        for i, section in enumerate(sections):
+            _, result = await _audit_one(i, section)
+            results.append(result)
+            total_supported += result.supported_count
+            total_unsupported += result.unsupported_count
+    else:
+        semaphore = asyncio.Semaphore(AUDIT_CONCURRENCY)
+
+        async def _runner(idx: int, section: WrittenSection) -> tuple[int, AuditResult]:
+            async with semaphore:
+                return await _audit_one(idx, section)
+
+        tasks = [asyncio.create_task(_runner(i, section)) for i, section in enumerate(sections)]
+        ordered: list[AuditResult | None] = [None] * total_sections
+        for task in asyncio.as_completed(tasks):
+            idx, result = await task
+            ordered[idx] = result
+
+        for result in ordered:
+            if result is None:
+                continue
+            results.append(result)
+            total_supported += result.supported_count
+            total_unsupported += result.unsupported_count
 
     log.info(
         "batch_audit_complete",
