@@ -1,0 +1,91 @@
+# Deploy Azure infrastructure (Bicep) for PaperPilot
+name: Deploy Azure Infra
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'infra/**'
+      - '.github/workflows/azure-infra-deploy.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: paperpilot-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy-infra:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Bicep (Resource Group)
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            set -euo pipefail
+            az bicep version
+            az deployment group create \
+              -g PaperPilot \
+              -f infra/main.bicep \
+              -p infra/params/prod.bicepparam
+
+      # ----------------------------------------------------------------------
+      # Phase 1 wiring:
+      # - Attach existing user-assigned identity to Function App
+      # - Use that identity for Key Vault references
+      # - Grant the identity read access to secrets
+      # - Set selected app settings to Key Vault references (no secret values in git)
+      # ----------------------------------------------------------------------
+      - name: Wire Key Vault references (identity, access, app settings)
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            set -euo pipefail
+
+            RG="PaperPilot"
+            FUNC_APP="paperpilot-api"
+            UAI_NAME="paperpilot-api-id-97d1"
+            KV_NAME="paperpilot-kv-prod"
+
+            KV_URI="https://${KV_NAME}.vault.azure.net"
+            SUB_ID="$(az account show --query id -o tsv)"
+            UAI_ID="$(az identity show -g "${RG}" -n "${UAI_NAME}" --query id -o tsv)"
+            UAI_PRINCIPAL_ID="$(az identity show -g "${RG}" -n "${UAI_NAME}" --query principalId -o tsv)"
+            KV_ID="$(az keyvault show -g "${RG}" -n "${KV_NAME}" --query id -o tsv)"
+
+            echo "Attaching user-assigned identity to Function App..."
+            az functionapp identity assign -g "${RG}" -n "${FUNC_APP}" --identities "${UAI_ID}" 1>/dev/null
+
+            echo "Setting Key Vault reference identity to user-assigned identity..."
+            az resource update \
+              --ids "/subscriptions/${SUB_ID}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${FUNC_APP}" \
+              --set keyVaultReferenceIdentity="${UAI_ID}" 1>/dev/null || true
+
+            echo "Granting Key Vault Secrets User role to identity..."
+            az role assignment create \
+              --assignee-object-id "${UAI_PRINCIPAL_ID}" \
+              --assignee-principal-type ServicePrincipal \
+              --role "Key Vault Secrets User" \
+              --scope "${KV_ID}" 1>/dev/null || true
+
+            echo "Setting app settings to Key Vault references (secrets must exist in KV)..."
+            az functionapp config appsettings set -g "${RG}" -n "${FUNC_APP}" --settings \
+              "OPENAI_API_KEY=@Microsoft.KeyVault(SecretUri=${KV_URI}/secrets/OPENAI-API-KEY)" \
+              "AZURE_COSMOS_KEY=@Microsoft.KeyVault(SecretUri=${KV_URI}/secrets/AZURE-COSMOS-KEY)" \
+              "AZURE_SERVICE_BUS_CONNECTION_STRING=@Microsoft.KeyVault(SecretUri=${KV_URI}/secrets/AZURE-SERVICE-BUS-CONNECTION-STRING)" \
+              "AzureWebJobsStorage=@Microsoft.KeyVault(SecretUri=${KV_URI}/secrets/AZURE-WEBJOBS-STORAGE)" \
+              "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING=@Microsoft.KeyVault(SecretUri=${KV_URI}/secrets/WEBSITE-CONTENTAZUREFILECONNECTIONSTRING)" 1>/dev/null
+

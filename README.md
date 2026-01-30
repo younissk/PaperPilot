@@ -136,8 +136,8 @@ uv run pyright
 
 ## Deployment
 
-- **Frontend**: GitHub Actions deploys to Azure Static Web Apps (`.github/workflows/azure-static-web-apps.yml`)
-- **Backend**: GitHub Actions deploys Azure Functions (`.github/workflows/azure-functions-deploy.yml`)
+- **Infra (backend)**: Bicep + GitHub Actions (`infra/`, `.github/workflows/azure-infra-deploy.yml`)
+- **Backend code**: GitHub Actions deploys Azure Functions (`.github/workflows/azure-functions-deploy.yml`)
 
 ## Configuration
 
@@ -157,6 +157,13 @@ uv run pyright
 | `AZURE_RESULTS_PREFIX` | Blob prefix for results | No |
 | `AZURE_KEY_VAULT_URL` | Key Vault URL (optional) | No |
 | `OPENAI_API_KEY_SECRET_NAME` | Key Vault secret name (optional) | No |
+
+## Infrastructure as Code (recommended)
+
+The backend Azure infrastructure is being migrated to **Bicep** under `infra/` so the repo becomes the source of truth (PR-reviewed), reducing portal drift.
+
+- Start here: `infra/README.md`
+- Resource Group (prod): `PaperPilot`
 
 ## API Endpoints
 

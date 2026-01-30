@@ -12,6 +12,10 @@ on:
       - '.github/workflows/azure-functions-deploy.yml'
   workflow_dispatch:  # Allow manual trigger
 
+concurrency:
+  group: paperpilot-prod
+  cancel-in-progress: false
+
 env:
   AZURE_FUNCTIONAPP_NAME: 'paperpilot-api'
   PYTHON_VERSION: '3.12'
