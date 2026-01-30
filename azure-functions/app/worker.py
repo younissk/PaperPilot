@@ -76,7 +76,11 @@ def process_job(job_id: str, job_type: str, payload: dict[str, Any]) -> tuple[di
             return existing_job.get("result", {}), existing_job.get("events", []), False, True
         # Check if job is running but stale (stuck)
         if existing_status == "running":
-            current_phase = (existing_job.get("progress") or {}).get("phase")
+            progress = existing_job.get("progress") or {}
+            current_phase = progress.get("phase")
+            step_name = (progress.get("step_name") or "").lower()
+            progress_message = (progress.get("message") or "").lower()
+            is_queued_marker = "queued" in step_name or "queued" in progress_message
             if stage and current_phase in phase_order and stage in phase_order:
                 if phase_order[stage] < phase_order[current_phase] and not is_job_stale(existing_job):
                     logger.warning(
@@ -87,8 +91,11 @@ def process_job(job_id: str, job_type: str, payload: dict[str, Any]) -> tuple[di
                     )
                     return {}, existing_job.get("events", []), False, False
             if stage and current_phase == stage and not is_job_stale(existing_job):
-                logger.warning("Job %s stage '%s' already running, skipping duplicate message", job_id, stage)
-                return {}, existing_job.get("events", []), False, False
+                if is_queued_marker:
+                    logger.info("Job %s stage '%s' is queued; allowing execution", job_id, stage)
+                else:
+                    logger.warning("Job %s stage '%s' already running, skipping duplicate message", job_id, stage)
+                    return {}, existing_job.get("events", []), False, False
             if is_job_stale(existing_job):
                 logger.warning("Job %s is stale (running for too long), allowing retry", job_id)
                 # Continue processing - job will be re-run

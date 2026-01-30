@@ -306,9 +306,10 @@ export function ProgressIndicator({
     percent = (status.phase_progress / status.phase_total) * 100;
   }
 
+  const queuedHint = (status.progress_message || "").toLowerCase().startsWith("queued");
   // Phase details
   let details = "";
-  if (status.status === "queued") {
+  if (status.status === "queued" || queuedHint) {
     const queuedPhase = phase || "search";
     details = `queued for ${queuedPhase}`;
   } else if (phase === "search") {
