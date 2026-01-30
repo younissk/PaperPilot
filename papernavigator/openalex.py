@@ -500,6 +500,61 @@ async def search_related_works(
     return works
 
 
+async def search_papers(
+    session: aiohttp.ClientSession,
+    queries: list[str],
+    num_results_per_query: int = 10,
+    min_citations: int = 5,
+) -> list[dict[str, Any]]:
+    """Search OpenAlex for papers matching multiple queries concurrently.
+    
+    This is the main entry point for using OpenAlex as a seeding source.
+    Returns results in a format compatible with the filter stage.
+    
+    Args:
+        session: aiohttp ClientSession
+        queries: List of search query strings
+        num_results_per_query: Maximum number of results per query
+        min_citations: Minimum citation count filter (helps quality)
+        
+    Returns:
+        List of paper dicts with keys: id, title, abstract, publication_year,
+        cited_by_count, source_query, and the original OpenAlex URL
+    """
+    async def search_single_query(query: str) -> list[dict[str, Any]]:
+        """Search for a single query and tag results with source_query."""
+        works = await search_related_works(
+            session, 
+            query, 
+            limit=num_results_per_query,
+            min_citations=min_citations,
+            verbose=False
+        )
+        
+        # Tag each result with the source query
+        for work in works:
+            work["source_query"] = query
+        
+        return works
+    
+    # Search all queries concurrently
+    tasks = [search_single_query(q) for q in queries]
+    results_per_query = await asyncio.gather(*tasks)
+    
+    # Flatten results
+    all_results: list[dict[str, Any]] = []
+    for results in results_per_query:
+        all_results.extend(results)
+    
+    logger.debug(
+        "OpenAlex search complete",
+        num_queries=len(queries),
+        total_results=len(all_results)
+    )
+    
+    return all_results
+
+
 async def get_work_with_refs_check(
     session: aiohttp.ClientSession,
     openalex_id: str

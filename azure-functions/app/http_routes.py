@@ -123,7 +123,8 @@ def create_job_endpoint(req: func.HttpRequest) -> func.HttpResponse:
         if not job_id:
             return json_response({"error": "Failed to create job. Database may be unavailable."}, status=503)
 
-        enqueue_job(job_id, job_type, payload)
+        if not enqueue_job(job_id, job_type, payload):
+            return json_response({"error": "Failed to enqueue job. Service Bus may be unavailable."}, status=503)
 
         return json_response(
             {
@@ -156,7 +157,8 @@ def start_pipeline(req: func.HttpRequest) -> func.HttpResponse:
         if not job_id:
             return json_response({"error": "Failed to create job. Database may be unavailable."}, status=503)
 
-        enqueue_job(job_id, "pipeline", payload)
+        if not enqueue_job(job_id, "pipeline", payload):
+            return json_response({"error": "Failed to enqueue job. Service Bus may be unavailable."}, status=503)
 
         return json_response(
             {
@@ -189,7 +191,8 @@ def start_search(req: func.HttpRequest) -> func.HttpResponse:
         if not job_id:
             return json_response({"error": "Failed to create job. Database may be unavailable."}, status=503)
 
-        enqueue_job(job_id, "search", payload)
+        if not enqueue_job(job_id, "search", payload):
+            return json_response({"error": "Failed to enqueue job. Service Bus may be unavailable."}, status=503)
 
         return json_response(
             {

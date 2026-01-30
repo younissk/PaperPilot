@@ -169,12 +169,15 @@ def append_job_event(
     update_job_document(job_id, {"events": events, "updated_at": now_iso()})
 
 
-def enqueue_job(job_id: str, job_type: str, payload: dict[str, Any]) -> None:
+def enqueue_job(job_id: str, job_type: str, payload: dict[str, Any]) -> bool:
     from azure.servicebus import ServiceBusMessage
 
     if not SERVICE_BUS_CONNECTION:
-        logger.warning("Service Bus connection string not set; skipping enqueue")
-        return
+        msg = "Service Bus connection string not set; cannot enqueue job"
+        logger.error(msg)
+        append_job_event(job_id, "job_enqueue_failed", "error", msg)
+        update_job_progress(job_id, "failed", "error", 0, msg, error=msg)
+        return False
 
     message_body = json.dumps({
         "job_id": job_id,
@@ -182,9 +185,16 @@ def enqueue_job(job_id: str, job_type: str, payload: dict[str, Any]) -> None:
         "payload": payload,
     })
 
-    with get_service_bus_client() as sb_client:
-        with sb_client.get_queue_sender(QUEUE_NAME) as sender:
-            sender.send_messages(ServiceBusMessage(message_body))
+    try:
+        with get_service_bus_client() as sb_client:
+            with sb_client.get_queue_sender(QUEUE_NAME) as sender:
+                sender.send_messages(ServiceBusMessage(message_body))
+    except Exception as exc:
+        msg = f"Failed to enqueue job: {exc}"
+        logger.exception("Service Bus enqueue failed for job %s", job_id)
+        append_job_event(job_id, "job_enqueue_failed", "error", msg)
+        update_job_progress(job_id, "failed", "error", 0, msg, error=str(exc))
+        return False
 
     append_job_event(
         job_id,
@@ -193,6 +203,7 @@ def enqueue_job(job_id: str, job_type: str, payload: dict[str, Any]) -> None:
         "Job enqueued to Service Bus",
         queue=QUEUE_NAME,
     )
+    return True
 
 
 def update_job_progress(

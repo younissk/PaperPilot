@@ -17,6 +17,48 @@ from .utils import is_job_stale, load_openai_api_key
 bp = func.Blueprint()
 
 
+def _extract_dead_letter_details(msg: func.ServiceBusMessage) -> tuple[str | None, str | None]:
+    reason = getattr(msg, "dead_letter_reason", None)
+    description = getattr(msg, "dead_letter_error_description", None)
+
+    if not reason or not description:
+        props = getattr(msg, "user_properties", None) or getattr(msg, "application_properties", None) or {}
+        if not reason:
+            reason = props.get("DeadLetterReason") or props.get(b"DeadLetterReason")
+        if not description:
+            description = props.get("DeadLetterErrorDescription") or props.get(b"DeadLetterErrorDescription")
+
+    return reason, description
+
+
+def _mark_job_failed_from_dlq(job_id: str, reason: str | None, description: str | None, message_id: str | None) -> None:
+    job = get_job(job_id)
+    if not job:
+        logger.warning("DLQ message for unknown job %s", job_id)
+        return
+
+    status = job.get("status")
+    if status in ("completed", "failed"):
+        logger.info("DLQ message for job %s already %s", job_id, status)
+        return
+
+    reason_text = reason or "DeadLettered"
+    desc_text = f" {description}" if description else ""
+    message = f"Job dead-lettered: {reason_text}.{desc_text}".strip()
+
+    events = job.get("events", []) or []
+    events = append_event(
+        events,
+        "job_failed",
+        "error",
+        message,
+        dead_letter_reason=reason,
+        dead_letter_error_description=description,
+        message_id=message_id,
+    )
+    update_job_progress(job_id, "failed", "error", 0, message, events=events, error=message)
+
+
 def process_job(job_id: str, job_type: str, payload: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]], bool]:
     """Process a job and return (result, events, was_processed).
     
@@ -129,3 +171,26 @@ def process_job_message(msg: func.ServiceBusMessage):
                 query = job_payload.get("query", "") if job_payload else ""
                 send_failure_email(notification_email, query, job_id, str(exc))
         raise
+
+
+@bp.service_bus_queue_trigger(
+    arg_name="msg",
+    queue_name=f"{QUEUE_NAME}/$DeadLetterQueue",
+    connection="AZURE_SERVICE_BUS_CONNECTION_STRING",
+)
+def process_deadletter_message(msg: func.ServiceBusMessage):
+    """Mark jobs as failed when their messages are dead-lettered."""
+    try:
+        body = msg.get_body().decode("utf-8")
+        payload = json.loads(body)
+    except Exception as exc:
+        logger.exception("Failed to parse dead-letter message body: %s", exc)
+        return
+
+    job_id = payload.get("job_id")
+    if not job_id:
+        logger.warning("Dead-letter message missing job_id: %s", payload)
+        return
+
+    reason, description = _extract_dead_letter_details(msg)
+    _mark_job_failed_from_dlq(job_id, reason, description, getattr(msg, "message_id", None))

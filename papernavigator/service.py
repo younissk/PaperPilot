@@ -25,6 +25,7 @@ from papernavigator.openalex import (
     get_work_details,
     resolve_arxiv_to_openalex,
     resolve_by_title,
+    search_papers as search_openalex,
 )
 from papernavigator.profiler import generate_query_profile
 from papernavigator.search import search_all_queries
@@ -66,12 +67,17 @@ async def run_search(
             progress_callback(1, "Augmenting Search Query", 0, 0, "Creating query variants...", 0, max_iterations)
         augmented_queries, _ = await augment_search(query)
 
-        # Step 2: Search arXiv for all query variants CONCURRENTLY
+        # Step 2: Search arXiv AND OpenAlex in parallel for all query variants
         if progress_callback:
-            progress_callback(2, "Searching arXiv", 0, len(augmented_queries), f"Searching {len(augmented_queries)} query variants...", 0, max_iterations)
-        feeds = await search_all_queries(session, augmented_queries, num_results)
+            progress_callback(2, "Searching Sources", 0, len(augmented_queries), f"Searching arXiv + OpenAlex for {len(augmented_queries)} query variants...", 0, max_iterations)
+        
+        # Run both searches concurrently
+        arxiv_task = search_all_queries(session, augmented_queries, num_results)
+        openalex_task = search_openalex(session, augmented_queries, num_results)
+        
+        feeds, openalex_results = await asyncio.gather(arxiv_task, openalex_task)
 
-        # Collect all results
+        # Collect arXiv results
         all_results: list[ReducedArxivEntry] = []
 
         for idx, (search_query, feed) in enumerate(zip(augmented_queries, feeds), 1):
@@ -89,9 +95,39 @@ async def run_search(
                     summary=entry.summary,
                     link=html_link or pdf_link,
                     source_query=search_query,
+                    source="arxiv",
                 ))
-            if progress_callback:
-                progress_callback(2, "Searching arXiv", idx, len(augmented_queries), f"Completed {idx} of {len(augmented_queries)} queries, found {len(all_results)} papers", 0, max_iterations)
+        
+        arxiv_count = len(all_results)
+        
+        # Convert and add OpenAlex results
+        for work in openalex_results:
+            openalex_id = work.get("id", "").replace("https://openalex.org/", "")
+            all_results.append(ReducedArxivEntry(
+                title=work.get("title", ""),
+                updated=str(work.get("publication_year", "")),
+                summary=work.get("abstract") or "",
+                link=work.get("id"),  # OpenAlex URL
+                source_query=work.get("source_query", ""),
+                source="openalex",
+                openalex_id=openalex_id if openalex_id else None,
+            ))
+        
+        openalex_count = len(all_results) - arxiv_count
+        
+        # Deduplicate by title (case-insensitive)
+        seen_titles: set[str] = set()
+        unique_results: list[ReducedArxivEntry] = []
+        for result in all_results:
+            title_lower = result.title.lower().strip()
+            if title_lower not in seen_titles:
+                seen_titles.add(title_lower)
+                unique_results.append(result)
+        
+        all_results = unique_results
+        
+        if progress_callback:
+            progress_callback(2, "Searching Sources", len(augmented_queries), len(augmented_queries), f"Found {arxiv_count} from arXiv, {openalex_count} from OpenAlex ({len(all_results)} unique)", 0, max_iterations)
 
         # Step 3: Filter results for relevance (CONCURRENT LLM calls)
         if progress_callback:
@@ -144,11 +180,14 @@ async def _resolve_papers_to_openalex(
     filtered_results: list[ReducedArxivEntry],
     progress_callback: Callable[[int, str, int, int, str, int, int], None] | None = None,
 ) -> list[SnowballCandidate]:
-    """Resolve arXiv papers to OpenAlex IDs concurrently.
+    """Resolve papers to OpenAlex IDs concurrently.
+    
+    Papers from OpenAlex already have IDs and skip resolution.
+    Papers from arXiv are resolved via DOI or title search.
     
     Args:
         session: aiohttp ClientSession
-        filtered_results: List of filtered arXiv entries
+        filtered_results: List of filtered search results (from arXiv or OpenAlex)
         
     Returns:
         List of SnowballCandidate objects (successfully resolved papers)
@@ -156,6 +195,27 @@ async def _resolve_papers_to_openalex(
 
     async def resolve_single_paper(result: ReducedArxivEntry) -> tuple[ReducedArxivEntry, SnowballCandidate | None]:
         """Resolve a single paper, returning (result, candidate or None)."""
+        
+        # OpenAlex-sourced papers already have IDs - no resolution needed
+        if result.source == "openalex" and result.openalex_id:
+            # Fetch additional details if needed
+            details = await get_work_details(session, result.openalex_id)
+            
+            seed = SnowballCandidate(
+                paper_id=result.openalex_id,
+                title=result.title,
+                abstract=result.summary,
+                year=details.get("publication_year") if details else None,
+                citation_count=details.get("cited_by_count", 0) if details else 0,
+                influential_citation_count=0,
+                discovered_from=result.source_query,
+                edge_type=EdgeType.SEED,
+                depth=0,
+                arxiv_id=None,  # OpenAlex papers don't have arXiv IDs
+            )
+            return result, seed
+        
+        # arXiv-sourced papers need resolution
         # Try to resolve via arXiv DOI first
         openalex_id = await resolve_arxiv_to_openalex(session, result.link) if result.link else None
 

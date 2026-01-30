@@ -46,11 +46,17 @@ class ArxivFeed(BaseModel):
 
 
 class ReducedArxivEntry(BaseModel):
+    """A paper result from search (arXiv or OpenAlex).
+    
+    Despite the name, this model is now used for results from multiple sources.
+    """
     title: str
     updated: str
     summary: str
-    link: str
+    link: str | None = None  # arXiv link or OpenAlex URL
     source_query: str  # Tracks which query variant found this paper
+    source: str = "arxiv"  # "arxiv" or "openalex"
+    openalex_id: str | None = None  # Pre-resolved OpenAlex ID (for OpenAlex-sourced papers)
 
 
 class QueryProfile(BaseModel):
