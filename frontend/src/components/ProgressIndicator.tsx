@@ -220,7 +220,7 @@ export function ProgressIndicator({
       <div className="max-w-xl w-full mx-auto text-center">
         {/* Header with title and timer - side by side on desktop, stacked on mobile */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 sm:mb-8">
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-black lowercase text-shadow-brutal order-2 sm:order-1">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-black lowercase text-shadow-brutal">
             {title}
           </h2>
           <ElapsedTimer createdAt={status.created_at} />
@@ -239,7 +239,7 @@ export function ProgressIndicator({
         <div className="h-3 bg-white border-2 border-black overflow-hidden mb-4">
           <div
             className="h-full bg-black transition-[width] duration-300 ease-out"
-            style={{ width: `${Math.min(percent, 100)}%` }}
+            style={{ width: `${Math.min(percent, 100)}%`, ...brutalShadow }}
           />
         </div>
 

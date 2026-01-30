@@ -32,7 +32,10 @@ def _get_async_client() -> AsyncOpenAI:
     """Get or create the async OpenAI client."""
     global _async_client
     if _async_client is None:
-        _async_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        _async_client = AsyncOpenAI(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            timeout=OPENAI_TIMEOUT_SECONDS,
+        )
     return _async_client
 
 
@@ -86,6 +89,8 @@ async def generate_paper_card(paper: dict) -> PaperCard | None:
     prompt = _build_card_prompt(paper)
     client = _get_async_client()
     semaphore = _get_semaphore()
+    start_time = time.monotonic()
+    log.info("openai_request_start", operation="generate_card", paper_id=paper_id, model="gpt-4o-mini")
 
     try:
         async with semaphore:
@@ -103,6 +108,12 @@ async def generate_paper_card(paper: dict) -> PaperCard | None:
             )
 
         content = response.choices[0].message.content.strip()
+        log.info(
+            "openai_request_complete",
+            operation="generate_card",
+            paper_id=paper_id,
+            duration_sec=round(time.monotonic() - start_time, 2),
+        )
         data = json.loads(content)
 
         # Build the PaperCard with extracted data + original metadata
@@ -125,12 +136,30 @@ async def generate_paper_card(paper: dict) -> PaperCard | None:
 
     except asyncio.TimeoutError:
         log.error("card_generation_timeout", paper_id=paper_id, timeout_sec=OPENAI_TIMEOUT_SECONDS)
+        log.info(
+            "openai_request_timeout",
+            operation="generate_card",
+            paper_id=paper_id,
+            duration_sec=round(time.monotonic() - start_time, 2),
+        )
         return None
     except json.JSONDecodeError as e:
         log.error("card_json_parse_error", paper_id=paper_id, error=str(e))
+        log.info(
+            "openai_request_failed",
+            operation="generate_card",
+            paper_id=paper_id,
+            duration_sec=round(time.monotonic() - start_time, 2),
+        )
         return None
     except Exception as e:
         log.error("card_generation_failed", paper_id=paper_id, error=str(e))
+        log.info(
+            "openai_request_failed",
+            operation="generate_card",
+            paper_id=paper_id,
+            duration_sec=round(time.monotonic() - start_time, 2),
+        )
         return None
 
 

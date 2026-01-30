@@ -7,6 +7,7 @@ enforcement to prevent hallucinations and ensure traceability.
 import asyncio
 import os
 import re
+import time
 from collections.abc import Callable
 
 from openai import AsyncOpenAI
@@ -31,7 +32,10 @@ def _get_async_client() -> AsyncOpenAI:
     """Get or create the async OpenAI client."""
     global _async_client
     if _async_client is None:
-        _async_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        _async_client = AsyncOpenAI(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            timeout=OPENAI_TIMEOUT_SECONDS,
+        )
     return _async_client
 
 
@@ -150,6 +154,8 @@ async def write_section(
 
     prompt = _build_section_prompt(section, cards)
     client = _get_async_client()
+    start_time = time.monotonic()
+    log.info("openai_request_start", operation="write_section", section=section.title, model="gpt-4o-mini")
 
     try:
         # Wrap API call with timeout to prevent indefinite hangs
@@ -165,6 +171,12 @@ async def write_section(
         )
 
         content = response.choices[0].message.content.strip()
+        log.info(
+            "openai_request_complete",
+            operation="write_section",
+            section=section.title,
+            duration_sec=round(time.monotonic() - start_time, 2),
+        )
         cited_ids = extract_cited_ids(content)
 
         # Validate cited IDs against available cards
@@ -200,6 +212,12 @@ async def write_section(
 
     except asyncio.TimeoutError:
         log.error("section_writing_timeout", section=section.title, timeout_sec=OPENAI_TIMEOUT_SECONDS)
+        log.info(
+            "openai_request_timeout",
+            operation="write_section",
+            section=section.title,
+            duration_sec=round(time.monotonic() - start_time, 2),
+        )
         return WrittenSection(
             title=section.title,
             content=f"Section generation timed out after {OPENAI_TIMEOUT_SECONDS}s.",
@@ -207,6 +225,12 @@ async def write_section(
         )
     except Exception as e:
         log.error("section_writing_failed", section=section.title, error=str(e))
+        log.info(
+            "openai_request_failed",
+            operation="write_section",
+            section=section.title,
+            duration_sec=round(time.monotonic() - start_time, 2),
+        )
         return WrittenSection(
             title=section.title,
             content=f"Error generating section: {str(e)}",
@@ -256,6 +280,8 @@ EXAMPLE OUTPUT FORMAT:
 Return ONLY the rewritten text with citations. Do not include any explanation."""
 
     client = _get_async_client()
+    start_time = time.monotonic()
+    log.info("openai_request_start", operation="rewrite_section", section=section.title, model="gpt-4o-mini")
 
     try:
         # Wrap API call with timeout to prevent indefinite hangs
@@ -271,6 +297,12 @@ Return ONLY the rewritten text with citations. Do not include any explanation.""
         )
 
         content = response.choices[0].message.content.strip()
+        log.info(
+            "openai_request_complete",
+            operation="rewrite_section",
+            section=section.title,
+            duration_sec=round(time.monotonic() - start_time, 2),
+        )
         cited_ids = extract_cited_ids(content)
 
         # Validate cited IDs
@@ -291,9 +323,21 @@ Return ONLY the rewritten text with citations. Do not include any explanation.""
 
     except asyncio.TimeoutError:
         log.error("rewrite_timeout", section=section.title, timeout_sec=OPENAI_TIMEOUT_SECONDS)
+        log.info(
+            "openai_request_timeout",
+            operation="rewrite_section",
+            section=section.title,
+            duration_sec=round(time.monotonic() - start_time, 2),
+        )
         return section  # Return original if rewrite times out
     except Exception as e:
         log.error("rewrite_failed", section=section.title, error=str(e))
+        log.info(
+            "openai_request_failed",
+            operation="rewrite_section",
+            section=section.title,
+            duration_sec=round(time.monotonic() - start_time, 2),
+        )
         return section  # Return original if rewrite fails
 
 
@@ -485,6 +529,8 @@ The introduction should:
 Write concise, academic prose. Return only the introduction text."""
 
     client = _get_async_client()
+    start_time = time.monotonic()
+    log.info("openai_request_start", operation="write_introduction", model="gpt-4o-mini")
 
     try:
         # Wrap API call with timeout to prevent indefinite hangs
@@ -500,14 +546,29 @@ Write concise, academic prose. Return only the introduction text."""
         )
 
         content = response.choices[0].message.content.strip()
+        log.info(
+            "openai_request_complete",
+            operation="write_introduction",
+            duration_sec=round(time.monotonic() - start_time, 2),
+        )
         log.info("introduction_complete", word_count=len(content.split()))
         return content
 
     except asyncio.TimeoutError:
         log.error("introduction_timeout", timeout_sec=OPENAI_TIMEOUT_SECONDS)
+        log.info(
+            "openai_request_timeout",
+            operation="write_introduction",
+            duration_sec=round(time.monotonic() - start_time, 2),
+        )
         return f"This report surveys research on: {query}"
     except Exception as e:
         log.error("introduction_failed", error=str(e))
+        log.info(
+            "openai_request_failed",
+            operation="write_introduction",
+            duration_sec=round(time.monotonic() - start_time, 2),
+        )
         return f"This report surveys research on: {query}"
 
 
@@ -556,6 +617,8 @@ The conclusion should:
 Write academic prose. Return only the conclusion text (no citations needed in conclusion)."""
 
     client = _get_async_client()
+    start_time = time.monotonic()
+    log.info("openai_request_start", operation="write_conclusion", model="gpt-4o-mini")
 
     try:
         # Wrap API call with timeout to prevent indefinite hangs
@@ -571,14 +634,29 @@ Write academic prose. Return only the conclusion text (no citations needed in co
         )
 
         content = response.choices[0].message.content.strip()
+        log.info(
+            "openai_request_complete",
+            operation="write_conclusion",
+            duration_sec=round(time.monotonic() - start_time, 2),
+        )
         log.info("conclusion_complete", word_count=len(content.split()))
         return content
 
     except asyncio.TimeoutError:
         log.error("conclusion_timeout", timeout_sec=OPENAI_TIMEOUT_SECONDS)
+        log.info(
+            "openai_request_timeout",
+            operation="write_conclusion",
+            duration_sec=round(time.monotonic() - start_time, 2),
+        )
         return f"This survey covered research on {query}. Further investigation is warranted."
     except Exception as e:
         log.error("conclusion_failed", error=str(e))
+        log.info(
+            "openai_request_failed",
+            operation="write_conclusion",
+            duration_sec=round(time.monotonic() - start_time, 2),
+        )
         return f"This survey covered research on {query}. Further investigation is warranted."
 
 

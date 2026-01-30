@@ -7,6 +7,7 @@ paper cards and grouping them by research themes/paradigms.
 import asyncio
 import json
 import os
+import time
 from collections import defaultdict
 
 from openai import AsyncOpenAI
@@ -27,7 +28,10 @@ def _get_async_client() -> AsyncOpenAI:
     """Get or create the async OpenAI client."""
     global _async_client
     if _async_client is None:
-        _async_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        _async_client = AsyncOpenAI(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            timeout=OPENAI_TIMEOUT_SECONDS,
+        )
     return _async_client
 
 
@@ -134,6 +138,8 @@ async def generate_outline(query: str, cards: list[PaperCard]) -> ReportOutline:
 
     prompt = _build_outline_prompt(query, cards)
     client = _get_async_client()
+    start_time = time.monotonic()
+    log.info("openai_request_start", operation="generate_outline", model="gpt-4o-mini")
 
     try:
         # Wrap API call with timeout to prevent indefinite hangs
@@ -150,6 +156,11 @@ async def generate_outline(query: str, cards: list[PaperCard]) -> ReportOutline:
         )
 
         content = response.choices[0].message.content.strip()
+        log.info(
+            "openai_request_complete",
+            operation="generate_outline",
+            duration_sec=round(time.monotonic() - start_time, 2),
+        )
         data = json.loads(content)
 
         # Parse sections
@@ -174,6 +185,11 @@ async def generate_outline(query: str, cards: list[PaperCard]) -> ReportOutline:
 
     except asyncio.TimeoutError:
         log.error("outline_generation_timeout", timeout_sec=OPENAI_TIMEOUT_SECONDS)
+        log.info(
+            "openai_request_timeout",
+            operation="generate_outline",
+            duration_sec=round(time.monotonic() - start_time, 2),
+        )
         # Return a fallback single-section outline
         return ReportOutline(sections=[
             SectionPlan(
@@ -184,6 +200,11 @@ async def generate_outline(query: str, cards: list[PaperCard]) -> ReportOutline:
         ])
     except json.JSONDecodeError as e:
         log.error("outline_json_parse_error", error=str(e))
+        log.info(
+            "openai_request_failed",
+            operation="generate_outline",
+            duration_sec=round(time.monotonic() - start_time, 2),
+        )
         # Return a fallback single-section outline
         return ReportOutline(sections=[
             SectionPlan(
@@ -194,4 +215,9 @@ async def generate_outline(query: str, cards: list[PaperCard]) -> ReportOutline:
         ])
     except Exception as e:
         log.error("outline_generation_failed", error=str(e))
+        log.info(
+            "openai_request_failed",
+            operation="generate_outline",
+            duration_sec=round(time.monotonic() - start_time, 2),
+        )
         raise

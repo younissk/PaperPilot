@@ -9,6 +9,7 @@ import asyncio
 import json
 import os
 import re
+import time
 from collections.abc import Callable
 
 from openai import AsyncOpenAI
@@ -55,7 +56,10 @@ def _get_async_client() -> AsyncOpenAI:
     """Get or create the async OpenAI client."""
     global _async_client
     if _async_client is None:
-        _async_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        _async_client = AsyncOpenAI(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            timeout=OPENAI_TIMEOUT_SECONDS,
+        )
     return _async_client
 
 
@@ -171,6 +175,8 @@ async def audit_section(
 
     prompt = _build_audit_prompt(section, cards)
     client = _get_async_client()
+    start_time = time.monotonic()
+    log.info("openai_request_start", operation="audit_section", section=section.title, model="gpt-4o-mini")
 
     try:
         # Wrap API call with timeout to prevent indefinite hangs
@@ -187,6 +193,12 @@ async def audit_section(
         )
 
         content = response.choices[0].message.content.strip()
+        log.info(
+            "openai_request_complete",
+            operation="audit_section",
+            section=section.title,
+            duration_sec=round(time.monotonic() - start_time, 2),
+        )
         data = json.loads(content)
 
         # Parse sentence audits
@@ -240,6 +252,12 @@ async def audit_section(
 
     except asyncio.TimeoutError:
         log.error("audit_timeout", section=section.title, timeout_sec=OPENAI_TIMEOUT_SECONDS)
+        log.info(
+            "openai_request_timeout",
+            operation="audit_section",
+            section=section.title,
+            duration_sec=round(time.monotonic() - start_time, 2),
+        )
         # Return original text without revision on timeout
         return AuditResult(
             section_title=section.title,
@@ -252,6 +270,12 @@ async def audit_section(
         )
     except json.JSONDecodeError as e:
         log.error("audit_json_parse_error", section=section.title, error=str(e))
+        log.info(
+            "openai_request_failed",
+            operation="audit_section",
+            section=section.title,
+            duration_sec=round(time.monotonic() - start_time, 2),
+        )
         # Return original text without revision
         return AuditResult(
             section_title=section.title,
@@ -264,6 +288,12 @@ async def audit_section(
         )
     except Exception as e:
         log.error("audit_failed", section=section.title, error=str(e))
+        log.info(
+            "openai_request_failed",
+            operation="audit_section",
+            section=section.title,
+            duration_sec=round(time.monotonic() - start_time, 2),
+        )
         return AuditResult(
             section_title=section.title,
             original_text=section.content,
