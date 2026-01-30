@@ -69,11 +69,6 @@ module keyVault 'modules/keyVault.bicep' = {
   }
 }
 
-// Existing Key Vault reference for RBAC role assignment scoping.
-resource kv 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
-  name: keyVaultName
-}
-
 // Cosmos DB (Phase 2)
 module cosmos 'modules/cosmos.bicep' = {
   name: 'cosmos'
@@ -125,19 +120,11 @@ module functionAppFull 'modules/functionAppFull.bicep' = {
   }
 }
 
-// Grant the Function App identity permission to read Key Vault secrets.
-// Role: "Key Vault Secrets User" (built-in).
-var keyVaultSecretsUserRoleDefinitionId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
-
-resource keyVaultSecretsUserAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(kv.id, userAssignedIdentityName, 'KeyVaultSecretsUser')
-  scope: kv
-  properties: {
-    principalId: functionAppFull.outputs.userAssignedPrincipalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: keyVaultSecretsUserRoleDefinitionId
-  }
-}
+// NOTE: Key Vault RBAC role assignment ("Key Vault Secrets User") for the
+// Function App identity is a one-time setup step requiring elevated permissions
+// (Owner or User Access Administrator). It is NOT managed here because the
+// GitHub Actions SP lacks roleAssignments/write. See infra/README.md for the
+// manual command if deploying from scratch.
 
 output keyVaultUri string = keyVault.outputs.vaultUri
 output functionAppNameOut string = functionAppName
