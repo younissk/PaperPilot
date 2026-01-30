@@ -4,3 +4,8 @@ export { SEO } from "./SEO";
 export { SearchForm } from "./SearchForm";
 export { PaperCard } from "./PaperCard";
 export { ProgressIndicator } from "./ProgressIndicator";
+export { HeroSection } from "./HeroSection";
+export { ProofStrip } from "./ProofStrip";
+export { OutputPreview } from "./OutputPreview";
+export { HowItWorks } from "./HowItWorks";
+export { PrivacySection } from "./PrivacySection";
