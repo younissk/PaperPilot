@@ -11,7 +11,7 @@ import azure.functions as func
 from .config import QUEUE_NAME, logger
 from .jobs import append_event, get_job, update_job_progress
 from .notifications import send_completion_email, send_failure_email
-from .pipeline import run_pipeline, run_search_job
+from .pipeline import run_search_job, run_ranking_stage, run_report_stage
 from .utils import is_job_stale, load_openai_api_key
 
 bp = func.Blueprint()
@@ -59,27 +59,42 @@ def _mark_job_failed_from_dlq(job_id: str, reason: str | None, description: str 
     update_job_progress(job_id, "failed", "error", 0, message, events=events, error=message)
 
 
-def process_job(job_id: str, job_type: str, payload: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]], bool]:
-    """Process a job and return (result, events, was_processed).
+def process_job(job_id: str, job_type: str, payload: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, Any]], bool, bool]:
+    """Process a job and return (result, events, was_processed, is_final).
     
     Returns was_processed=False if job was skipped due to idempotency check.
     """
     existing_job = get_job(job_id)
+    stage = payload.get("stage") if isinstance(payload, dict) else None
     
     # Idempotency check: skip if job already completed or failed
+    phase_order = {"search": 0, "ranking": 1, "report": 2}
     if existing_job:
         existing_status = existing_job.get("status")
         if existing_status in ("completed", "failed"):
             logger.info("Job %s already finished with status '%s', skipping re-execution", job_id, existing_status)
-            return existing_job.get("result", {}), existing_job.get("events", []), False
+            return existing_job.get("result", {}), existing_job.get("events", []), False, True
         # Check if job is running but stale (stuck)
         if existing_status == "running":
+            current_phase = (existing_job.get("progress") or {}).get("phase")
+            if stage and current_phase in phase_order and stage in phase_order:
+                if phase_order[stage] < phase_order[current_phase] and not is_job_stale(existing_job):
+                    logger.warning(
+                        "Job %s stage '%s' behind current phase '%s', skipping",
+                        job_id,
+                        stage,
+                        current_phase,
+                    )
+                    return {}, existing_job.get("events", []), False, False
+            if stage and current_phase == stage and not is_job_stale(existing_job):
+                logger.warning("Job %s stage '%s' already running, skipping duplicate message", job_id, stage)
+                return {}, existing_job.get("events", []), False, False
             if is_job_stale(existing_job):
                 logger.warning("Job %s is stale (running for too long), allowing retry", job_id)
                 # Continue processing - job will be re-run
             else:
                 logger.warning("Job %s is already running (possible message redelivery), skipping", job_id)
-                return {}, existing_job.get("events", []), False
+                return {}, existing_job.get("events", []), False, False
     
     events: list[dict[str, Any]] = existing_job.get("events", []) if existing_job else []
     events = append_event(events, "job_start", "init", f"Starting {job_type} job")
@@ -88,11 +103,27 @@ def process_job(job_id: str, job_type: str, payload: dict[str, Any]) -> tuple[di
     load_openai_api_key()
 
     if job_type == "pipeline":
-        result = asyncio.run(run_pipeline(job_id, payload, events))
-        return result, events, True
+        stage = payload.get("stage") or "search"
+        if stage == "search":
+            result = asyncio.run(run_search_job(job_id, payload, events))
+            # Enqueue next stage
+            next_payload = dict(payload)
+            next_payload["stage"] = "ranking"
+            enqueue_job(job_id, "pipeline", next_payload)
+            return result, events, True, False
+        if stage == "ranking":
+            result = asyncio.run(run_ranking_stage(job_id, payload, events))
+            next_payload = dict(payload)
+            next_payload["stage"] = "report"
+            enqueue_job(job_id, "pipeline", next_payload)
+            return result, events, True, False
+        if stage == "report":
+            result = asyncio.run(run_report_stage(job_id, payload, events))
+            return result, events, True, True
+        raise ValueError(f"Unknown pipeline stage: {stage}")
     if job_type == "search":
         result = asyncio.run(run_search_job(job_id, payload, events))
-        return result, events, True
+        return result, events, True, True
 
     raise ValueError(f"Unknown job type: {job_type}")
 
@@ -117,10 +148,10 @@ def process_job_message(msg: func.ServiceBusMessage):
             logger.error("Invalid message: missing job_id or job_type")
             return
 
-        result, events, was_processed = process_job(job_id, job_type, job_payload)
+        result, events, was_processed, is_final = process_job(job_id, job_type, job_payload)
         
         # Only update status if job was actually processed (not skipped due to idempotency)
-        if was_processed:
+        if was_processed and is_final:
             events = append_event(events, "job_complete", "complete", "Job completed")
             update_job_progress(
                 job_id,

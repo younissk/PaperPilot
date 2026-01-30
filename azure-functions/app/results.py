@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 from .clients import get_results_container_client
@@ -69,6 +70,27 @@ def get_blob_json(blob_name: str) -> dict[str, Any] | None:
     except Exception as exc:
         logger.error("Failed to read blob %s: %s", blob_name, exc)
         return None
+
+
+def download_blob_to_path(blob_name: str, file_path: Path) -> bool:
+    from azure.core.exceptions import ResourceNotFoundError
+
+    if not RESULTS_CONNECTION_STRING and not RESULTS_ACCOUNT_URL:
+        return False
+
+    try:
+        container = get_results_container_client()
+        blob_client = container.get_blob_client(blob_name)
+        data = blob_client.download_blob().readall()
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(file_path, "wb") as f:
+            f.write(data)
+        return True
+    except ResourceNotFoundError:
+        return False
+    except Exception as exc:
+        logger.error("Failed to download blob %s: %s", blob_name, exc)
+        return False
 
 
 def find_latest_job_for_query(query_slug: str) -> str | None:
