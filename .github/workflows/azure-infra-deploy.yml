@@ -35,6 +35,7 @@ jobs:
           azcliversion: latest
           inlineScript: |
             set -euo pipefail
+            az bicep install
             az bicep version
             az deployment group create \
               -g PaperPilot \
@@ -72,7 +73,7 @@ jobs:
             echo "Setting Key Vault reference identity to user-assigned identity..."
             az resource update \
               --ids "/subscriptions/${SUB_ID}/resourceGroups/${RG}/providers/Microsoft.Web/sites/${FUNC_APP}" \
-              --set keyVaultReferenceIdentity="${UAI_ID}" 1>/dev/null || true
+              --set properties.keyVaultReferenceIdentity="${UAI_ID}" 1>/dev/null || true
 
             echo "Granting Key Vault Secrets User role to identity..."
             az role assignment create \
@@ -85,7 +86,5 @@ jobs:
             az functionapp config appsettings set -g "${RG}" -n "${FUNC_APP}" --settings \
               "OPENAI_API_KEY=@Microsoft.KeyVault(SecretUri=${KV_URI}/secrets/OPENAI-API-KEY)" \
               "AZURE_COSMOS_KEY=@Microsoft.KeyVault(SecretUri=${KV_URI}/secrets/AZURE-COSMOS-KEY)" \
-              "AZURE_SERVICE_BUS_CONNECTION_STRING=@Microsoft.KeyVault(SecretUri=${KV_URI}/secrets/AZURE-SERVICE-BUS-CONNECTION-STRING)" \
-              "AzureWebJobsStorage=@Microsoft.KeyVault(SecretUri=${KV_URI}/secrets/AZURE-WEBJOBS-STORAGE)" \
-              "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING=@Microsoft.KeyVault(SecretUri=${KV_URI}/secrets/WEBSITE-CONTENTAZUREFILECONNECTIONSTRING)" 1>/dev/null
+              "AZURE_SERVICE_BUS_CONNECTION_STRING=@Microsoft.KeyVault(SecretUri=${KV_URI}/secrets/AZURE-SERVICE-BUS-CONNECTION-STRING)" 1>/dev/null
 

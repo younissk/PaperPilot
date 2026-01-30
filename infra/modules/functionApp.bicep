@@ -22,10 +22,6 @@ var desiredAppSettings = {
   OPENAI_API_KEY: '@Microsoft.KeyVault(SecretUri=${kvSecretUriPrefix}/OPENAI-API-KEY)'
   AZURE_COSMOS_KEY: '@Microsoft.KeyVault(SecretUri=${kvSecretUriPrefix}/AZURE-COSMOS-KEY)'
   AZURE_SERVICE_BUS_CONNECTION_STRING: '@Microsoft.KeyVault(SecretUri=${kvSecretUriPrefix}/AZURE-SERVICE-BUS-CONNECTION-STRING)'
-
-  // Optional: also store storage keys in KV (recommended). Keep names identical.
-  AzureWebJobsStorage: '@Microsoft.KeyVault(SecretUri=${kvSecretUriPrefix}/AZURE-WEBJOBS-STORAGE)'
-  WEBSITE_CONTENTAZUREFILECONNECTIONSTRING: '@Microsoft.KeyVault(SecretUri=${kvSecretUriPrefix}/WEBSITE-CONTENTAZUREFILECONNECTIONSTRING)'
 }
 
 resource appSettings 'Microsoft.Web/sites/config@2022-03-01' = {
