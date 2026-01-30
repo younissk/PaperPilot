@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { startPipeline, slugifyQuery } from "@/lib/api";
 import { DEFAULT_PIPELINE_PARAMS } from "@/lib/config";
 import type { PipelineRequest } from "@/lib/types";
+import { DocumentRain } from "./DocumentRain";
 
 const EXAMPLE_QUERIES = [
   "effect of chatgpt on students",
@@ -70,9 +71,12 @@ export function HeroSection() {
   const marqueeItems = [...EXAMPLE_QUERIES, ...EXAMPLE_QUERIES];
 
   return (
-    <section className="h-[calc(100vh-3rem)] flex flex-col px-4 pb-6">
+    <section className="relative h-[calc(100vh-3rem)] flex flex-col px-4 pb-6 overflow-hidden">
+      {/* Physics-based document rain background */}
+      <DocumentRain maxDocuments={15} spawnInterval={400} scale={1.8} />
+
       {/* Main content area */}
-      <div className="flex-1 flex flex-col justify-center max-w-4xl mx-auto w-full text-center">
+      <div className="relative z-10 flex-1 flex flex-col justify-center max-w-4xl mx-auto w-full text-center">
         {/* Headline with brutalist shadow */}
         <h1 className="text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-bold text-gray-900 leading-tight mb-4 md:mb-6 text-shadow-brutal lowercase">
           from query to full survey in minutes
@@ -151,7 +155,7 @@ export function HeroSection() {
       {/* Scroll Down Triangle - at bottom of viewport */}
       <button
         onClick={scrollToNextSection}
-        className="mx-auto hover:translate-y-1 transition-transform"
+        className="relative z-10 mx-auto hover:translate-y-1 transition-transform"
         aria-label="Scroll to next section"
       >
         <svg

@@ -34,9 +34,35 @@ export function Header() {
           {/* Logo */}
           <Link
             to="/"
-            className="font-medium text-base text-gray-900 no-underline hover:no-underline lowercase z-50"
+            className="flex items-center gap-1 font-medium text-base text-gray-900 no-underline hover:no-underline lowercase z-50"
           >
-            paper-navigator
+            <svg
+              width="16"
+              height="20"
+              viewBox="0 0 360 460"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="shrink-0"
+            >
+              <path
+                d="M340 130H230V20"
+                stroke="currentColor"
+                strokeWidth="24"
+                strokeMiterlimit="10"
+                strokeLinecap="round"
+              />
+              <path
+                d="M350 450H10V10H230L350 130V450Z"
+                stroke="currentColor"
+                strokeWidth="24"
+                strokeMiterlimit="10"
+                strokeLinecap="round"
+              />
+              <path d="M280 200H80V220H280V200Z" fill="currentColor" />
+              <path d="M280 320H80V340H280V320Z" fill="currentColor" />
+              <path d="M240 260H80V280H240V260Z" fill="currentColor" />
+            </svg>
+            <span>-navigator</span>
           </Link>
 
           {/* Desktop Navigation */}

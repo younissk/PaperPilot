@@ -12,8 +12,34 @@ export function Footer() {
       <div className="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
         {/* Brand */}
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600 lowercase">
-            paper-navigator
+          <span className="flex items-center gap-1 text-sm text-gray-600 lowercase">
+            <svg
+              width="14"
+              height="18"
+              viewBox="0 0 360 460"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="shrink-0"
+            >
+              <path
+                d="M340 130H230V20"
+                stroke="currentColor"
+                strokeWidth="24"
+                strokeMiterlimit="10"
+                strokeLinecap="round"
+              />
+              <path
+                d="M350 450H10V10H230L350 130V450Z"
+                stroke="currentColor"
+                strokeWidth="24"
+                strokeMiterlimit="10"
+                strokeLinecap="round"
+              />
+              <path d="M280 200H80V220H280V200Z" fill="currentColor" />
+              <path d="M280 320H80V340H280V320Z" fill="currentColor" />
+              <path d="M240 260H80V280H240V260Z" fill="currentColor" />
+            </svg>
+            <span>-navigator</span>
           </span>
           <span className="text-sm text-gray-400">
             {currentYear}

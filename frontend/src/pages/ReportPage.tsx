@@ -5,7 +5,6 @@ import { useAllResults, usePipelineStatus } from "@/hooks";
 
 // Brutalist shadow styles
 const brutalShadow = { boxShadow: "3px 3px 0 #F3787A" };
-const brutalShadowSmall = { boxShadow: "1px 1px 0 #F3787A" };
 
 /**
  * Helper function to format citations in text.

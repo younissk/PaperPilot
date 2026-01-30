@@ -11,3 +11,4 @@ export { ProofStrip } from "./ProofStrip";
 export { OutputPreview } from "./OutputPreview";
 export { HowItWorks } from "./HowItWorks";
 export { PrivacySection } from "./PrivacySection";
+export { DocumentRain } from "./DocumentRain";

@@ -1,25 +1,68 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 type CursorState = "default" | "pointer" | "text";
 
 /**
  * Custom brutalist cursor with circle and coral shadow.
  * Shows a trailing effect, expands on clickable elements, and changes to text cursor on inputs.
+ * 
+ * Performance optimized: Uses refs and direct DOM manipulation instead of React state
+ * for position updates to avoid unnecessary re-renders on every mouse move.
  */
 export function CustomCursor() {
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const mainCursorRef = useRef<HTMLDivElement>(null);
+  const trailCursorRef = useRef<HTMLDivElement>(null);
+  const mainInnerRef = useRef<HTMLDivElement>(null);
+  const trailInnerRef = useRef<HTMLDivElement>(null);
+  
+  // Only state that needs re-renders (cursor type changes are infrequent)
   const [cursorState, setCursorState] = useState<CursorState>("default");
-  const [isVisible, setIsVisible] = useState(false);
-  const [isClicking, setIsClicking] = useState(false);
+  
+  // Use refs for frequently changing values to avoid re-renders
+  const positionRef = useRef({ x: 0, y: 0 });
+  const trailPositionRef = useRef({ x: 0, y: 0 });
+  const isVisibleRef = useRef(false);
+  const isClickingRef = useRef(false);
+  const rafRef = useRef<number | null>(null);
+
+  // Direct DOM update for cursor position (no React re-render)
+  const updateCursorDOM = useCallback(() => {
+    const main = mainCursorRef.current;
+    const trail = trailCursorRef.current;
+    
+    if (main) {
+      const { x, y } = positionRef.current;
+      main.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%) scale(${isClickingRef.current ? 0.8 : 1})`;
+      main.style.opacity = isVisibleRef.current ? "1" : "0";
+    }
+    
+    if (trail) {
+      const { x, y } = trailPositionRef.current;
+      trail.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%) scale(${isClickingRef.current ? 0.6 : 1})`;
+      trail.style.opacity = isVisibleRef.current ? "0.5" : "0";
+    }
+  }, []);
+
+  // Smooth trail animation using lerp (linear interpolation)
+  const animateTrail = useCallback(() => {
+    const lerp = 0.15; // Smoothing factor (0-1, lower = smoother/slower)
+    
+    trailPositionRef.current.x += (positionRef.current.x - trailPositionRef.current.x) * lerp;
+    trailPositionRef.current.y += (positionRef.current.y - trailPositionRef.current.y) * lerp;
+    
+    updateCursorDOM();
+    rafRef.current = requestAnimationFrame(animateTrail);
+  }, [updateCursorDOM]);
 
   useEffect(() => {
     // Only show custom cursor on devices with fine pointer (mouse)
     const hasFineMouse = window.matchMedia("(pointer: fine)").matches;
     if (!hasFineMouse) return;
 
-    const updatePosition = (e: MouseEvent) => {
-      setPosition({ x: e.clientX, y: e.clientY });
-      setIsVisible(true);
+    const handleMouseMove = (e: MouseEvent) => {
+      positionRef.current.x = e.clientX;
+      positionRef.current.y = e.clientY;
+      isVisibleRef.current = true;
     };
 
     const updateCursorState = (e: MouseEvent) => {
@@ -51,88 +94,117 @@ export function CustomCursor() {
       setCursorState(isClickable ? "pointer" : "default");
     };
 
-    const handleMouseDown = () => setIsClicking(true);
-    const handleMouseUp = () => setIsClicking(false);
-    const handleMouseLeave = () => setIsVisible(false);
-    const handleMouseEnter = () => setIsVisible(true);
+    const handleMouseDown = () => {
+      isClickingRef.current = true;
+    };
+    
+    const handleMouseUp = () => {
+      isClickingRef.current = false;
+    };
+    
+    const handleMouseLeave = () => {
+      isVisibleRef.current = false;
+    };
+    
+    const handleMouseEnter = () => {
+      isVisibleRef.current = true;
+    };
 
-    document.addEventListener("mousemove", updatePosition);
-    document.addEventListener("mouseover", updateCursorState);
+    // Start the animation loop
+    rafRef.current = requestAnimationFrame(animateTrail);
+
+    document.addEventListener("mousemove", handleMouseMove, { passive: true });
+    document.addEventListener("mouseover", updateCursorState, { passive: true });
     document.addEventListener("mousedown", handleMouseDown);
     document.addEventListener("mouseup", handleMouseUp);
     document.documentElement.addEventListener("mouseleave", handleMouseLeave);
     document.documentElement.addEventListener("mouseenter", handleMouseEnter);
 
     return () => {
-      document.removeEventListener("mousemove", updatePosition);
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+      document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseover", updateCursorState);
       document.removeEventListener("mousedown", handleMouseDown);
       document.removeEventListener("mouseup", handleMouseUp);
       document.documentElement.removeEventListener("mouseleave", handleMouseLeave);
       document.documentElement.removeEventListener("mouseenter", handleMouseEnter);
     };
-  }, []);
+  }, [animateTrail]);
+
+  // Update cursor size when state changes (infrequent, OK to use effect)
+  useEffect(() => {
+    const mainInner = mainInnerRef.current;
+    const trailInner = trailInnerRef.current;
+    
+    if (!mainInner || !trailInner) return;
+    
+    let width: number;
+    let height: number;
+    let isText = false;
+    
+    switch (cursorState) {
+      case "pointer":
+        width = 40;
+        height = 40;
+        break;
+      case "text":
+        width = 3;
+        height = 24;
+        isText = true;
+        break;
+      default:
+        width = 12;
+        height = 12;
+    }
+    
+    mainInner.style.width = `${width}px`;
+    mainInner.style.height = `${height}px`;
+    mainInner.style.borderRadius = isText ? "0" : "50%";
+    mainInner.style.boxShadow = isText ? "1px 1px 0 #F3787A" : "2px 2px 0 #F3787A";
+    
+    trailInner.style.width = `${width}px`;
+    trailInner.style.height = `${height}px`;
+    trailInner.style.borderRadius = isText ? "0" : "50%";
+  }, [cursorState]);
 
   // Don't render on touch devices
   if (typeof window !== "undefined" && !window.matchMedia("(pointer: fine)").matches) {
     return null;
   }
 
-  // Get cursor size based on state
-  const getSize = () => {
-    switch (cursorState) {
-      case "pointer":
-        return { width: 40, height: 40 };
-      case "text":
-        return { width: 3, height: 24 };
-      default:
-        return { width: 12, height: 12 };
-    }
-  };
-
-  const size = getSize();
-  const isText = cursorState === "text";
-
   return (
     <>
-      {/* Main cursor */}
+      {/* Main cursor - position controlled via ref */}
       <div
-        className="fixed pointer-events-none z-[9999] mix-blend-difference"
-        style={{
-          left: position.x,
-          top: position.y,
-          opacity: isVisible ? 1 : 0,
-          transition: "opacity 0.15s ease, transform 0.1s ease",
-          transform: `translate(-50%, -50%) scale(${isClicking ? 0.8 : 1})`,
-        }}
+        ref={mainCursorRef}
+        className="fixed top-0 left-0 pointer-events-none z-[9999] mix-blend-difference will-change-transform"
+        style={{ opacity: 0 }}
       >
-        {/* Circle cursor (or line for text) */}
         <div
-          className={`bg-white transition-all duration-150 ease-out ${isText ? "" : "rounded-full"}`}
+          ref={mainInnerRef}
+          className="bg-white rounded-full"
           style={{
-            width: size.width,
-            height: size.height,
-            boxShadow: isText ? "1px 1px 0 #F3787A" : "2px 2px 0 #F3787A",
+            width: 12,
+            height: 12,
+            boxShadow: "2px 2px 0 #F3787A",
           }}
         />
       </div>
 
-      {/* Trailing cursor (coral shadow) */}
+      {/* Trailing cursor - smooth follow via requestAnimationFrame */}
       <div
-        className="fixed pointer-events-none z-[9998]"
-        style={{
-          left: position.x,
-          top: position.y,
-          opacity: isVisible ? 0.5 : 0,
-          transition: "left 0.15s ease-out, top 0.15s ease-out, opacity 0.15s ease, transform 0.15s ease",
-          transform: `translate(-50%, -50%) scale(${isClicking ? 0.6 : 1})`,
-        }}
+        ref={trailCursorRef}
+        className="fixed top-0 left-0 pointer-events-none z-[9998] will-change-transform"
+        style={{ opacity: 0 }}
       >
         <div
-          className={`bg-[#F3787A] transition-all duration-200 ease-out ${isText ? "" : "rounded-full"}`}
+          ref={trailInnerRef}
+          className="bg-[#F3787A] rounded-full"
           style={{
-            width: size.width,
-            height: size.height,
+            width: 12,
+            height: 12,
           }}
         />
       </div>
