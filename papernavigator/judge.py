@@ -11,7 +11,7 @@ import re
 
 from openai import AsyncOpenAI
 
-from papernavigator.async_utils import get_loop_semaphore
+from papernavigator.async_utils import get_loop_semaphore, validate_loop
 from papernavigator.models import (
     JudgmentResult,
     QueryProfile,
@@ -33,7 +33,9 @@ OPENAI_TIMEOUT_SECONDS = 30
 
 def _get_openai_semaphore() -> asyncio.Semaphore:
     """Get or create the OpenAI semaphore for rate limiting."""
-    return get_loop_semaphore("openai_judge", OPENAI_MAX_CONCURRENT)
+    semaphore = get_loop_semaphore("openai_judge", OPENAI_MAX_CONCURRENT)
+    validate_loop(semaphore, "openai_judge_semaphore")
+    return semaphore
 
 
 def keyword_gate(profile: QueryProfile, title: str, summary: str) -> bool:

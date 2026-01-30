@@ -20,7 +20,7 @@ from typing import Any
 
 import aiohttp
 
-from papernavigator.async_utils import get_loop_semaphore
+from papernavigator.async_utils import get_loop_semaphore, validate_loop
 from papernavigator.logging import get_logger
 
 logger = get_logger(__name__)
@@ -44,12 +44,16 @@ WORK_SELECT_FIELDS = "id,title,abstract_inverted_index,publication_year,cited_by
 
 def _get_openalex_semaphore() -> asyncio.Semaphore:
     """Get or create the OpenAlex semaphore for rate limiting."""
-    return get_loop_semaphore("openalex", OPENALEX_MAX_CONCURRENT)
+    semaphore = get_loop_semaphore("openalex", OPENALEX_MAX_CONCURRENT)
+    validate_loop(semaphore, "openalex_semaphore")
+    return semaphore
 
 
 def _get_s2_semaphore() -> asyncio.Semaphore:
     """Get or create the Semantic Scholar semaphore for rate limiting."""
-    return get_loop_semaphore("semantic_scholar", SEMANTIC_SCHOLAR_MAX_CONCURRENT)
+    semaphore = get_loop_semaphore("semantic_scholar", SEMANTIC_SCHOLAR_MAX_CONCURRENT)
+    validate_loop(semaphore, "semantic_scholar_semaphore")
+    return semaphore
 
 
 def _build_headers() -> dict[str, str]:

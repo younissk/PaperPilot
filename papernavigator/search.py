@@ -10,7 +10,7 @@ import xml.etree.ElementTree as ET
 
 import aiohttp
 
-from papernavigator.async_utils import get_loop_semaphore
+from papernavigator.async_utils import get_loop_semaphore, validate_loop
 from papernavigator.models import ArxivEntry, ArxivFeed, Author, Category, Link
 
 # arXiv rate limiting - be respectful of their API
@@ -135,6 +135,7 @@ async def search_articles(
     url = f'http://export.arxiv.org/api/query?search_query=all:{encoded_query}&start=0&max_results={max_results}'
 
     semaphore = get_loop_semaphore("arxiv", ARXIV_MAX_CONCURRENT)
+    validate_loop(semaphore, "arxiv_semaphore")
 
     async with semaphore:
         await asyncio.sleep(ARXIV_RATE_LIMIT_DELAY)
