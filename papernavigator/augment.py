@@ -4,12 +4,16 @@ This module expands a single search query into multiple variants
 for better coverage of the research topic.
 """
 
+import asyncio
 import json
 import os
 import time
 
 from openai import AsyncOpenAI
 from pydantic import TypeAdapter, ValidationError
+
+# Timeout for OpenAI API calls (seconds)
+OPENAI_TIMEOUT_SECONDS = 30
 
 async_client = AsyncOpenAI(
     api_key=os.getenv("OPENAI_API_KEY"),
@@ -74,10 +78,18 @@ async def augment_search(query: str, k: int = 6) -> tuple[list[str], float]:
     """
 
     start_time = time.time()
-    response = await async_client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
-    )
+    try:
+        # Wrap API call with timeout to prevent indefinite hangs
+        response = await asyncio.wait_for(
+            async_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+            ),
+            timeout=OPENAI_TIMEOUT_SECONDS
+        )
+    except asyncio.TimeoutError:
+        # On timeout, return just the original query
+        return [query], 0.0
     end_time = time.time()
 
     content = response.choices[0].message.content.strip()

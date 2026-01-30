@@ -27,6 +27,9 @@ async_client = AsyncOpenAI(
 OPENAI_MAX_CONCURRENT = 50
 _openai_semaphore: asyncio.Semaphore | None = None
 
+# Timeout for OpenAI API calls (seconds)
+OPENAI_TIMEOUT_SECONDS = 30
+
 
 def _get_openai_semaphore() -> asyncio.Semaphore:
     """Get or create the OpenAI semaphore for rate limiting."""
@@ -136,18 +139,25 @@ Paper summary: {result.summary}
 
     try:
         async with semaphore:
-            response = await async_client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0,
-                max_tokens=100,
-                response_format={"type": "json_object"}
+            # Wrap API call with timeout to prevent indefinite hangs
+            response = await asyncio.wait_for(
+                async_client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0,
+                    max_tokens=100,
+                    response_format={"type": "json_object"}
+                ),
+                timeout=OPENAI_TIMEOUT_SECONDS
             )
 
         content = response.choices[0].message.content.strip()
         data = json.loads(content)
         return bool(data.get("relevant", False))
 
+    except asyncio.TimeoutError:
+        # Timeout - treat as not relevant to continue processing
+        return False
     except Exception:
         # Fallback for parsing errors or API issues
         return False
@@ -255,12 +265,16 @@ Discovery context: {parent_context or "Discovered through citation graph expansi
 
     try:
         async with semaphore:
-            response = await async_client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0,
-                max_tokens=150,
-                response_format={"type": "json_object"}
+            # Wrap API call with timeout to prevent indefinite hangs
+            response = await asyncio.wait_for(
+                async_client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0,
+                    max_tokens=150,
+                    response_format={"type": "json_object"}
+                ),
+                timeout=OPENAI_TIMEOUT_SECONDS
             )
 
         content = response.choices[0].message.content.strip()
@@ -272,6 +286,13 @@ Discovery context: {parent_context or "Discovered through citation graph expansi
             reason=str(data.get("reason", "No reason provided"))
         )
 
+    except asyncio.TimeoutError:
+        # Timeout - treat as not relevant to continue processing
+        return JudgmentResult(
+            relevant=False,
+            confidence=0.0,
+            reason="Judgment timed out"
+        )
     except Exception as e:
         # Fallback for parsing errors or API issues
         return JudgmentResult(

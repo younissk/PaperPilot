@@ -4,6 +4,7 @@ This module writes report sections using LLM with strict citation
 enforcement to prevent hallucinations and ensure traceability.
 """
 
+import asyncio
 import os
 import re
 from collections.abc import Callable
@@ -14,6 +15,9 @@ from papernavigator.logging import get_logger
 from papernavigator.report.models import PaperCard, SectionPlan, WrittenSection
 
 log = get_logger(__name__)
+
+# Timeout for OpenAI API calls (seconds)
+OPENAI_TIMEOUT_SECONDS = 60
 
 # Async OpenAI client
 _async_client: AsyncOpenAI | None = None
@@ -144,11 +148,15 @@ async def write_section(
     client = _get_async_client()
 
     try:
-        response = await client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.2,  # Low temperature for factual accuracy
-            max_tokens=1500,
+        # Wrap API call with timeout to prevent indefinite hangs
+        response = await asyncio.wait_for(
+            client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.2,  # Low temperature for factual accuracy
+                max_tokens=1500,
+            ),
+            timeout=OPENAI_TIMEOUT_SECONDS
         )
 
         content = response.choices[0].message.content.strip()
@@ -185,6 +193,13 @@ async def write_section(
             paper_ids_used=valid_cited
         )
 
+    except asyncio.TimeoutError:
+        log.error("section_writing_timeout", section=section.title, timeout_sec=OPENAI_TIMEOUT_SECONDS)
+        return WrittenSection(
+            title=section.title,
+            content=f"Section generation timed out after {OPENAI_TIMEOUT_SECONDS}s.",
+            paper_ids_used=[]
+        )
     except Exception as e:
         log.error("section_writing_failed", section=section.title, error=str(e))
         return WrittenSection(
@@ -238,11 +253,15 @@ Return ONLY the rewritten text with citations. Do not include any explanation.""
     client = _get_async_client()
 
     try:
-        response = await client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1,
-            max_tokens=1500,
+        # Wrap API call with timeout to prevent indefinite hangs
+        response = await asyncio.wait_for(
+            client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                max_tokens=1500,
+            ),
+            timeout=OPENAI_TIMEOUT_SECONDS
         )
 
         content = response.choices[0].message.content.strip()
@@ -264,6 +283,9 @@ Return ONLY the rewritten text with citations. Do not include any explanation.""
             paper_ids_used=valid_cited
         )
 
+    except asyncio.TimeoutError:
+        log.error("rewrite_timeout", section=section.title, timeout_sec=OPENAI_TIMEOUT_SECONDS)
+        return section  # Return original if rewrite times out
     except Exception as e:
         log.error("rewrite_failed", section=section.title, error=str(e))
         return section  # Return original if rewrite fails
@@ -399,17 +421,24 @@ Write concise, academic prose. Return only the introduction text."""
     client = _get_async_client()
 
     try:
-        response = await client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=800,
+        # Wrap API call with timeout to prevent indefinite hangs
+        response = await asyncio.wait_for(
+            client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,
+                max_tokens=800,
+            ),
+            timeout=OPENAI_TIMEOUT_SECONDS
         )
 
         content = response.choices[0].message.content.strip()
         log.info("introduction_complete", word_count=len(content.split()))
         return content
 
+    except asyncio.TimeoutError:
+        log.error("introduction_timeout", timeout_sec=OPENAI_TIMEOUT_SECONDS)
+        return f"This report surveys research on: {query}"
     except Exception as e:
         log.error("introduction_failed", error=str(e))
         return f"This report surveys research on: {query}"
@@ -462,17 +491,24 @@ Write academic prose. Return only the conclusion text (no citations needed in co
     client = _get_async_client()
 
     try:
-        response = await client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=500,
+        # Wrap API call with timeout to prevent indefinite hangs
+        response = await asyncio.wait_for(
+            client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,
+                max_tokens=500,
+            ),
+            timeout=OPENAI_TIMEOUT_SECONDS
         )
 
         content = response.choices[0].message.content.strip()
         log.info("conclusion_complete", word_count=len(content.split()))
         return content
 
+    except asyncio.TimeoutError:
+        log.error("conclusion_timeout", timeout_sec=OPENAI_TIMEOUT_SECONDS)
+        return f"This survey covered research on {query}. Further investigation is warranted."
     except Exception as e:
         log.error("conclusion_failed", error=str(e))
         return f"This survey covered research on {query}. Further investigation is warranted."

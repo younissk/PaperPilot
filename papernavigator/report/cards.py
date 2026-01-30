@@ -24,6 +24,9 @@ _async_client: AsyncOpenAI | None = None
 OPENAI_MAX_CONCURRENT = 20
 _openai_semaphore: asyncio.Semaphore | None = None
 
+# Timeout for OpenAI API calls (seconds)
+OPENAI_TIMEOUT_SECONDS = 30
+
 
 def _get_async_client() -> AsyncOpenAI:
     """Get or create the async OpenAI client."""
@@ -86,12 +89,16 @@ async def generate_paper_card(paper: dict) -> PaperCard | None:
 
     try:
         async with semaphore:
-            response = await client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0,
-                max_tokens=500,
-                response_format={"type": "json_object"}
+            # Wrap API call with timeout to prevent indefinite hangs
+            response = await asyncio.wait_for(
+                client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0,
+                    max_tokens=500,
+                    response_format={"type": "json_object"}
+                ),
+                timeout=OPENAI_TIMEOUT_SECONDS
             )
 
         content = response.choices[0].message.content.strip()
@@ -115,6 +122,9 @@ async def generate_paper_card(paper: dict) -> PaperCard | None:
         log.info("card_generated", paper_id=paper_id, tags=card.paradigm_tags)
         return card
 
+    except asyncio.TimeoutError:
+        log.error("card_generation_timeout", paper_id=paper_id, timeout_sec=OPENAI_TIMEOUT_SECONDS)
+        return None
     except json.JSONDecodeError as e:
         log.error("card_json_parse_error", paper_id=paper_id, error=str(e))
         return None

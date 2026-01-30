@@ -4,6 +4,7 @@ This module generates a structured outline for the report by analyzing
 paper cards and grouping them by research themes/paradigms.
 """
 
+import asyncio
 import json
 import os
 from collections import defaultdict
@@ -14,6 +15,9 @@ from papernavigator.logging import get_logger
 from papernavigator.report.models import PaperCard, ReportOutline, SectionPlan
 
 log = get_logger(__name__)
+
+# Timeout for OpenAI API calls (seconds)
+OPENAI_TIMEOUT_SECONDS = 60
 
 # Async OpenAI client
 _async_client: AsyncOpenAI | None = None
@@ -132,12 +136,16 @@ async def generate_outline(query: str, cards: list[PaperCard]) -> ReportOutline:
     client = _get_async_client()
 
     try:
-        response = await client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,  # Slight creativity for organization
-            max_tokens=2000,
-            response_format={"type": "json_object"}
+        # Wrap API call with timeout to prevent indefinite hangs
+        response = await asyncio.wait_for(
+            client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,  # Slight creativity for organization
+                max_tokens=2000,
+                response_format={"type": "json_object"}
+            ),
+            timeout=OPENAI_TIMEOUT_SECONDS
         )
 
         content = response.choices[0].message.content.strip()
@@ -163,6 +171,16 @@ async def generate_outline(query: str, cards: list[PaperCard]) -> ReportOutline:
 
         return outline
 
+    except asyncio.TimeoutError:
+        log.error("outline_generation_timeout", timeout_sec=OPENAI_TIMEOUT_SECONDS)
+        # Return a fallback single-section outline
+        return ReportOutline(sections=[
+            SectionPlan(
+                title="Research Overview",
+                bullet_claims=["Overview of current research"],
+                relevant_paper_ids=[c.id for c in cards]
+            )
+        ])
     except json.JSONDecodeError as e:
         log.error("outline_json_parse_error", error=str(e))
         # Return a fallback single-section outline

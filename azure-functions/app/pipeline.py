@@ -366,14 +366,16 @@ async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[s
             "artifact_count": len(artifacts),
             "artifact_bytes_total": artifact_bytes_total,
             "phase_durations_sec": phase_durations_sec,
-            "top_papers": [
-                {
-                    "title": c.candidate.title,
-                    "elo": round(c.elo, 1),
-                    "paper_id": c.candidate.paper_id,
-                }
-                for c in ranked_candidates[:5]
-            ],
+    "top_papers": [
+        {
+            "paper_id": c.candidate.paper_id,
+            "title": c.candidate.title,
+            "elo": round(c.elo, 1),
+            "wins": c.wins,
+            "losses": c.losses,
+        }
+        for c in ranked_candidates[:5]
+    ],
         }
 
         return result

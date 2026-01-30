@@ -12,7 +12,7 @@ from .config import QUEUE_NAME, logger
 from .jobs import append_event, get_job, update_job_progress
 from .notifications import send_completion_email, send_failure_email
 from .pipeline import run_pipeline, run_search_job
-from .utils import load_openai_api_key
+from .utils import is_job_stale, load_openai_api_key
 
 bp = func.Blueprint()
 
@@ -30,10 +30,14 @@ def process_job(job_id: str, job_type: str, payload: dict[str, Any]) -> tuple[di
         if existing_status in ("completed", "failed"):
             logger.info("Job %s already finished with status '%s', skipping re-execution", job_id, existing_status)
             return existing_job.get("result", {}), existing_job.get("events", []), False
-        # Also skip if job is already running (message redelivery scenario)
+        # Check if job is running but stale (stuck)
         if existing_status == "running":
-            logger.warning("Job %s is already running (possible message redelivery), skipping", job_id)
-            return {}, existing_job.get("events", []), False
+            if is_job_stale(existing_job):
+                logger.warning("Job %s is stale (running for too long), allowing retry", job_id)
+                # Continue processing - job will be re-run
+            else:
+                logger.warning("Job %s is already running (possible message redelivery), skipping", job_id)
+                return {}, existing_job.get("events", []), False
     
     events: list[dict[str, Any]] = existing_job.get("events", []) if existing_job else []
     events = append_event(events, "job_start", "init", f"Starting {job_type} job")

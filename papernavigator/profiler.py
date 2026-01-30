@@ -4,6 +4,7 @@ This module analyzes research queries and generates structured QueryProfiles
 for relevance filtering.
 """
 
+import asyncio
 import json
 import os
 import re
@@ -11,6 +12,9 @@ import re
 from openai import AsyncOpenAI
 
 from papernavigator.models import QueryProfile
+
+# Timeout for OpenAI API calls (seconds)
+OPENAI_TIMEOUT_SECONDS = 30
 
 async_client = AsyncOpenAI(
     api_key=os.getenv("OPENAI_API_KEY"),
@@ -77,11 +81,15 @@ Return ONLY valid JSON. No markdown, no extra text.
 Research topic query: {query}
 """
 
-    response = await async_client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0,
-        response_format={"type": "json_object"}
+    # Wrap API call with timeout to prevent indefinite hangs
+    response = await asyncio.wait_for(
+        async_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+            response_format={"type": "json_object"}
+        ),
+        timeout=OPENAI_TIMEOUT_SECONDS
     )
 
     content = response.choices[0].message.content.strip()

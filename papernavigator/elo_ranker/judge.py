@@ -9,6 +9,9 @@ from openai import AsyncOpenAI
 from papernavigator.elo_ranker.models import MatchResult
 from papernavigator.models import QueryProfile, SnowballCandidate
 
+# Timeout for OpenAI API calls (seconds)
+OPENAI_TIMEOUT_SECONDS = 30
+
 # Async OpenAI client
 async_client = AsyncOpenAI(
     api_key=os.getenv("OPENAI_API_KEY"),
@@ -71,12 +74,16 @@ Output ONLY valid JSON with keys:
 """
 
     try:
-        response = await async_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0,
-            max_tokens=150,
-            response_format={"type": "json_object"}
+        # Wrap API call with timeout to prevent indefinite hangs
+        response = await asyncio.wait_for(
+            async_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0,
+                max_tokens=150,
+                response_format={"type": "json_object"}
+            ),
+            timeout=OPENAI_TIMEOUT_SECONDS
         )
 
         content = response.choices[0].message.content.strip()
@@ -95,6 +102,9 @@ Output ONLY valid JSON with keys:
             # Invalid response, treat as draw
             return None, "Invalid response"
 
+    except asyncio.TimeoutError:
+        # On timeout, treat as draw to avoid blocking the pipeline
+        return None, "Timeout"
     except (json.JSONDecodeError, KeyError, AttributeError):
         # On error, treat as draw to avoid skewing ratings
         return None, "Parse error"
