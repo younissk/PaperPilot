@@ -4,7 +4,7 @@ from datetime import datetime
 
 import pytest
 
-from paperpilot.core.report.models import (
+from papernavigator.report.models import (
     AuditResult,
     OpenProblem,
     PaperCard,

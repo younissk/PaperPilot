@@ -1,4 +1,4 @@
-"""Configuration and logging for PaperPilot Azure Functions."""
+"""Configuration and logging for PaperNavigator Azure Functions."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 
-logger = logging.getLogger("paperpilot.azure")
+logger = logging.getLogger("papernavigator.azure")
 
 COSMOS_ENDPOINT = os.environ.get("AZURE_COSMOS_ENDPOINT", "")
 COSMOS_KEY = os.environ.get("AZURE_COSMOS_KEY", "")

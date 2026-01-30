@@ -2,7 +2,7 @@
 
 import pytest
 
-from paperpilot.core.models import (
+from papernavigator.models import (
     AcceptedPaper,
     EdgeType,
     JudgmentResult,

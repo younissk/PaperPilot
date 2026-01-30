@@ -4,9 +4,9 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from paperpilot.core.elo_ranker.elo import expected_score, update_elo
-from paperpilot.core.elo_ranker.models import CandidateElo, SnowballCandidate
-from paperpilot.core.models import EdgeType
+from papernavigator.elo_ranker.elo import expected_score, update_elo
+from papernavigator.elo_ranker.models import CandidateElo
+from papernavigator.models import EdgeType, SnowballCandidate
 
 # Mark all tests in this module as unit tests
 pytestmark = pytest.mark.unit

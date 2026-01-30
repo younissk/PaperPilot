@@ -52,11 +52,11 @@ def upload_artifacts_to_blob(local_dir: Path, prefix: str) -> list[dict[str, Any
 
 
 async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[str, Any]]) -> dict[str, Any]:
-    from paperpilot.core.elo_ranker import EloRanker, RankerConfig
-    from paperpilot.core.models import SnowballCandidate
-    from paperpilot.core.profiler import generate_query_profile
-    from paperpilot.core.report.generator import generate_report, report_to_dict
-    from paperpilot.core.service import run_search
+    from papernavigator.elo_ranker import EloRanker, RankerConfig
+    from papernavigator.models import SnowballCandidate
+    from papernavigator.profiler import generate_query_profile
+    from papernavigator.report.generator import generate_report, report_to_dict
+    from papernavigator.service import run_search
 
     query = payload.get("query", "")
     num_results = payload.get("num_results", 5)
@@ -71,7 +71,7 @@ async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[s
 
     query_slug = slugify(query)
 
-    workspace = Path(tempfile.mkdtemp(prefix=f"paperpilot_{job_id}_"))
+    workspace = Path(tempfile.mkdtemp(prefix=f"papernavigator_{job_id}_"))
     results_dir = workspace / query_slug
     results_dir.mkdir(parents=True, exist_ok=True)
 
@@ -283,7 +283,7 @@ async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[s
 
 
 async def run_search_job(job_id: str, payload: dict[str, Any], events: list[dict[str, Any]]) -> dict[str, Any]:
-    from paperpilot.core.service import run_search
+    from papernavigator.service import run_search
 
     query = payload.get("query", "")
     num_results = payload.get("num_results", 5)
@@ -292,7 +292,7 @@ async def run_search_job(job_id: str, payload: dict[str, Any], events: list[dict
     top_n = payload.get("top_n", 50)
 
     query_slug = slugify(query)
-    workspace = Path(tempfile.mkdtemp(prefix=f"paperpilot_{job_id}_"))
+    workspace = Path(tempfile.mkdtemp(prefix=f"papernavigator_{job_id}_"))
     results_dir = workspace / query_slug
     results_dir.mkdir(parents=True, exist_ok=True)
 

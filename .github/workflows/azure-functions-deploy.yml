@@ -1,4 +1,4 @@
-# GitHub Actions workflow for deploying PaperPilot Azure Functions
+# GitHub Actions workflow for deploying PaperNavigator Azure Functions
 # Docs: https://learn.microsoft.com/en-us/azure/azure-functions/functions-how-to-github-actions
 
 name: Deploy Azure Functions
@@ -9,6 +9,7 @@ on:
       - master
     paths:
       - 'azure-functions/**'
+      - 'papernavigator/**'
       - '.github/workflows/azure-functions-deploy.yml'
   workflow_dispatch:  # Allow manual trigger
 
@@ -45,10 +46,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Vendor PaperPilot package
+      - name: Vendor PaperNavigator package
         run: |
-          rm -rf azure-functions/paperpilot
-          cp -R paperpilot azure-functions/paperpilot
+          rm -rf azure-functions/papernavigator
+          cp -R papernavigator azure-functions/papernavigator
 
       - name: Lint with ruff (optional)
         working-directory: azure-functions

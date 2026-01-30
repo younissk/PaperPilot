@@ -1,10 +1,10 @@
-# PaperPilot
+# PaperNavigator
 
 AI-powered academic literature discovery using snowball sampling, ELO ranking, and LLM-generated research reports.
 
 ## Overview
 
-PaperPilot helps researchers discover relevant academic papers by:
+PaperNavigator helps researchers discover relevant academic papers by:
 
 1. **Snowball Sampling**: Starting from seed papers, it explores citations and references to find related work
 2. **LLM-Based Filtering**: Uses GPT to filter papers for relevance to your research query
@@ -13,7 +13,7 @@ PaperPilot helps researchers discover relevant academic papers by:
 
 ## Architecture (Azure)
 
-PaperPilot runs as a serverless backend on Azure:
+PaperNavigator runs as a serverless backend on Azure:
 
 ```
 ┌────────────────────────────┐     ┌──────────────────────────┐     ┌──────────────────────────┐
@@ -40,25 +40,11 @@ PaperPilot runs as a serverless backend on Azure:
 
 - **Frontend** (`frontend/`): React/Vite app for the web interface
 - **Azure Functions** (`azure-functions/`): HTTP API + Service Bus worker
-- **Core Library** (`paperpilot/`): Shared domain logic (search, ranking, reports)
-- **CLI** (`paperpilot/cli/`): Command-line interface for local usage
+- **Core Library** (`papernavigator/`): Shared domain logic (search, ranking, reports)
 
 ## Quick Start
 
-### Option 1: CLI (Simplest)
-
-```bash
-# Install dependencies
-uv sync
-
-# Run a search
-uv run paperpilot search "LLM Based Recommendation Systems" -n 30
-
-# View results
-uv run paperpilot results snowball_results.json
-```
-
-### Option 2: Frontend Dev
+### Frontend Dev
 
 ```bash
 cd frontend
@@ -66,7 +52,7 @@ npm install
 npm run dev
 ```
 
-### Option 3: Azure Functions Local (optional)
+### Azure Functions Local (optional)
 
 If you have Azure Functions Core Tools installed:
 
@@ -78,13 +64,12 @@ func start
 ## Project Structure
 
 ```
-PaperPilot/
+PaperNavigator/
 ├── azure-functions/      # Azure Functions entrypoint + modules
 ├── frontend/             # React/Vite frontend
-├── paperpilot/           # Core library (domain logic)
-│   ├── api/              # Legacy monolith API (deprecated)
-│   ├── cli/              # CLI commands
-│   └── core/             # Search, ranking, reports
+├── papernavigator/       # Core library (domain logic)
+│   ├── elo_ranker/       # ELO ranking system
+│   └── report/           # Report generation
 ├── tests/                # Test suites
 └── results/              # Example outputs (historical)
 ```
@@ -118,17 +103,17 @@ cd frontend && npm install
 uv run pytest
 
 # Run with coverage
-uv run pytest --cov=paperpilot
+uv run pytest --cov=papernavigator
 ```
 
 ### Code Quality
 
 ```bash
 # Format code
-uv run ruff format paperpilot tests azure-functions
+uv run ruff format papernavigator tests azure-functions
 
 # Lint
-uv run ruff check paperpilot tests azure-functions
+uv run ruff check papernavigator tests azure-functions
 
 # Type check
 uv run pyright

@@ -1,4 +1,4 @@
-# Pre-commit hooks for PaperPilot backend
+# Pre-commit hooks for PaperNavigator backend
 # Install: pre-commit install
 # Run manually: pre-commit run --all-files
 # See https://pre-commit.com for more information
@@ -35,13 +35,13 @@ repos:
       # Formatter (replaces black)
       - id: ruff-format
         name: ruff format
-        files: ^(paperpilot|azure-functions|tests)/
+        files: ^(papernavigator|azure-functions|tests)/
         types: [python]
       # Linter (replaces flake8, isort, etc.)
       - id: ruff
         name: ruff check
         args: [--fix, --exit-non-zero-on-fix]
-        files: ^(paperpilot|azure-functions|tests)/
+        files: ^(papernavigator|azure-functions|tests)/
         types: [python]
 
   # ==========================================================================
@@ -53,7 +53,7 @@ repos:
         name: pyright type check
         entry: uv run pyright
         language: system
-        files: ^(paperpilot|azure-functions)/
+        files: ^(papernavigator|azure-functions)/
         types: [python]
         pass_filenames: false
         # Only run on staged Python files, but check the whole project

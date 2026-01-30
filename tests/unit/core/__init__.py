@@ -1,1 +1,1 @@
-# Unit tests for paperpilot.core modules
+# Unit tests for papernavigator modules
