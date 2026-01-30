@@ -10,6 +10,7 @@ import azure.functions as func
 
 from .config import QUEUE_NAME, logger
 from .jobs import append_event, get_job, update_job_progress
+from .notifications import send_completion_email, send_failure_email
 from .pipeline import run_pipeline, run_search_job
 from .utils import load_openai_api_key
 
@@ -84,6 +85,15 @@ def process_job_message(msg: func.ServiceBusMessage):
                 events=events,
                 result=result,
             )
+
+            # Send completion email notification if requested
+            notification_email = job_payload.get("notification_email")
+            if notification_email:
+                query = job_payload.get("query", "")
+                email_sent = send_completion_email(notification_email, query, job_id, result)
+                if email_sent:
+                    events = append_event(events, "email_sent", "complete", f"Notification sent to {notification_email}")
+                    update_job_progress(job_id, "completed", "complete", 0, "Job completed", events=events, result=result)
         else:
             logger.info("Job %s was skipped (idempotency), not updating status", job_id)
 
@@ -108,4 +118,10 @@ def process_job_message(msg: func.ServiceBusMessage):
                 events=events,
                 error=str(exc),
             )
+
+            # Send failure email notification if requested
+            notification_email = job_payload.get("notification_email") if job_payload else None
+            if notification_email:
+                query = job_payload.get("query", "") if job_payload else ""
+                send_failure_email(notification_email, query, job_id, str(exc))
         raise

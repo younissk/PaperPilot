@@ -36,3 +36,8 @@ TTL_DAYS = int(os.environ.get("JOB_TTL_DAYS", "7"))
 MAX_EVENTS = int(os.environ.get("MAX_JOB_EVENTS", "100"))
 
 DEBUG = os.environ.get("DEBUG", "").lower() == "true"
+
+# Azure Communication Services (Email)
+ACS_CONNECTION_STRING = os.environ.get("AZURE_ACS_CONNECTION_STRING", "")
+ACS_SENDER_ADDRESS = os.environ.get("AZURE_ACS_SENDER_ADDRESS", "noreply@papernavigator.com")
+FRONTEND_BASE_URL = os.environ.get("FRONTEND_BASE_URL", "https://papernavigator.com")

@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import azure.functions as func
+
+# Simple email regex for validation (not exhaustive, but catches common errors)
+EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
 
 
 def parse_json(req: func.HttpRequest) -> dict[str, Any] | None:
@@ -12,6 +16,21 @@ def parse_json(req: func.HttpRequest) -> dict[str, Any] | None:
         return req.get_json()
     except ValueError:
         return None
+
+
+def parse_email(value: Any) -> str | None:
+    """Parse and validate an optional email address.
+
+    Returns None if not provided, raises ValueError if invalid format.
+    """
+    if value is None:
+        return None
+    email = str(value).strip().lower()
+    if not email:
+        return None
+    if not EMAIL_REGEX.match(email):
+        raise ValueError(f"Invalid email format: {value}")
+    return email
 
 
 def parse_int(value: Any, default: int) -> int:
@@ -46,6 +65,7 @@ def normalize_pipeline_payload(data: dict[str, Any]) -> dict[str, Any]:
         "early_stop": bool(data.get("early_stop", True)),
         "elo_concurrency": parse_int(data.get("elo_concurrency"), 5),
         "report_top_k": parse_int(data.get("report_top_k"), 30),
+        "notification_email": parse_email(data.get("notification_email")),
     }
 
 

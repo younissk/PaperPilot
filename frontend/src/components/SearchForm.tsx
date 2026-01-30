@@ -26,6 +26,9 @@ export function SearchForm() {
   const [eloConcurrency, setEloConcurrency] = useState<number>(DEFAULT_PIPELINE_PARAMS.elo_concurrency);
   const [reportTopK, setReportTopK] = useState<number>(DEFAULT_PIPELINE_PARAMS.report_top_k);
 
+  // Notification settings
+  const [notificationEmail, setNotificationEmail] = useState<string>("");
+
   const mutation = useMutation({
     mutationFn: (request: PipelineRequest) => startPipeline(request),
     onSuccess: (response) => {
@@ -53,6 +56,7 @@ export function SearchForm() {
       early_stop: earlyStop,
       elo_concurrency: eloConcurrency,
       report_top_k: reportTopK,
+      notification_email: notificationEmail.trim() || undefined,
     });
   };
 
@@ -226,6 +230,25 @@ export function SearchForm() {
                   </div>
                 </>
               )}
+
+              <h4 className="text-sm font-medium text-gray-500 mb-4 mt-6">
+                Notifications
+              </h4>
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
+                <div className="form-group">
+                  <label className="form-label">Email Notification (optional)</label>
+                  <input
+                    type="email"
+                    value={notificationEmail}
+                    onChange={(e) => setNotificationEmail(e.target.value)}
+                    className="form-input"
+                    placeholder="your@email.com"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    Get notified when your report is ready
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         )}

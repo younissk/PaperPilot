@@ -92,6 +92,7 @@ export interface PipelineRequest {
   early_stop?: boolean;
   elo_concurrency?: number;
   report_top_k?: number;
+  notification_email?: string;
 }
 
 export interface PipelineResponse {
