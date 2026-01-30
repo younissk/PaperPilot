@@ -41,3 +41,26 @@ jobs:
               -g PaperPilot \
               -f infra/main.bicep \
               -p infra/params/prod.bicepparam
+
+      # ----------------------------------------------------------------------
+      # Post-deploy wiring (no secret values in git):
+      # - App settings become Key Vault references.
+      #   (Done via CLI to avoid ARM circular dependency when merging existing settings.)
+      # ----------------------------------------------------------------------
+      - name: Set Function App settings to Key Vault references
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            set -euo pipefail
+
+            RG="PaperPilot"
+            FUNC_APP="paperpilot-api"
+            KV_NAME="paperpilot-kv-prod"
+            KV_URI="https://${KV_NAME}.vault.azure.net"
+
+            az functionapp config appsettings set -g "${RG}" -n "${FUNC_APP}" --settings \
+              "OPENAI_API_KEY=@Microsoft.KeyVault(SecretUri=${KV_URI}/secrets/OPENAI-API-KEY)" \
+              "AZURE_COSMOS_KEY=@Microsoft.KeyVault(SecretUri=${KV_URI}/secrets/AZURE-COSMOS-KEY)" \
+              "AZURE_SERVICE_BUS_CONNECTION_STRING=@Microsoft.KeyVault(SecretUri=${KV_URI}/secrets/AZURE-SERVICE-BUS-CONNECTION-STRING)" \
+              "AzureWebJobsStorage=@Microsoft.KeyVault(SecretUri=${KV_URI}/secrets/AZURE-WEBJOBS-STORAGE)" 1>/dev/null

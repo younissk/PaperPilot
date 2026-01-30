@@ -118,7 +118,6 @@ module functionAppFull 'modules/functionAppFull.bicep' = {
     location: location
     appServicePlanName: appServicePlanName
     userAssignedIdentityName: userAssignedIdentityName
-    keyVaultName: keyVaultName
     corsAllowedOrigins: functionCorsAllowedOrigins
     customDomainName: functionCustomDomainName
     appInsightsResourceId: appInsightsResourceId

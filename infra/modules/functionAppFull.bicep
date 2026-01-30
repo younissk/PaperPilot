@@ -10,9 +10,6 @@ param appServicePlanName string
 @description('User-assigned managed identity name for the Function App.')
 param userAssignedIdentityName string
 
-@description('Key Vault name used for Key Vault references in app settings.')
-param keyVaultName string
-
 @description('Linux runtime stack, e.g. Python|3.12.')
 param linuxFxVersion string = 'Python|3.12'
 
@@ -150,28 +147,6 @@ resource customDomainBinding 'Microsoft.Web/sites/hostNameBindings@2024-11-01' =
     hostNameType: 'Verified'
     siteName: functionAppName
   }
-}
-
-// -----------------------------------------------------------------------------
-// App settings: merge (preserve platform settings) + Key Vault references.
-// -----------------------------------------------------------------------------
-
-var currentAppSettings = list('${functionApp.id}/config/appsettings', '2024-11-01').properties
-
-var kvSecretUriPrefix = 'https://${keyVaultName}${environment().suffixes.keyvaultDns}/secrets'
-
-var desiredAppSettings = {
-  // Sensitive values: stored in Key Vault, referenced here
-  OPENAI_API_KEY: '@Microsoft.KeyVault(SecretUri=${kvSecretUriPrefix}/OPENAI-API-KEY)'
-  AZURE_COSMOS_KEY: '@Microsoft.KeyVault(SecretUri=${kvSecretUriPrefix}/AZURE-COSMOS-KEY)'
-  AZURE_SERVICE_BUS_CONNECTION_STRING: '@Microsoft.KeyVault(SecretUri=${kvSecretUriPrefix}/AZURE-SERVICE-BUS-CONNECTION-STRING)'
-  AzureWebJobsStorage: '@Microsoft.KeyVault(SecretUri=${kvSecretUriPrefix}/AZURE-WEBJOBS-STORAGE)'
-}
-
-resource appSettings 'Microsoft.Web/sites/config@2024-11-01' = {
-  parent: functionApp
-  name: 'appsettings'
-  properties: union(currentAppSettings, desiredAppSettings)
 }
 
 output functionAppId string = functionApp.id
