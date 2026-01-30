@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from typing import Any
 
 from .clients import get_jobs_container, get_service_bus_client
 from .config import COSMOS_ENDPOINT, COSMOS_KEY, MAX_EVENTS, QUEUE_NAME, SERVICE_BUS_CONNECTION, logger
 from .utils import expires_at, now_iso
+from .telemetry import log_event
 
 
 def test_cosmos_connection() -> bool:
@@ -261,3 +263,25 @@ def update_job_progress(
     updated = update_job_document(job_id, updates)
     if updated is None:
         logger.warning("Job %s not found while updating progress", job_id)
+        return
+
+    level = logging.INFO
+    if status == "failed":
+        level = logging.ERROR
+    elif phase == "error":
+        level = logging.ERROR
+
+    log_event(
+        logger,
+        level,
+        "job_progress",
+        job_id=job_id,
+        status=status,
+        phase=phase,
+        step=step,
+        step_name=step_name,
+        current=current,
+        total=total,
+        message=message,
+        error=error,
+    )
