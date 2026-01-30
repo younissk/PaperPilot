@@ -9,7 +9,7 @@ from typing import Any
 import azure.functions as func
 
 from .config import QUEUE_NAME, logger
-from .jobs import append_event, get_job, update_job_progress
+from .jobs import append_event, enqueue_job, get_job, update_job_progress
 from .notifications import send_completion_email, send_failure_email
 from .pipeline import run_search_job, run_ranking_stage, run_report_stage
 from .utils import is_job_stale, load_openai_api_key
