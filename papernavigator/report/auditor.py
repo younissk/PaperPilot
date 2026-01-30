@@ -8,9 +8,27 @@ It also ensures citations are preserved and added where missing.
 import json
 import os
 import re
+import time
 from collections.abc import Callable
 
 from openai import AsyncOpenAI
+
+# #region agent log
+def _debug_log(location: str, message: str, data: dict, hypothesis_id: str = ""):
+    import json as _json
+    # Log to file for local debugging
+    log_path = "/Users/younisskandah/Documents/GitHub/PaperPilot/.cursor/debug.log"
+    try:
+        with open(log_path, "a") as f:
+            f.write(_json.dumps({"location": location, "message": message, "data": data, "hypothesisId": hypothesis_id, "timestamp": time.time(), "sessionId": "debug-session"}) + "\n")
+    except Exception:
+        pass
+    # Also log via structlog for Azure visibility
+    try:
+        log.debug("DEBUG_TRACE", location=location, message=message, hypothesis=hypothesis_id, **data)
+    except Exception:
+        pass
+# #endregion
 
 from papernavigator.logging import get_logger
 from papernavigator.report.models import (
@@ -164,6 +182,11 @@ async def audit_section(
     prompt = _build_audit_prompt(section, cards)
     client = _get_async_client()
 
+    # #region agent log
+    _debug_log("auditor.py:audit_section:before_api_call", "Starting OpenAI API call", {"section_title": section.title, "prompt_length": len(prompt), "num_cards": len(cards)}, "H1")
+    api_start_time = time.time()
+    # #endregion
+
     try:
         response = await client.chat.completions.create(
             model="gpt-4o-mini",
@@ -172,6 +195,10 @@ async def audit_section(
             max_tokens=2500,
             response_format={"type": "json_object"}
         )
+
+        # #region agent log
+        _debug_log("auditor.py:audit_section:after_api_call", "OpenAI API call returned", {"section_title": section.title, "elapsed_sec": round(time.time() - api_start_time, 2)}, "H1")
+        # #endregion
 
         content = response.choices[0].message.content.strip()
         data = json.loads(content)
@@ -226,6 +253,9 @@ async def audit_section(
         )
 
     except json.JSONDecodeError as e:
+        # #region agent log
+        _debug_log("auditor.py:audit_section:json_error", "JSON decode error", {"section_title": section.title, "error": str(e)}, "H2")
+        # #endregion
         log.error("audit_json_parse_error", section=section.title, error=str(e))
         # Return original text without revision
         return AuditResult(
@@ -238,6 +268,9 @@ async def audit_section(
             revised_count=0
         )
     except Exception as e:
+        # #region agent log
+        _debug_log("auditor.py:audit_section:exception", "Exception in audit_section", {"section_title": section.title, "error": str(e), "error_type": type(e).__name__}, "H2")
+        # #endregion
         log.error("audit_failed", section=section.title, error=str(e))
         return AuditResult(
             section_title=section.title,
@@ -282,6 +315,10 @@ async def audit_all_sections(
         progress_callback(0, total_sections, f"Starting to audit {total_sections} sections...")
 
     for i, section in enumerate(sections):
+        # #region agent log
+        _debug_log("auditor.py:audit_all_sections:loop_start", "Starting section loop iteration", {"index": i, "section_title": section.title, "total_sections": total_sections}, "H3")
+        # #endregion
+
         # Get cards that were used in this section
         section_cards = [
             card_lookup[pid]
@@ -294,16 +331,37 @@ async def audit_all_sections(
             section_cards = all_cards
 
         if progress_callback:
+            # #region agent log
+            _debug_log("auditor.py:audit_all_sections:pre_callback", "About to call progress_callback (pre-audit)", {"index": i, "section_title": section.title}, "H3")
+            # #endregion
             progress_callback(i, total_sections, f"Auditing section {i+1}/{total_sections}: {section.title}")
+            # #region agent log
+            _debug_log("auditor.py:audit_all_sections:post_pre_callback", "progress_callback (pre-audit) returned", {"index": i, "section_title": section.title}, "H3")
+            # #endregion
+
+        # #region agent log
+        _debug_log("auditor.py:audit_all_sections:before_audit", "About to call audit_section", {"index": i, "section_title": section.title, "num_cards": len(section_cards)}, "H1")
+        # #endregion
 
         result = await audit_section(section, section_cards)
+
+        # #region agent log
+        _debug_log("auditor.py:audit_all_sections:after_audit", "audit_section returned", {"index": i, "section_title": section.title, "supported": result.supported_count, "unsupported": result.unsupported_count}, "H1")
+        # #endregion
+
         results.append(result)
 
         total_supported += result.supported_count
         total_unsupported += result.unsupported_count
 
         if progress_callback:
+            # #region agent log
+            _debug_log("auditor.py:audit_all_sections:pre_completed_callback", "About to call progress_callback (completed)", {"index": i, "section_title": section.title}, "H3")
+            # #endregion
             progress_callback(i + 1, total_sections, f"Completed audit {i+1}/{total_sections}: {section.title}")
+            # #region agent log
+            _debug_log("auditor.py:audit_all_sections:post_completed_callback", "progress_callback (completed) returned", {"index": i, "section_title": section.title}, "H3")
+            # #endregion
 
     log.info(
         "batch_audit_complete",

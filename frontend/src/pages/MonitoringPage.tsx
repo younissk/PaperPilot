@@ -36,96 +36,81 @@ function formatBytes(value: number | null | undefined): string {
 
 type MonitorState = "ok" | "degraded" | "down";
 
-function Heartbeat({ state, bpm }: { state: MonitorState; bpm: number }) {
-  const color =
+function EcgPulse({ state }: { state: MonitorState }) {
+  const strokeColor =
     state === "ok"
-      ? "stroke-teal-500"
+      ? "#14b8a6" // teal-500
       : state === "degraded"
-        ? "stroke-orange-500"
-        : "stroke-red-500";
+        ? "#f97316" // orange-500
+        : "#ef4444"; // red-500
 
-  const pulseClass =
-    state === "ok"
-      ? "animate-pulse"
-      : state === "degraded"
-        ? "animate-pulse"
-        : "";
+  // ECG waveform: flat → small P wave → flat → sharp QRS → flat → small T wave → flat
+  const ecgPath =
+    "M0 20 L15 20 L18 18 L21 20 L30 20 L33 20 L36 22 L38 5 L42 35 L45 18 L48 20 L60 20 L63 17 L69 20 L80 20";
 
-  const showFlatline = state === "down";
+  if (state === "down") {
+    return (
+      <svg
+        viewBox="0 0 80 40"
+        className="w-24 h-8"
+        role="img"
+        aria-label="ECG offline"
+      >
+        <line
+          x1="0"
+          y1="20"
+          x2="80"
+          y2="20"
+          stroke={strokeColor}
+          strokeWidth="2"
+          opacity="0.5"
+        />
+      </svg>
+    );
+  }
 
   return (
-    <div className="card">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="stack stack-sm">
-          <h2 className="text-lg">Health & Readiness</h2>
-          <p className="text-sm text-gray-500">
-            State:{" "}
-            <span className="font-semibold">
-              {state === "ok"
-                ? "OK"
-                : state === "degraded"
-                  ? "Degraded"
-                  : "Down"}
-            </span>
-            {" · "}
-            BPM: <span className="font-semibold">{bpm}</span>
-          </p>
-        </div>
+    <svg
+      viewBox="0 0 80 40"
+      className="w-24 h-8"
+      role="img"
+      aria-label="ECG pulse"
+    >
+      <path
+        d={ecgPath}
+        fill="none"
+        stroke={strokeColor}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="ecg-trace"
+      />
+    </svg>
+  );
+}
 
-        <span
-          className={`inline-flex items-center gap-2 rounded-md px-3 py-1 text-sm border ${
-            state === "ok"
-              ? "bg-teal-50 border-teal-200 text-teal-800"
-              : state === "degraded"
-                ? "bg-orange-50 border-orange-200 text-orange-800"
-                : "bg-red-50 border-red-200 text-red-800"
-          }`}
-        >
-          <span
-            className={`w-2.5 h-2.5 rounded-full ${
-              state === "ok"
-                ? "bg-teal-500"
-                : state === "degraded"
-                  ? "bg-orange-500"
-                  : "bg-red-500"
-            } ${pulseClass}`}
-          />
-          {state === "ok"
-            ? "Ready"
+function StatusBadge({ state }: { state: MonitorState }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-2 rounded-md px-3 py-1 text-sm border ${
+        state === "ok"
+          ? "bg-teal-50 border-teal-200 text-teal-800"
+          : state === "degraded"
+            ? "bg-orange-50 border-orange-200 text-orange-800"
+            : "bg-red-50 border-red-200 text-red-800"
+      }`}
+    >
+      <span
+        className={`w-2 h-2 rounded-full ${
+          state === "ok"
+            ? "bg-teal-500"
             : state === "degraded"
-              ? "Not ready"
-              : "Offline"}
-        </span>
-      </div>
-
-      <div className="mt-4 bg-gray-50 border border-gray-200 rounded-md p-4 overflow-hidden">
-        <svg
-          viewBox="0 0 240 60"
-          className="w-full h-14"
-          role="img"
-          aria-label="Heartbeat monitor"
-        >
-          <path
-            d={
-              showFlatline
-                ? "M0 30 H240"
-                : "M0 30 H30 L38 30 L44 12 L50 48 L56 30 H90 L96 30 L102 15 L108 45 L114 30 H240"
-            }
-            className={`fill-none stroke-[3] ${color} ${
-              showFlatline ? "" : "ecg-line"
-            }`}
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-          <path
-            d="M0 30 H240"
-            className="fill-none stroke-[2] stroke-gray-200"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-        </svg>
-      </div>
-    </div>
+              ? "bg-orange-500"
+              : "bg-red-500"
+        } ${state !== "down" ? "animate-pulse" : ""}`}
+      />
+      {state === "ok" ? "Ready" : state === "degraded" ? "Degraded" : "Offline"}
+    </span>
   );
 }
 
@@ -154,8 +139,6 @@ export default function MonitoringPage() {
     return "degraded";
   })();
 
-  const bpm = monitorState === "ok" ? 78 : monitorState === "degraded" ? 52 : 0;
-
   const daily = reports.data?.daily ?? [];
   const maxDaily = Math.max(1, ...daily.map((d) => d.count));
 
@@ -167,9 +150,13 @@ export default function MonitoringPage() {
       />
       <div className="container container-lg">
         <div className="stack stack-xl">
-          <h1>Monitoring</h1>
-
-          <Heartbeat state={monitorState} bpm={bpm} />
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-4">
+              <h1 className="mb-0">Monitoring</h1>
+              <EcgPulse state={monitorState} />
+            </div>
+            <StatusBadge state={monitorState} />
+          </div>
 
           <div className="grid gap-6 md:grid-cols-3">
             <div className="card">

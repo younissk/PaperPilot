@@ -303,6 +303,7 @@ def get_pipeline_status(req: func.HttpRequest) -> func.HttpResponse:
             "job_id": job.get("job_id"),
             "status": frontend_status,
             "query": job.get("query", ""),
+            "created_at": job.get("created_at"),
             "phase": phase or None,
             "phase_step": progress.get("step"),
             "phase_step_name": progress.get("step_name") or progress.get("phase"),

@@ -114,6 +114,8 @@ async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[s
                     "paper_id": c.candidate.paper_id,
                     "title": c.candidate.title,
                     "elo": round(c.elo, 1),
+                    "wins": c.wins,
+                    "losses": c.losses,
                 }
                 for c in leaderboard
             ]

@@ -25,6 +25,8 @@ export interface LeaderboardEntry {
   paper_id: string;
   title: string;
   elo: number;
+  wins?: number;
+  losses?: number;
 }
 
 export interface ResearchItem {
@@ -111,6 +113,7 @@ export interface PipelineResponse {
     | "completed"
     | "failed";
   query: string;
+  created_at?: string;
   phase?: string;
   phase_step?: number;
   phase_step_name?: string;

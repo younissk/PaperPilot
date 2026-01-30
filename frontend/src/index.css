@@ -232,18 +232,65 @@
     @apply bg-primary-100 no-underline;
   }
 
-  /* Heartbeat monitor */
-  @keyframes ecgDash {
-    from {
-      stroke-dashoffset: 0;
+  /* ECG trace animation - sweeping line like hospital monitor */
+  @keyframes ecgSweep {
+    0% {
+      stroke-dashoffset: 200;
     }
-    to {
-      stroke-dashoffset: -200;
+    100% {
+      stroke-dashoffset: 0;
     }
   }
 
-  .ecg-line {
-    stroke-dasharray: 12 8;
-    animation: ecgDash 1.2s linear infinite;
+  @keyframes ecgFade {
+    0%,
+    80% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0.3;
+    }
+  }
+
+  .ecg-trace {
+    stroke-dasharray: 200;
+    stroke-dashoffset: 200;
+    animation:
+      ecgSweep 1.5s linear infinite,
+      ecgFade 1.5s ease-in-out infinite;
+  }
+
+  /* Medal badges for leaderboard */
+  .medal-gold {
+    box-shadow:
+      0 0 0 2px theme("colors.amber.200"),
+      0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .medal-silver {
+    box-shadow:
+      0 0 0 2px theme("colors.gray.300"),
+      0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .medal-bronze {
+    box-shadow:
+      0 0 0 2px theme("colors.orange.200"),
+      0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Pulse animation for active timeline step */
+  @keyframes timelinePulse {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 theme("colors.primary.200");
+    }
+    50% {
+      box-shadow: 0 0 0 8px transparent;
+    }
+  }
+
+  .timeline-step-active {
+    animation: timelinePulse 2s ease-in-out infinite;
   }
 }

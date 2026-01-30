@@ -16,6 +16,23 @@ from datetime import datetime
 from pathlib import Path
 
 from papernavigator.logging import get_logger
+
+# #region agent log
+def _debug_log(location: str, message: str, data: dict, hypothesis_id: str = ""):
+    import json as _json
+    # Log to file for local debugging
+    log_path = "/Users/younisskandah/Documents/GitHub/PaperPilot/.cursor/debug.log"
+    try:
+        with open(log_path, "a") as f:
+            f.write(_json.dumps({"location": location, "message": message, "data": data, "hypothesisId": hypothesis_id, "timestamp": time.time(), "sessionId": "debug-session"}) + "\n")
+    except Exception:
+        pass
+    # Also log via structlog for Azure visibility
+    try:
+        log.debug("DEBUG_TRACE", location=location, message=message, hypothesis=hypothesis_id, **data)
+    except Exception:
+        pass
+# #endregion
 from papernavigator.report.auditor import audit_all_sections, merge_citations
 from papernavigator.report.cards import generate_paper_cards
 from papernavigator.report.models import (
@@ -259,6 +276,9 @@ async def generate_report(
 
     # Step 4: Audit sections
     log.info("step_4_citation_audit")
+    # #region agent log
+    _debug_log("generator.py:generate_report:step4_start", "Starting Step 4 - Audit sections", {"num_sections": len(written_sections)}, "H1")
+    # #endregion
     audit_results = await audit_all_sections(
         written_sections,
         cards,
@@ -266,15 +286,33 @@ async def generate_report(
             progress_callback(4, "Auditing Citations", current, total, msg) if progress_callback else None
         )
     )
+    # #region agent log
+    _debug_log("generator.py:generate_report:step4_complete", "Step 4 complete - audit_all_sections returned", {"num_results": len(audit_results)}, "H1")
+    # #endregion
     log.info("audit_complete", count=len(audit_results))
 
     if progress_callback:
+        # #region agent log
+        _debug_log("generator.py:generate_report:step4_final_callback", "Calling final progress callback for Step 4", {"num_results": len(audit_results)}, "H3")
+        # #endregion
         progress_callback(4, "Auditing Citations", len(audit_results), len(audit_results), f"Audited {len(audit_results)} sections")
+        # #region agent log
+        _debug_log("generator.py:generate_report:step4_final_callback_done", "Final Step 4 callback returned", {}, "H3")
+        # #endregion
 
     # Step 5: Write introduction and conclusion
     log.info("step_5_intro_conclusion")
+    # #region agent log
+    _debug_log("generator.py:generate_report:step5_start", "Starting Step 5 - Write intro/conclusion", {}, "H1")
+    # #endregion
     introduction = await write_introduction(query, cards)
+    # #region agent log
+    _debug_log("generator.py:generate_report:step5_intro_done", "Introduction written", {"intro_length": len(introduction) if introduction else 0}, "H1")
+    # #endregion
     conclusion = await write_conclusion(query, cards, written_sections)
+    # #region agent log
+    _debug_log("generator.py:generate_report:step5_conclusion_done", "Conclusion written", {"conclusion_length": len(conclusion) if conclusion else 0}, "H1")
+    # #endregion
 
     if progress_callback:
         progress_callback(5, "Writing Introduction & Conclusion", 1, 1, "Completed introduction and conclusion")
