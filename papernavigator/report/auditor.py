@@ -15,6 +15,10 @@ from openai import AsyncOpenAI
 
 # Timeout for OpenAI API calls (seconds)
 OPENAI_TIMEOUT_SECONDS = 60
+# Timeout per audit section (seconds) to avoid indefinite hangs
+AUDIT_SECTION_TIMEOUT_SECONDS = int(os.getenv("AUDIT_SECTION_TIMEOUT_SECONDS", "120"))
+# Retries for audit timeouts/errors
+AUDIT_SECTION_MAX_RETRIES = int(os.getenv("AUDIT_SECTION_MAX_RETRIES", "1"))
 
 from papernavigator.logging import get_logger
 from papernavigator.report.models import (
@@ -316,7 +320,70 @@ async def audit_all_sections(
         if progress_callback:
             progress_callback(i, total_sections, f"Auditing section {i+1}/{total_sections}: {section.title}")
 
-        result = await audit_section(section, section_cards)
+        result: AuditResult | None = None
+        for attempt in range(AUDIT_SECTION_MAX_RETRIES + 1):
+            try:
+                result = await asyncio.wait_for(
+                    audit_section(section, section_cards),
+                    timeout=AUDIT_SECTION_TIMEOUT_SECONDS,
+                )
+                break
+            except asyncio.TimeoutError:
+                log.warning(
+                    "audit_section_timeout",
+                    section=section.title,
+                    timeout_sec=AUDIT_SECTION_TIMEOUT_SECONDS,
+                    attempt=attempt + 1,
+                )
+                if progress_callback:
+                    progress_callback(
+                        i,
+                        total_sections,
+                        (
+                            "WARNING: Audit timed out for section "
+                            f"{i+1}/{total_sections}: {section.title} "
+                            f"(attempt {attempt + 1})"
+                        ),
+                    )
+            except Exception as exc:
+                log.error(
+                    "audit_section_failed",
+                    section=section.title,
+                    error=str(exc),
+                    attempt=attempt + 1,
+                )
+                if progress_callback:
+                    progress_callback(
+                        i,
+                        total_sections,
+                        (
+                            "WARNING: Audit failed for section "
+                            f"{i+1}/{total_sections}: {section.title} "
+                            f"(attempt {attempt + 1})"
+                        ),
+                    )
+            if attempt == AUDIT_SECTION_MAX_RETRIES:
+                result = AuditResult(
+                    section_title=section.title,
+                    original_text=section.content,
+                    revised_text=section.content,
+                    sentences=[],
+                    supported_count=0,
+                    unsupported_count=0,
+                    revised_count=0,
+                )
+                break
+
+        if result is None:
+            result = AuditResult(
+                section_title=section.title,
+                original_text=section.content,
+                revised_text=section.content,
+                sentences=[],
+                supported_count=0,
+                unsupported_count=0,
+                revised_count=0,
+            )
         results.append(result)
 
         total_supported += result.supported_count

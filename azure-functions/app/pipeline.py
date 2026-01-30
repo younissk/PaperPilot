@@ -342,13 +342,30 @@ async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[s
 
         def report_progress_callback(step, step_name, current, total, message):
             nonlocal events
-            events = append_event(events, "progress", "report", message, step=step, step_name=step_name)
+            level = None
+            clean_message = message
+            if message.startswith("WARNING:"):
+                level = "warning"
+                clean_message = message[len("WARNING:"):].strip()
+            elif message.startswith("ERROR:"):
+                level = "error"
+                clean_message = message[len("ERROR:"):].strip()
+
+            events = append_event(
+                events,
+                "progress",
+                "report",
+                clean_message,
+                step=step,
+                step_name=step_name,
+                level=level,
+            )
             update_job_progress(
                 job_id,
                 "running",
                 "report",
                 step,
-                message,
+                clean_message,
                 current=current,
                 total=total,
                 step_name=step_name,
