@@ -14,7 +14,7 @@ from collections.abc import Callable
 from openai import AsyncOpenAI
 
 # Timeout for OpenAI API calls (seconds)
-OPENAI_TIMEOUT_SECONDS = 60
+OPENAI_TIMEOUT_SECONDS = int(os.getenv("OPENAI_TIMEOUT_SECONDS", "60"))
 # Timeout per audit section (seconds) to avoid indefinite hangs
 AUDIT_SECTION_TIMEOUT_SECONDS = int(os.getenv("AUDIT_SECTION_TIMEOUT_SECONDS", "120"))
 # Retries for audit timeouts/errors
@@ -180,7 +180,8 @@ async def audit_section(
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0,
                 max_tokens=2500,
-                response_format={"type": "json_object"}
+                response_format={"type": "json_object"},
+                timeout=OPENAI_TIMEOUT_SECONDS,
             ),
             timeout=OPENAI_TIMEOUT_SECONDS
         )

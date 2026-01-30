@@ -17,7 +17,7 @@ from papernavigator.report.models import PaperCard, ReportOutline, SectionPlan
 log = get_logger(__name__)
 
 # Timeout for OpenAI API calls (seconds)
-OPENAI_TIMEOUT_SECONDS = 60
+OPENAI_TIMEOUT_SECONDS = int(os.getenv("OPENAI_TIMEOUT_SECONDS", "60"))
 
 # Async OpenAI client
 _async_client: AsyncOpenAI | None = None
@@ -143,7 +143,8 @@ async def generate_outline(query: str, cards: list[PaperCard]) -> ReportOutline:
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.3,  # Slight creativity for organization
                 max_tokens=2000,
-                response_format={"type": "json_object"}
+                response_format={"type": "json_object"},
+                timeout=OPENAI_TIMEOUT_SECONDS,
             ),
             timeout=OPENAI_TIMEOUT_SECONDS
         )

@@ -7,6 +7,10 @@ import {
   useReadinessCheck,
 } from "@/hooks";
 
+// Brutalist shadow styles
+const brutalShadow = { boxShadow: "3px 3px 0 #F3787A" };
+const brutalShadowSmall = { boxShadow: "1px 1px 0 #F3787A" };
+
 function formatSeconds(value: number | null | undefined): string {
   if (value === null || value === undefined || !Number.isFinite(value)) {
     return "—";
@@ -37,12 +41,8 @@ function formatBytes(value: number | null | undefined): string {
 type MonitorState = "ok" | "degraded" | "down";
 
 function EcgPulse({ state }: { state: MonitorState }) {
-  const strokeColor =
-    state === "ok"
-      ? "#14b8a6" // teal-500
-      : state === "degraded"
-        ? "#f97316" // orange-500
-        : "#ef4444"; // red-500
+  // Brutalist: use black for ok/degraded, coral for pulse
+  const strokeColor = state === "down" ? "#000" : "#000";
 
   // ECG waveform: flat → small P wave → flat → sharp QRS → flat → small T wave → flat
   const ecgPath =
@@ -63,7 +63,7 @@ function EcgPulse({ state }: { state: MonitorState }) {
           y2="20"
           stroke={strokeColor}
           strokeWidth="2"
-          opacity="0.5"
+          opacity="0.3"
         />
       </svg>
     );
@@ -90,32 +90,32 @@ function EcgPulse({ state }: { state: MonitorState }) {
 }
 
 function StatusBadge({ state }: { state: MonitorState }) {
+  const label = state === "ok" ? "ready" : state === "degraded" ? "degraded" : "offline";
+  const icon = state === "ok" ? "✓" : state === "degraded" ? "!" : "×";
+  
   return (
     <span
-      className={`inline-flex items-center gap-2 rounded-md px-3 py-1 text-sm border ${
-        state === "ok"
-          ? "bg-teal-50 border-teal-200 text-teal-800"
-          : state === "degraded"
-            ? "bg-orange-50 border-orange-200 text-orange-800"
-            : "bg-red-50 border-red-200 text-red-800"
-      }`}
+      className="inline-flex items-center gap-2 px-3 py-1 text-sm border-2 border-black bg-white text-black lowercase"
+      style={brutalShadowSmall}
     >
       <span
-        className={`w-2 h-2 rounded-full ${
+        className={`w-5 h-5 flex items-center justify-center text-xs font-bold ${
           state === "ok"
-            ? "bg-teal-500"
+            ? "bg-black text-white"
             : state === "degraded"
-              ? "bg-orange-500"
-              : "bg-red-500"
-        } ${state !== "down" ? "animate-pulse" : ""}`}
-      />
-      {state === "ok" ? "Ready" : state === "degraded" ? "Degraded" : "Offline"}
+              ? "bg-white text-black border border-black"
+              : "bg-white text-black border border-black"
+        }`}
+      >
+        {icon}
+      </span>
+      {label}
     </span>
   );
 }
 
 /**
- * Monitoring page placeholder for API and system status.
+ * Monitoring page - brutalist design.
  */
 export default function MonitoringPage() {
   const windowDays = 30;
@@ -148,34 +148,39 @@ export default function MonitoringPage() {
         title="Monitoring"
         description="API and system monitoring dashboard"
       />
-      <div className="container container-lg">
+      <div className="container container-lg py-12 px-4">
         <div className="stack stack-xl">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-4">
-              <h1 className="mb-0">Monitoring</h1>
+              <h1 className="mb-0 text-3xl md:text-4xl font-bold text-black text-shadow-brutal lowercase">
+                monitoring
+              </h1>
               <EcgPulse state={monitorState} />
             </div>
             <StatusBadge state={monitorState} />
           </div>
 
           <div className="grid gap-6 md:grid-cols-3">
-            <div className="card">
+            {/* Reports Card */}
+            <div className="bg-white border-2 border-black p-6" style={brutalShadow}>
               <div className="stack stack-sm">
-                <h2 className="text-base">Reports (last {windowDays} days)</h2>
+                <h2 className="text-base font-bold text-black lowercase">
+                  reports (last {windowDays} days)
+                </h2>
                 {reports.isLoading ? (
-                  <div className="inline inline-sm text-gray-500">
+                  <div className="flex items-center gap-2 text-gray-600 lowercase">
                     <div className="spinner" />
-                    <span>Loading…</span>
+                    <span>loading…</span>
                   </div>
                 ) : reports.error ? (
-                  <div className="text-sm text-red-700">
+                  <div className="text-sm text-black">
                     {reports.error instanceof Error
                       ? reports.error.message
-                      : "Failed to load report metrics"}
+                      : "failed to load report metrics"}
                   </div>
                 ) : (
                   <>
-                    <div className="text-3xl font-semibold text-gray-900">
+                    <div className="text-4xl font-bold text-black text-shadow-brutal">
                       {reports.data?.reports_generated ?? 0}
                     </div>
                     <div className="mt-3">
@@ -183,7 +188,7 @@ export default function MonitoringPage() {
                         {daily.slice(-windowDays).map((d) => (
                           <div
                             key={d.date}
-                            className="w-1 rounded-sm bg-primary-200"
+                            className="w-1 bg-black"
                             style={{
                               height: `${Math.max(
                                 8,
@@ -194,8 +199,8 @@ export default function MonitoringPage() {
                           />
                         ))}
                       </div>
-                      <p className="text-xs text-gray-500 mt-2">
-                        Daily counts (sparkline)
+                      <p className="text-xs text-gray-600 mt-2 lowercase">
+                        daily counts (sparkline)
                       </p>
                     </div>
                   </>
@@ -203,44 +208,47 @@ export default function MonitoringPage() {
               </div>
             </div>
 
-            <div className="card">
+            {/* Pipeline Time Card */}
+            <div className="bg-white border-2 border-black p-6" style={brutalShadow}>
               <div className="stack stack-sm">
-                <h2 className="text-base">Pipeline time (last {windowDays} days)</h2>
+                <h2 className="text-base font-bold text-black lowercase">
+                  pipeline time (last {windowDays} days)
+                </h2>
                 {pipelines.isLoading ? (
-                  <div className="inline inline-sm text-gray-500">
+                  <div className="flex items-center gap-2 text-gray-600 lowercase">
                     <div className="spinner" />
-                    <span>Loading…</span>
+                    <span>loading…</span>
                   </div>
                 ) : pipelines.error ? (
-                  <div className="text-sm text-red-700">
+                  <div className="text-sm text-black">
                     {pipelines.error instanceof Error
                       ? pipelines.error.message
-                      : "Failed to load pipeline metrics"}
+                      : "failed to load pipeline metrics"}
                   </div>
                 ) : (
                   <>
-                    <div className="text-sm text-gray-600">
-                      Avg:{" "}
-                      <span className="font-semibold text-gray-900">
+                    <div className="text-sm text-gray-600 lowercase">
+                      avg:{" "}
+                      <span className="font-bold text-black">
                         {formatSeconds(pipelines.data?.duration_sec.avg)}
                       </span>
                       {" · "}p95:{" "}
-                      <span className="font-semibold text-gray-900">
+                      <span className="font-bold text-black">
                         {formatSeconds(pipelines.data?.duration_sec.p95)}
                       </span>
                     </div>
 
                     <div className="mt-3">
-                      <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                        Avg per phase
+                      <h3 className="text-xs font-bold text-black lowercase tracking-wide mb-2">
+                        avg per phase
                       </h3>
                       <div className="stack stack-sm">
                         {Object.entries(
                           pipelines.data?.per_phase_avg_duration_sec ?? {},
                         ).map(([phase, sec]) => (
                           <div key={phase} className="flex justify-between text-sm">
-                            <span className="text-gray-600">{phase}</span>
-                            <span className="font-medium text-gray-900">
+                            <span className="text-gray-600 lowercase">{phase}</span>
+                            <span className="font-medium text-black">
                               {formatSeconds(sec)}
                             </span>
                           </div>
@@ -248,8 +256,8 @@ export default function MonitoringPage() {
                         {Object.keys(
                           pipelines.data?.per_phase_avg_duration_sec ?? {},
                         ).length === 0 && (
-                          <p className="text-sm text-gray-500">
-                            No phase timing data yet.
+                          <p className="text-sm text-gray-600 lowercase">
+                            no phase timing data yet.
                           </p>
                         )}
                       </div>
@@ -259,53 +267,56 @@ export default function MonitoringPage() {
               </div>
             </div>
 
-            <div className="card">
+            {/* Cost Signals Card */}
+            <div className="bg-white border-2 border-black p-6" style={brutalShadow}>
               <div className="stack stack-sm">
-                <h2 className="text-base">Cost signals (excluding OpenAI)</h2>
+                <h2 className="text-base font-bold text-black lowercase">
+                  cost signals (excluding openai)
+                </h2>
                 {costs.isLoading ? (
-                  <div className="inline inline-sm text-gray-500">
+                  <div className="flex items-center gap-2 text-gray-600 lowercase">
                     <div className="spinner" />
-                    <span>Loading…</span>
+                    <span>loading…</span>
                   </div>
                 ) : costs.error ? (
-                  <div className="text-sm text-red-700">
+                  <div className="text-sm text-black">
                     {costs.error instanceof Error
                       ? costs.error.message
-                      : "Failed to load cost signals"}
+                      : "failed to load cost signals"}
                   </div>
                 ) : (
                   <>
                     <div className="stack stack-sm">
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Bytes uploaded (total)</span>
-                        <span className="font-medium text-gray-900">
+                        <span className="text-gray-600 lowercase">bytes uploaded (total)</span>
+                        <span className="font-medium text-black">
                           {formatBytes(costs.data?.cost_proxies.bytes_uploaded_total)}
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Avg bytes / pipeline</span>
-                        <span className="font-medium text-gray-900">
+                        <span className="text-gray-600 lowercase">avg bytes / pipeline</span>
+                        <span className="font-medium text-black">
                           {formatBytes(
                             costs.data?.cost_proxies.avg_bytes_uploaded_per_pipeline,
                           )}
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Artifacts (total)</span>
-                        <span className="font-medium text-gray-900">
+                        <span className="text-gray-600 lowercase">artifacts (total)</span>
+                        <span className="font-medium text-black">
                           {costs.data?.cost_proxies.artifact_count_total ?? 0}
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Avg artifacts / pipeline</span>
-                        <span className="font-medium text-gray-900">
+                        <span className="text-gray-600 lowercase">avg artifacts / pipeline</span>
+                        <span className="font-medium text-black">
                           {costs.data?.cost_proxies.avg_artifacts_per_pipeline ??
                             "—"}
                         </span>
                       </div>
                     </div>
-                    <p className="text-xs text-gray-500 mt-2">
-                      OpenAI/LLM costs intentionally excluded for now.
+                    <p className="text-xs text-gray-600 mt-2 lowercase">
+                      openai/llm costs intentionally excluded for now.
                     </p>
                   </>
                 )}
@@ -313,14 +324,15 @@ export default function MonitoringPage() {
             </div>
           </div>
 
+          {/* Readiness Checks Card */}
           {(readiness.error || readiness.data) && (
-            <div className="card">
-              <h2 className="text-base mb-3">Readiness checks</h2>
+            <div className="bg-white border-2 border-black p-6" style={brutalShadow}>
+              <h2 className="text-base font-bold text-black mb-3 lowercase">readiness checks</h2>
               {readiness.error ? (
-                <p className="text-sm text-red-700">
+                <p className="text-sm text-black">
                   {readiness.error instanceof Error
                     ? readiness.error.message
-                    : "Failed to load readiness"}
+                    : "failed to load readiness"}
                 </p>
               ) : (
                 <div className="grid gap-2">
@@ -328,17 +340,20 @@ export default function MonitoringPage() {
                     ([name, status]) => (
                       <div
                         key={name}
-                        className="flex justify-between text-sm border-b border-gray-100 pb-2 last:border-b-0 last:pb-0"
+                        className="flex justify-between text-sm border-b border-black pb-2 last:border-b-0 last:pb-0"
                       >
-                        <span className="text-gray-600">{name}</span>
-                        <span
-                          className={
-                            status === "connected"
-                              ? "text-teal-700 font-medium"
-                              : "text-red-700 font-medium"
-                          }
-                        >
-                          {status}
+                        <span className="text-gray-600 lowercase">{name}</span>
+                        <span className="flex items-center gap-2 font-medium text-black">
+                          <span
+                            className={`w-4 h-4 flex items-center justify-center text-xs ${
+                              status === "connected"
+                                ? "bg-black text-white"
+                                : "border border-black"
+                            }`}
+                          >
+                            {status === "connected" ? "✓" : "×"}
+                          </span>
+                          <span className="lowercase">{status}</span>
                         </span>
                       </div>
                     ),

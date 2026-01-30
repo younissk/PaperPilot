@@ -17,7 +17,11 @@ from papernavigator.report.models import PaperCard, SectionPlan, WrittenSection
 log = get_logger(__name__)
 
 # Timeout for OpenAI API calls (seconds)
-OPENAI_TIMEOUT_SECONDS = 60
+OPENAI_TIMEOUT_SECONDS = int(os.getenv("OPENAI_TIMEOUT_SECONDS", "60"))
+# Timeout per section write (seconds)
+WRITE_SECTION_TIMEOUT_SECONDS = int(os.getenv("WRITE_SECTION_TIMEOUT_SECONDS", "120"))
+# Retries per section write on timeout/errors
+WRITE_SECTION_MAX_RETRIES = int(os.getenv("WRITE_SECTION_MAX_RETRIES", "1"))
 
 # Async OpenAI client
 _async_client: AsyncOpenAI | None = None
@@ -155,6 +159,7 @@ async def write_section(
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.2,  # Low temperature for factual accuracy
                 max_tokens=1500,
+                timeout=OPENAI_TIMEOUT_SECONDS,
             ),
             timeout=OPENAI_TIMEOUT_SECONDS
         )
@@ -260,6 +265,7 @@ Return ONLY the rewritten text with citations. Do not include any explanation.""
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.1,
                 max_tokens=1500,
+                timeout=OPENAI_TIMEOUT_SECONDS,
             ),
             timeout=OPENAI_TIMEOUT_SECONDS
         )
@@ -375,10 +381,70 @@ async def write_all_sections(
         if progress_callback:
             progress_callback(i, total_sections, f"Writing section {i+1}/{total_sections}: {section.title}")
 
-        written = await write_section(section, section_cards)
+        written: WrittenSection | None = None
+        for attempt in range(WRITE_SECTION_MAX_RETRIES + 1):
+            try:
+                written = await asyncio.wait_for(
+                    write_section(section, section_cards),
+                    timeout=WRITE_SECTION_TIMEOUT_SECONDS,
+                )
+                # Validate and rewrite if citation density is too low
+                written = await asyncio.wait_for(
+                    validate_and_rewrite_if_needed(written, section_cards),
+                    timeout=WRITE_SECTION_TIMEOUT_SECONDS,
+                )
+                break
+            except asyncio.TimeoutError:
+                log.warning(
+                    "section_write_timeout",
+                    section=section.title,
+                    timeout_sec=WRITE_SECTION_TIMEOUT_SECONDS,
+                    attempt=attempt + 1,
+                )
+                if progress_callback:
+                    progress_callback(
+                        i,
+                        total_sections,
+                        (
+                            "WARNING: Writing timed out for section "
+                            f"{i+1}/{total_sections}: {section.title} "
+                            f"(attempt {attempt + 1})"
+                        ),
+                    )
+            except Exception as exc:
+                log.error(
+                    "section_write_failed",
+                    section=section.title,
+                    error=str(exc),
+                    attempt=attempt + 1,
+                )
+                if progress_callback:
+                    progress_callback(
+                        i,
+                        total_sections,
+                        (
+                            "WARNING: Writing failed for section "
+                            f"{i+1}/{total_sections}: {section.title} "
+                            f"(attempt {attempt + 1})"
+                        ),
+                    )
+            if attempt == WRITE_SECTION_MAX_RETRIES:
+                written = WrittenSection(
+                    title=section.title,
+                    content=(
+                        "Section generation failed after "
+                        f"{WRITE_SECTION_MAX_RETRIES + 1} attempts."
+                    ),
+                    paper_ids_used=[],
+                )
+                break
 
-        # Validate and rewrite if citation density is too low
-        written = await validate_and_rewrite_if_needed(written, section_cards)
+        if written is None:
+            written = WrittenSection(
+                title=section.title,
+                content="Section generation failed with unknown error.",
+                paper_ids_used=[],
+            )
 
         written_sections.append(written)
 
@@ -428,6 +494,7 @@ Write concise, academic prose. Return only the introduction text."""
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.3,
                 max_tokens=800,
+                timeout=OPENAI_TIMEOUT_SECONDS,
             ),
             timeout=OPENAI_TIMEOUT_SECONDS
         )
@@ -498,6 +565,7 @@ Write academic prose. Return only the conclusion text (no citations needed in co
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.3,
                 max_tokens=500,
+                timeout=OPENAI_TIMEOUT_SECONDS,
             ),
             timeout=OPENAI_TIMEOUT_SECONDS
         )

@@ -3,6 +3,10 @@ import { useParams, useSearchParams, useNavigate, Link } from "react-router";
 import { SEO, PaperCard, ProgressIndicator } from "@/components";
 import { useAllResults, usePipelineStatus } from "@/hooks";
 
+// Brutalist shadow styles
+const brutalShadow = { boxShadow: "3px 3px 0 #F3787A" };
+const brutalShadowSmall = { boxShadow: "1px 1px 0 #F3787A" };
+
 /**
  * Helper function to format citations in text.
  * Converts [W123456789] to clickable OpenAlex links.
@@ -18,7 +22,7 @@ function formatCitations(text: string): string {
 }
 
 /**
- * Report page component.
+ * Report page component - brutalist design.
  */
 export default function ReportPage() {
   const { queryId } = useParams();
@@ -85,17 +89,26 @@ export default function ReportPage() {
     return (
       <>
         <SEO title="Report Not Found" noindex />
-        <div className="text-center py-12">
-          <h1 className="text-gray-600">Report Not Found</h1>
-          <p className="text-gray-500 mt-2">
-            The report for "{queryId?.replace(/_/g, " ")}" does not exist.
+        <div className="text-center py-12 px-4">
+          <h1 className="text-3xl font-bold text-black text-shadow-brutal lowercase">
+            report not found
+          </h1>
+          <p className="text-gray-600 mt-2 lowercase">
+            the report for "{queryId?.replace(/_/g, " ")}" does not exist.
           </p>
-          <div className="stack stack-md mt-6 items-center">
-            <Link to="/" className="btn btn-primary">
-              Create New Report
+          <div className="flex flex-col sm:flex-row gap-4 mt-6 justify-center">
+            <Link
+              to="/"
+              className="btn btn-brutal lowercase"
+              style={brutalShadow}
+            >
+              create new report
             </Link>
-            <Link to="/queries" className="btn btn-secondary">
-              View Existing Reports
+            <Link
+              to="/queries"
+              className="btn border-2 border-black bg-white text-black hover:bg-gray-50 lowercase"
+            >
+              view existing reports
             </Link>
           </div>
         </div>
@@ -108,9 +121,9 @@ export default function ReportPage() {
     return (
       <>
         <SEO title="Error" noindex />
-        <div className="container container-lg">
-          <div className="alert alert-error">
-            <strong>Error loading report:</strong> {error.message}
+        <div className="container container-lg py-12 px-4">
+          <div className="p-4 border-2 border-black border-l-4 border-l-red-500 bg-white">
+            <strong className="lowercase">error loading report:</strong> {error.message}
           </div>
         </div>
       </>
@@ -125,7 +138,7 @@ export default function ReportPage() {
         <div className="flex justify-center items-center min-h-[400px]">
           <div className="text-center">
             <div className="spinner mx-auto mb-4" />
-            <p className="text-gray-500">Loading report...</p>
+            <p className="text-gray-600 lowercase">loading report...</p>
           </div>
         </div>
       </>
@@ -139,28 +152,31 @@ export default function ReportPage() {
       return (
         <>
           <SEO title="Generation Failed" noindex />
-          <div className="container container-lg">
-            <div className="alert alert-error">
-              <strong>Report generation failed:</strong>{" "}
-              {pipelineStatus.error || "Unknown error"}
+          <div className="container container-lg py-12 px-4">
+            <div className="p-4 border-2 border-black border-l-4 border-l-red-500 bg-white">
+              <strong className="lowercase">report generation failed:</strong>{" "}
+              {pipelineStatus.error || "unknown error"}
             </div>
             {pipelineStatus.alerts && pipelineStatus.alerts.length > 0 && (
-              <div className="stack stack-sm">
+              <div className="stack stack-sm mt-4">
                 {pipelineStatus.alerts.slice(-3).map((alert, idx) => (
                   <div
                     key={`${alert.ts ?? "alert"}-${idx}`}
-                    className={`alert ${
-                      alert.level === "error" ? "alert-error" : "alert-warning"
+                    className={`p-3 border-2 border-black bg-white ${
+                      alert.level === "error" ? "border-l-4 border-l-red-500" : ""
                     }`}
                   >
-                    <strong className="capitalize">{alert.level || "warning"}:</strong>{" "}
+                    <strong className="lowercase">{alert.level || "warning"}:</strong>{" "}
                     {alert.message}
                   </div>
                 ))}
               </div>
             )}
-            <Link to="/" className="btn btn-secondary mt-4">
-              Try Again
+            <Link
+              to="/"
+              className="btn border-2 border-black bg-white text-black hover:bg-gray-50 mt-4 lowercase inline-block"
+            >
+              try again
             </Link>
           </div>
         </>
@@ -192,41 +208,51 @@ export default function ReportPage() {
         jsonLd={jsonLd}
       />
 
-      <div className="container container-lg">
+      <div className="container container-lg py-12 px-4">
         <article className="max-w-4xl mx-auto">
           {/* Header */}
-          <header className="gradient-bg text-white p-8 rounded-lg mb-8">
-            <h1 className="text-white text-3xl md:text-2xl mb-4">
-              Research Report: <span>{reportData.query}</span>
+          <header
+            className="bg-black text-white p-8 mb-8 border-2 border-black"
+            style={brutalShadow}
+          >
+            <h1 className="text-white text-2xl md:text-3xl mb-4 lowercase">
+              research report: <span>{reportData.query}</span>
             </h1>
             <div className="flex gap-2 flex-wrap">
-              <span className="badge bg-white/20 text-white">
+              <span
+                className="inline-flex items-center px-3 py-1 text-sm border border-white text-white lowercase"
+              >
                 {new Date(reportData.generated_at).toLocaleDateString()}
               </span>
-              <span className="badge bg-white/20 text-white">
+              <span
+                className="inline-flex items-center px-3 py-1 text-sm border border-white text-white lowercase"
+              >
                 {reportData.total_papers_used} papers used
               </span>
             </div>
           </header>
 
           {/* Table of Contents */}
-          <nav className="bg-white p-6 rounded-md border border-gray-200 mb-8">
-            <h3 className="text-base text-gray-600 mb-4">Table of Contents</h3>
+          <nav
+            className="bg-white p-6 border-2 border-black mb-8"
+            style={brutalShadow}
+          >
+            <h3 className="text-base font-bold text-black mb-4 lowercase">table of contents</h3>
             <ul className="list-none p-0 m-0">
               <li className="mb-2">
-                <a href="#introduction" className="text-gray-700 hover:text-primary-600">
-                  Introduction
+                <a href="#introduction" className="text-gray-700 hover:text-black no-underline hover:underline lowercase">
+                  introduction
                 </a>
               </li>
               <li className="mb-2">
-                <a href="#current-research" className="text-gray-700 hover:text-primary-600">
-                  Current Research
+                <a href="#current-research" className="text-gray-700 hover:text-black no-underline hover:underline lowercase">
+                  current research
                 </a>
                 {reportData.current_research.length > 0 && (
                   <ul className="list-none p-0 ml-6 mt-1">
                     {reportData.current_research.map((item, idx) => (
                       <li key={idx} className="text-sm mb-1">
-                        <a href={`#research-${idx}`} className="text-gray-700 hover:text-primary-600">
+                        <a href={`#research-${idx}`} className="text-gray-600 hover:text-black no-underline hover:underline">
                           {item.title}
                         </a>
                       </li>
@@ -236,26 +262,26 @@ export default function ReportPage() {
               </li>
               {reportData.open_problems.length > 0 && (
                 <li className="mb-2">
-                  <a href="#open-problems" className="text-gray-700 hover:text-primary-600">
-                    Open Problems
+                  <a href="#open-problems" className="text-gray-700 hover:text-black no-underline hover:underline lowercase">
+                    open problems
                   </a>
                 </li>
               )}
               <li className="mb-2">
-                <a href="#conclusion" className="text-gray-700 hover:text-primary-600">
-                  Conclusion
+                <a href="#conclusion" className="text-gray-700 hover:text-black no-underline hover:underline lowercase">
+                  conclusion
                 </a>
               </li>
               <li>
-                <a href="#sources" className="text-gray-700 hover:text-primary-600">
-                  Sources
+                <a href="#sources" className="text-gray-700 hover:text-black no-underline hover:underline lowercase">
+                  sources
                 </a>
               </li>
             </ul>
           </nav>
 
           {/* Introduction */}
-          <ReportSection id="introduction" title="Introduction">
+          <ReportSection id="introduction" title="introduction">
             <p
               className="leading-relaxed"
               dangerouslySetInnerHTML={{ __html: formatCitations(reportData.introduction) }}
@@ -263,21 +289,21 @@ export default function ReportPage() {
           </ReportSection>
 
           {/* Current Research */}
-          <ReportSection id="current-research" title="Current Research">
+          <ReportSection id="current-research" title="current research">
             {reportData.current_research.map((item, idx) => (
               <div
                 key={idx}
                 id={`research-${idx}`}
-                className="mb-8 pb-6 border-b border-gray-100 last:mb-0 last:pb-0 last:border-b-0"
+                className="mb-8 pb-6 border-b border-black last:mb-0 last:pb-0 last:border-b-0"
               >
-                <h3 className="text-gray-800 mb-4">{item.title}</h3>
+                <h3 className="text-black font-bold mb-4">{item.title}</h3>
                 <p
                   className="leading-relaxed"
                   dangerouslySetInnerHTML={{ __html: formatCitations(item.summary) }}
                 />
                 {item.paper_ids.length > 0 && (
-                  <div className="mt-4 p-4 bg-gray-50 rounded-md text-sm">
-                    <strong>Referenced papers:</strong>
+                  <div className="mt-4 p-4 border border-black bg-white text-sm">
+                    <strong className="lowercase">referenced papers:</strong>
                     <ul className="list-none p-0 mt-2">
                       {item.paper_ids.map((paperId) => {
                         const card = reportData.paper_cards.find((c) => c.id === paperId);
@@ -308,20 +334,21 @@ export default function ReportPage() {
 
           {/* Open Problems */}
           {reportData.open_problems.length > 0 && (
-            <ReportSection id="open-problems" title="Open Problems">
+            <ReportSection id="open-problems" title="open problems">
               {reportData.open_problems.map((problem, idx) => (
                 <div
                   key={idx}
-                  className="mb-6 p-6 bg-orange-50 border-l-4 border-warning rounded-r-md"
+                  className="mb-6 p-6 bg-white border-2 border-black border-l-4"
+                  style={{ borderLeftColor: "#F3787A" }}
                 >
-                  <h3 className="text-warning mb-4">{problem.title}</h3>
+                  <h3 className="text-black font-bold mb-4">{problem.title}</h3>
                   <p
                     className="leading-relaxed"
                     dangerouslySetInnerHTML={{ __html: formatCitations(problem.text) }}
                   />
                   {problem.paper_ids.length > 0 && (
                     <div className="mt-4 flex gap-1 flex-wrap items-center">
-                      <strong>Sources:</strong>
+                      <strong className="lowercase">sources:</strong>
                       {problem.paper_ids.map((paperId) => {
                         const isOpenAlex = paperId.startsWith("W");
                         const url = isOpenAlex
@@ -347,7 +374,7 @@ export default function ReportPage() {
           )}
 
           {/* Conclusion */}
-          <ReportSection id="conclusion" title="Conclusion">
+          <ReportSection id="conclusion" title="conclusion">
             <p
               className="leading-relaxed"
               dangerouslySetInnerHTML={{ __html: formatCitations(reportData.conclusion) }}
@@ -355,10 +382,10 @@ export default function ReportPage() {
           </ReportSection>
 
           {/* Sources */}
-          <ReportSection id="sources" title="Sources">
-            <p className="text-gray-500 text-sm mb-6">
-              {papers.length} papers were analyzed for this report. Click on any paper
-              to view it on OpenAlex.
+          <ReportSection id="sources" title="sources">
+            <p className="text-gray-600 text-sm mb-6 lowercase">
+              {papers.length} papers were analyzed for this report. click on any paper
+              to view it on openalex.
             </p>
 
             {reportData.paper_cards.length > 0 && (
@@ -376,7 +403,7 @@ export default function ReportPage() {
 }
 
 /**
- * Report section wrapper component.
+ * Report section wrapper component - brutalist design.
  */
 function ReportSection({
   id,
@@ -390,9 +417,10 @@ function ReportSection({
   return (
     <section
       id={id}
-      className="bg-white p-8 rounded-md mb-6 border border-gray-200"
+      className="bg-white p-8 mb-6 border-2 border-black"
+      style={brutalShadow}
     >
-      <h2 className="text-primary-700 mb-6 pb-2 border-b-2 border-primary-100">
+      <h2 className="text-black font-bold text-xl mb-6 pb-2 border-b-2 border-black lowercase">
         {title}
       </h2>
       {children}

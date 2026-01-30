@@ -5,8 +5,11 @@ import { startPipeline, slugifyQuery } from "@/lib/api";
 import { DEFAULT_PIPELINE_PARAMS } from "@/lib/config";
 import type { PipelineRequest } from "@/lib/types";
 
+// Brutalist shadow styles
+const brutalShadow = { boxShadow: "3px 3px 0 #F3787A" };
+
 /**
- * Search form component with advanced options.
+ * Search form component with advanced options - brutalist design.
  */
 export function SearchForm() {
   const navigate = useNavigate();
@@ -62,12 +65,12 @@ export function SearchForm() {
 
   return (
     <div className="stack stack-lg text-center">
-      <h1 className="text-5xl font-bold text-primary-600 leading-tight md:text-4xl">
-        Discover Research Papers
+      <h1 className="text-5xl font-bold text-black leading-tight md:text-4xl text-shadow-brutal lowercase">
+        discover research papers
       </h1>
-      <p className="text-lg text-gray-500 max-w-xl mx-auto">
-        Use our intelligent snowball search to find and explore relevant academic
-        papers. Enter your research query to get started.
+      <p className="text-lg text-gray-600 max-w-xl mx-auto lowercase">
+        use our intelligent snowball search to find and explore relevant academic
+        papers. enter your research query to get started.
       </p>
 
       <form onSubmit={handleSubmit} className="w-full mt-8">
@@ -76,16 +79,18 @@ export function SearchForm() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="form-input form-input-lg flex-1"
-            placeholder="e.g., LLM Based Recommendation Systems"
+            className="form-input form-input-lg flex-1 border-2 border-black"
+            style={brutalShadow}
+            placeholder="e.g., llm based recommendation systems"
             required
           />
           <button
             type="submit"
             disabled={mutation.isPending}
-            className="btn btn-primary btn-lg whitespace-nowrap"
+            className="btn btn-brutal btn-lg whitespace-nowrap lowercase"
+            style={brutalShadow}
           >
-            {mutation.isPending ? "Starting..." : "Search"}
+            {mutation.isPending ? "starting..." : "search"}
           </button>
         </div>
 
@@ -95,25 +100,26 @@ export function SearchForm() {
               type="checkbox"
               checked={pipelineEnabled}
               onChange={(e) => setPipelineEnabled(e.target.checked)}
+              className="w-4 h-4 accent-black"
             />
-            <span className="text-sm text-gray-600">
-              Full Pipeline (Search + Rank + Report)
+            <span className="text-sm text-gray-600 lowercase">
+              full pipeline (search + rank + report)
             </span>
           </label>
           <button
             type="button"
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="bg-transparent border-none text-primary-600 cursor-pointer text-sm hover:underline"
+            className="bg-transparent border-none text-black cursor-pointer text-sm hover:underline lowercase"
           >
-            {showAdvanced ? "Hide Advanced Options" : "Show Advanced Options"}
+            {showAdvanced ? "hide advanced options" : "show advanced options"}
           </button>
         </div>
 
         {showAdvanced && (
           <div className="mt-6">
-            <div className="bg-white border border-gray-200 rounded-md p-6 text-left">
-              <h4 className="text-sm font-medium text-gray-500 mb-4">
-                Query Configuration
+            <div className="bg-white border-2 border-black p-6 text-left" style={brutalShadow}>
+              <h4 className="text-sm font-bold text-black mb-4 lowercase">
+                query configuration
               </h4>
               <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
                 <div className="form-group">
@@ -162,8 +168,8 @@ export function SearchForm() {
 
               {pipelineEnabled && (
                 <>
-                  <h4 className="text-sm font-medium text-gray-500 mb-4 mt-6">
-                    ELO Ranking Configuration
+                  <h4 className="text-sm font-bold text-black mb-4 mt-6 lowercase">
+                    elo ranking configuration
                   </h4>
                   <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
                     <div className="form-group">
@@ -213,8 +219,8 @@ export function SearchForm() {
                     </div>
                   </div>
 
-                  <h4 className="text-sm font-medium text-gray-500 mb-4 mt-6">
-                    Report Generation
+                  <h4 className="text-sm font-bold text-black mb-4 mt-6 lowercase">
+                    report generation
                   </h4>
                   <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4">
                     <div className="form-group">
@@ -231,8 +237,8 @@ export function SearchForm() {
                 </>
               )}
 
-              <h4 className="text-sm font-medium text-gray-500 mb-4 mt-6">
-                Notifications
+              <h4 className="text-sm font-bold text-black mb-4 mt-6 lowercase">
+                notifications
               </h4>
               <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
                 <div className="form-group">
@@ -256,15 +262,15 @@ export function SearchForm() {
 
       {error && (
         <div className="mt-6">
-          <div className="alert alert-error">
-            <strong>Error:</strong> {error}
+          <div className="p-4 border-2 border-black border-l-4 border-l-red-500 bg-white text-left">
+            <strong className="lowercase">error:</strong> {error}
           </div>
           <button
             type="button"
             onClick={() => setError(null)}
-            className="btn btn-secondary mt-2"
+            className="btn border-2 border-black bg-white text-black hover:bg-gray-50 mt-2 lowercase"
           >
-            Try Again
+            try again
           </button>
         </div>
       )}

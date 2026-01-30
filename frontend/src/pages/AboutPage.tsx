@@ -1,62 +1,66 @@
 import { SEO } from "@/components";
 
+// Brutalist shadow styles
+const brutalShadow = { boxShadow: "3px 3px 0 #F3787A" };
+const brutalShadowSmall = { boxShadow: "1px 1px 0 #F3787A" };
+
 const FEATURES = [
   {
-    title: "Semantic Search with Snowball Sampling",
+    title: "semantic search with snowball sampling",
     description:
-      "Discover relevant papers by iteratively expanding your search based on citations and references.",
+      "discover relevant papers by iteratively expanding your search based on citations and references.",
   },
   {
-    title: "ELO-based Paper Ranking",
+    title: "elo-based paper ranking",
     description:
-      "AI-powered pairwise comparisons to rank papers by relevance to your research question.",
+      "ai-powered pairwise comparisons to rank papers by relevance to your research question.",
   },
   {
-    title: "Citation Graph Visualization",
+    title: "citation graph visualization",
     description:
-      "Explore relationships between papers through interactive citation network graphs.",
+      "explore relationships between papers through interactive citation network graphs.",
   },
   {
-    title: "Timeline Analysis",
-    description: "Visualize the evolution of research topics over time.",
+    title: "timeline analysis",
+    description: "visualize the evolution of research topics over time.",
   },
   {
-    title: "Paper Clustering",
+    title: "paper clustering",
     description:
-      "Automatically group papers by topic using advanced embedding techniques.",
+      "automatically group papers by topic using advanced embedding techniques.",
   },
   {
-    title: "Automated Research Reports",
+    title: "automated research reports",
     description:
-      "Generate comprehensive literature review reports with citations and insights.",
+      "generate comprehensive literature review reports with citations and insights.",
   },
 ];
 
 const STEPS = [
   {
-    number: 1,
-    title: "Enter Your Query",
-    description: "Describe your research topic or question.",
+    number: "01",
+    title: "enter your query",
+    description: "describe your research topic or question.",
   },
   {
-    number: 2,
-    title: "Snowball Search",
-    description: "We find relevant papers and expand via citations/references.",
+    number: "02",
+    title: "snowball search",
+    description: "we find relevant papers and expand via citations/references.",
   },
   {
-    number: 3,
-    title: "AI Ranking",
-    description: "Papers are compared pairwise and ranked by relevance.",
+    number: "03",
+    title: "ai ranking",
+    description: "papers are compared pairwise and ranked by relevance.",
   },
   {
-    number: 4,
-    title: "Report Generation",
-    description: "A comprehensive report summarizes key findings and themes.",
+    number: "04",
+    title: "report generation",
+    description: "a comprehensive report summarizes key findings and themes.",
   },
 ];
 
 /**
- * About page with feature list and how it works.
+ * About page with feature list and how it works - brutalist design.
  */
 export default function AboutPage() {
   return (
@@ -66,47 +70,52 @@ export default function AboutPage() {
         description="Learn about Paper Navigator - AI-powered academic literature discovery and analysis."
       />
 
-      <div className="container container-lg">
+      <div className="container container-lg py-12 px-4">
         <div className="stack stack-xl">
-          <h1>About Paper Navigator</h1>
+          <h1 className="text-3xl md:text-4xl font-bold text-black text-shadow-brutal lowercase">
+            about paper navigator
+          </h1>
 
-          <div className="card">
+          <div className="bg-white border-2 border-black p-6" style={brutalShadow}>
             <div className="stack stack-md">
-              <p className="text-lg font-bold">
-                AI-powered academic literature discovery
+              <p className="text-lg font-bold lowercase">
+                ai-powered academic literature discovery
               </p>
-              <p>
-                Paper Navigator helps researchers discover and analyze academic papers
+              <p className="text-gray-600 lowercase">
+                paper navigator helps researchers discover and analyze academic papers
                 through intelligent search, ranking, visualization, and automated
                 report generation.
               </p>
 
-              <h3>Features</h3>
+              <h3 className="text-xl font-bold text-black lowercase mt-4">features</h3>
               <ul className="list-none p-0">
                 {FEATURES.map((feature) => (
                   <li
                     key={feature.title}
-                    className="py-4 border-b border-gray-100 last:border-b-0"
+                    className="py-4 border-b border-black last:border-b-0"
                   >
-                    <strong>{feature.title}</strong>
-                    <p className="text-gray-500 text-sm">{feature.description}</p>
+                    <strong className="text-black">{feature.title}</strong>
+                    <p className="text-gray-600 text-sm mt-1">{feature.description}</p>
                   </li>
                 ))}
               </ul>
             </div>
           </div>
 
-          <div className="card">
-            <h3>How It Works</h3>
+          <div className="bg-white border-2 border-black p-6" style={brutalShadow}>
+            <h3 className="text-xl font-bold text-black lowercase mb-6">how it works</h3>
             <div className="stack stack-md">
               {STEPS.map((step) => (
                 <div key={step.number} className="flex items-start gap-4">
-                  <span className="flex items-center justify-center w-8 h-8 bg-primary-600 text-white rounded-full font-semibold shrink-0">
+                  <span
+                    className="flex items-center justify-center w-10 h-10 bg-black text-white font-bold shrink-0 text-sm"
+                    style={brutalShadowSmall}
+                  >
                     {step.number}
                   </span>
                   <div>
-                    <strong>{step.title}</strong>
-                    <p className="text-gray-500 text-sm">{step.description}</p>
+                    <strong className="text-black">{step.title}</strong>
+                    <p className="text-gray-600 text-sm mt-1">{step.description}</p>
                   </div>
                 </div>
               ))}

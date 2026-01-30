@@ -25,7 +25,7 @@ OPENAI_MAX_CONCURRENT = 20
 _openai_semaphore: asyncio.Semaphore | None = None
 
 # Timeout for OpenAI API calls (seconds)
-OPENAI_TIMEOUT_SECONDS = 30
+OPENAI_TIMEOUT_SECONDS = int(os.getenv("OPENAI_TIMEOUT_SECONDS", "30"))
 
 
 def _get_async_client() -> AsyncOpenAI:
@@ -96,7 +96,8 @@ async def generate_paper_card(paper: dict) -> PaperCard | None:
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0,
                     max_tokens=500,
-                    response_format={"type": "json_object"}
+                    response_format={"type": "json_object"},
+                    timeout=OPENAI_TIMEOUT_SECONDS,
                 ),
                 timeout=OPENAI_TIMEOUT_SECONDS
             )
