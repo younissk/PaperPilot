@@ -36,9 +36,54 @@ export default function QueriesPage() {
           </div>
 
           {isLoading && (
-            <div className="text-center py-12">
-              <div className="spinner mx-auto mb-4" />
-              <p className="text-gray-600 lowercase">loading queries...</p>
+            <div className="flex flex-col items-center justify-center py-16">
+              {/* Pulsing Document Loader */}
+              <div className="relative">
+                <svg
+                  width="64"
+                  height="82"
+                  viewBox="0 0 360 460"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="animate-pulse-brutal"
+                >
+                  <path
+                    d="M340 130H230V20"
+                    stroke="black"
+                    strokeWidth="20"
+                    strokeMiterlimit="10"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M350 450H10V10H230L350 130V450Z"
+                    stroke="black"
+                    strokeWidth="20"
+                    strokeMiterlimit="10"
+                    strokeLinecap="round"
+                  />
+                  {/* Animated text lines */}
+                  <path
+                    d="M280 200H80V220H280V200Z"
+                    fill="black"
+                    className="animate-line-1"
+                  />
+                  <path
+                    d="M280 320H80V340H280V320Z"
+                    fill="black"
+                    className="animate-line-2"
+                  />
+                  <path
+                    d="M240 260H80V280H240V260Z"
+                    fill="black"
+                    className="animate-line-3"
+                  />
+                </svg>
+                {/* Coral shadow that pulses */}
+                <div className="absolute inset-0 -z-10 translate-x-1 translate-y-1 bg-coral-shadow animate-pulse-shadow" />
+              </div>
+              <p className="mt-6 text-gray-600 lowercase tracking-wide animate-fade-in">
+                loading queries...
+              </p>
             </div>
           )}
 

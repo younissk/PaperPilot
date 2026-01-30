@@ -282,6 +282,6 @@ def update_job_progress(
         step_name=step_name,
         current=current,
         total=total,
-        message=message,
-        error=error,
+        progress_message=message,
+        error_message=error,
     )
