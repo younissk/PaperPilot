@@ -250,6 +250,7 @@ async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[s
             pairing_strategy=pairing,
             early_stop_enabled=early_stop,
             batch_size=elo_concurrency,
+            concurrency=elo_concurrency,
             interactive=False,
         )
         expected_matches = ranker_config.max_matches or (len(candidates) * 3)

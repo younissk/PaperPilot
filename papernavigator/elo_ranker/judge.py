@@ -3,19 +3,29 @@
 import asyncio
 import json
 import os
+import time
 
 from openai import AsyncOpenAI
 
+from papernavigator.logging import get_logger
 from papernavigator.elo_ranker.models import MatchResult
 from papernavigator.models import QueryProfile, SnowballCandidate
 
 # Timeout for OpenAI API calls (seconds)
-OPENAI_TIMEOUT_SECONDS = 30
+OPENAI_TIMEOUT_SECONDS = int(os.getenv("OPENAI_TIMEOUT_SECONDS", "30"))
+# OpenAI retry attempts for transient errors (429/5xx)
+OPENAI_MAX_RETRIES = int(os.getenv("OPENAI_MAX_RETRIES", "2"))
+# Limit abstract length (chars) for prompt efficiency
+ABSTRACT_CHAR_LIMIT = int(os.getenv("RANKER_ABSTRACT_CHAR_LIMIT", "500"))
 
 # Async OpenAI client
 async_client = AsyncOpenAI(
     api_key=os.getenv("OPENAI_API_KEY"),
+    timeout=OPENAI_TIMEOUT_SECONDS,
+    max_retries=OPENAI_MAX_RETRIES,
 )
+
+log = get_logger(__name__)
 
 
 async def judge_match(
@@ -37,44 +47,42 @@ async def judge_match(
         Tuple of (winner, reason) where winner is 1, 2, or None for draw
     """
     # Build relevance-first prompt
-    required_concepts_str = ", ".join(profile.required_concepts) if profile.required_concepts else "None specified"
-    optional_concepts_str = ", ".join(profile.optional_concepts) if profile.optional_concepts else "None specified"
+    required_concepts_str = ", ".join(profile.required_concepts) if profile.required_concepts else "None"
+    optional_concepts_str = ", ".join(profile.optional_concepts) if profile.optional_concepts else "None"
 
     abstract1 = candidate1.abstract or "(No abstract available)"
     abstract2 = candidate2.abstract or "(No abstract available)"
 
-    prompt = f"""You are judging which paper is MORE USEFUL TO CITE for a survey on:
+    prompt = f"""Decide which paper is MORE USEFUL TO CITE for:
 "{profile.core_query}"
 
 Domain: {profile.domain_description}
+Required: {required_concepts_str}
+Optional: {optional_concepts_str}
 
-Required concepts: {required_concepts_str}
-Optional concepts: {optional_concepts_str}
+Priority:
+1) Relevance to query.
+2) If tied, prefer clearer method/evaluation.
+Do NOT prefer by citation count, fame, or broadness.
 
-DECISION CRITERIA (in order of priority):
-1. PRIMARY - Relevance to core query: Which paper directly addresses the research question?
-2. SECONDARY (tiebreaker only): If equally relevant, prefer clearer methodology/evaluation.
+Paper A: {candidate1.title}
+Abstract: {abstract1[:ABSTRACT_CHAR_LIMIT]}
 
-IMPORTANT: Do NOT prefer papers just because they are:
-- Highly cited (citation count is not a relevance signal)
-- Foundational/classic (unless directly on-topic)
-- Broader in scope (focused papers may be more citable)
+Paper B: {candidate2.title}
+Abstract: {abstract2[:ABSTRACT_CHAR_LIMIT]}
 
-Paper A:
-Title: {candidate1.title}
-Abstract: {abstract1[:500]}
-
-Paper B:
-Title: {candidate2.title}
-Abstract: {abstract2[:500]}
-
-Output ONLY valid JSON with keys:
-- winner: integer (1 for Paper A, 2 for Paper B, 0 for draw)
-- reason: short string (max 20 words) explaining the choice
-"""
+Return JSON only: {{"winner":1|2|0, "reason":"max 20 words"}}"""
 
     try:
         # Wrap API call with timeout to prevent indefinite hangs
+        start_time = time.monotonic()
+        log.info(
+            "openai_request_start",
+            operation="ranker_judge_match",
+            paper_a=candidate1.paper_id,
+            paper_b=candidate2.paper_id,
+            model="gpt-4o-mini",
+        )
         response = await asyncio.wait_for(
             async_client.chat.completions.create(
                 model="gpt-4o-mini",
@@ -88,6 +96,13 @@ Output ONLY valid JSON with keys:
 
         content = response.choices[0].message.content.strip()
         data = json.loads(content)
+        log.info(
+            "openai_request_complete",
+            operation="ranker_judge_match",
+            paper_a=candidate1.paper_id,
+            paper_b=candidate2.paper_id,
+            duration_sec=round(time.monotonic() - start_time, 2),
+        )
 
         winner = data.get("winner")
         reason = data.get("reason", "")
@@ -103,12 +118,30 @@ Output ONLY valid JSON with keys:
             return None, "Invalid response"
 
     except asyncio.TimeoutError:
+        log.info(
+            "openai_request_timeout",
+            operation="ranker_judge_match",
+            paper_a=candidate1.paper_id,
+            paper_b=candidate2.paper_id,
+        )
         # On timeout, treat as draw to avoid blocking the pipeline
         return None, "Timeout"
     except (json.JSONDecodeError, KeyError, AttributeError):
+        log.info(
+            "openai_request_failed",
+            operation="ranker_judge_match",
+            paper_a=candidate1.paper_id,
+            paper_b=candidate2.paper_id,
+        )
         # On error, treat as draw to avoid skewing ratings
         return None, "Parse error"
     except Exception:
+        log.info(
+            "openai_request_failed",
+            operation="ranker_judge_match",
+            paper_a=candidate1.paper_id,
+            paper_b=candidate2.paper_id,
+        )
         # On any other error, treat as draw
         return None, "API error"
 
