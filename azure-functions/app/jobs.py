@@ -42,16 +42,35 @@ def test_service_bus_connection() -> bool:
         return False
 
 
+EVENT_LEVELS: dict[str, str] = {
+    "job_created": "info",
+    "job_enqueued": "info",
+    "job_start": "info",
+    "job_complete": "info",
+    "phase_start": "info",
+    "phase_complete": "info",
+    "progress": "info",
+    "email_sent": "info",
+    "job_failed": "error",
+    "job_enqueue_failed": "error",
+    "phase_error": "error",
+    "phase_warning": "warning",
+}
+
+
 def append_event(
     events: list[dict[str, Any]],
     event_type: str,
     phase: str,
     message: str,
+    level: str | None = None,
     **kwargs,
 ) -> list[dict[str, Any]]:
+    resolved_level = level or EVENT_LEVELS.get(event_type, "info")
     event = {
         "ts": now_iso(),
         "type": event_type,
+        "level": resolved_level,
         "phase": phase,
         "message": message,
         **kwargs,

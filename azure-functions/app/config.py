@@ -5,12 +5,19 @@ from __future__ import annotations
 import logging
 import os
 
+from papernavigator.logging import configure_logging
+
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
+
 logging.basicConfig(
-    level=os.environ.get("LOG_LEVEL", "INFO"),
+    level=LOG_LEVEL,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 
 logger = logging.getLogger("papernavigator.azure")
+
+# Ensure structlog-backed modules emit consistent logs in Azure Functions.
+configure_logging(cli_mode=False, log_level=LOG_LEVEL)
 
 COSMOS_ENDPOINT = os.environ.get("AZURE_COSMOS_ENDPOINT", "")
 COSMOS_KEY = os.environ.get("AZURE_COSMOS_KEY", "")
@@ -36,6 +43,9 @@ TTL_DAYS = int(os.environ.get("JOB_TTL_DAYS", "7"))
 MAX_EVENTS = int(os.environ.get("MAX_JOB_EVENTS", "100"))
 
 DEBUG = os.environ.get("DEBUG", "").lower() == "true"
+
+# Report generation timeout (seconds) to avoid hanging jobs.
+REPORT_TIMEOUT_SECONDS = int(os.environ.get("REPORT_TIMEOUT_SECONDS", "1200"))
 
 # Azure Communication Services (Email)
 ACS_CONNECTION_STRING = os.environ.get("AZURE_ACS_CONNECTION_STRING", "")

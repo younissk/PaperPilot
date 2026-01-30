@@ -289,6 +289,18 @@ def get_pipeline_status(req: func.HttpRequest) -> func.HttpResponse:
         internal_status = job.get("status", "unknown")
         progress = job.get("progress", {}) or {}
         phase = progress.get("phase", "")
+        events = job.get("events", []) or []
+
+        # Limit returned events to keep payload lightweight
+        limit_raw = req.params.get("events_limit")
+        try:
+            event_limit = max(1, int(limit_raw)) if limit_raw else 20
+        except ValueError:
+            event_limit = 20
+
+        recent_events = events[-event_limit:] if events else []
+        alert_events = [e for e in events if e.get("level") in {"warning", "error"}]
+        alerts = alert_events[-10:] if alert_events else []
 
         if internal_status == "running":
             if phase == "search":
@@ -307,6 +319,7 @@ def get_pipeline_status(req: func.HttpRequest) -> func.HttpResponse:
             "status": frontend_status,
             "query": job.get("query", ""),
             "created_at": job.get("created_at"),
+            "updated_at": job.get("updated_at"),
             "phase": phase or None,
             "phase_step": progress.get("step"),
             "phase_step_name": progress.get("step_name") or progress.get("phase"),
@@ -316,6 +329,8 @@ def get_pipeline_status(req: func.HttpRequest) -> func.HttpResponse:
             "papers": (job.get("result") or {}).get("top_papers"),
             "report_data": None,
             "error": job.get("error_message"),
+            "events": recent_events,
+            "alerts": alerts,
         })
 
     return safe(handler)

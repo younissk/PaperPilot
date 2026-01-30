@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import type { PipelineResponse, LeaderboardEntry } from "@/lib/types";
+import type { PipelineResponse, LeaderboardEntry, PipelineEvent } from "@/lib/types";
 
 interface ProgressIndicatorProps {
   status: PipelineResponse;
@@ -13,6 +13,7 @@ const PHASE_NAMES: Record<string, string> = {
 };
 
 const PIPELINE_PHASES = ["search", "ranking", "report"] as const;
+const STALE_WARNING_MINUTES = 20;
 
 /**
  * Format elapsed time as MM:SS or HH:MM:SS
@@ -268,6 +269,23 @@ function PipelineStats({
   );
 }
 
+function formatEventTime(ts?: string): string {
+  if (!ts) return "";
+  const parsed = Date.parse(ts);
+  if (Number.isNaN(parsed)) return "";
+  return new Date(parsed).toLocaleTimeString();
+}
+
+function getStaleInfo(updatedAt?: string) {
+  if (!updatedAt) return { isStale: false, minutesSince: null, label: "" };
+  const parsed = Date.parse(updatedAt);
+  if (Number.isNaN(parsed)) return { isStale: false, minutesSince: null, label: "" };
+  const minutesSince = Math.floor((Date.now() - parsed) / 60000);
+  const isStale = minutesSince >= STALE_WARNING_MINUTES;
+  const label = new Date(parsed).toLocaleString();
+  return { isStale, minutesSince, label };
+}
+
 /**
  * Progress indicator for pipeline jobs.
  */
@@ -277,6 +295,10 @@ export function ProgressIndicator({
 }: ProgressIndicatorProps) {
   const phase = status.phase || "";
   const title = PHASE_NAMES[phase] || status.status || "Processing...";
+  const events = status.events ?? [];
+  const alerts = status.alerts ?? [];
+  const recentEvents: PipelineEvent[] = events.slice(-5);
+  const { isStale, minutesSince, label: updatedLabel } = getStaleInfo(status.updated_at);
 
   // Calculate progress percentage
   let percent = 0;
@@ -335,12 +357,75 @@ export function ProgressIndicator({
           <p className="text-sm text-gray-600 mt-1 font-medium">{details}</p>
         )}
 
+        {updatedLabel && (
+          <p className={`text-xs mt-1 ${isStale ? "text-orange-700" : "text-gray-400"}`}>
+            Last update: {updatedLabel}
+            {minutesSince !== null ? ` (${minutesSince}m ago)` : ""}
+          </p>
+        )}
+
+        {isStale && (
+          <div className="alert alert-warning mt-4 text-left">
+            <strong>Pipeline appears stalled.</strong>{" "}
+            No progress updates in {minutesSince} minutes. You can keep waiting, or
+            start a new run if it doesn’t recover.
+          </div>
+        )}
+
+        {alerts.length > 0 && (
+          <div className="mt-4 text-left stack stack-sm">
+            {alerts.slice(-3).map((alert, idx) => (
+              <div
+                key={`${alert.ts ?? "alert"}-${idx}`}
+                className={`alert ${
+                  alert.level === "error" ? "alert-error" : "alert-warning"
+                }`}
+              >
+                <div className="text-sm font-semibold">
+                  {alert.level === "error" ? "Error" : "Warning"}
+                  {alert.phase ? ` · ${alert.phase}` : ""}
+                </div>
+                <div className="text-xs mt-1">{alert.message}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Statistics */}
         <PipelineStats
           phase={phase}
           phaseProgress={status.phase_progress}
           phaseTotal={status.phase_total}
         />
+
+        {recentEvents.length > 0 && (
+          <div className="mt-4 text-left">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+              Recent Logs
+            </h3>
+            <div className="space-y-1 text-xs text-gray-600">
+              {recentEvents.map((ev, idx) => (
+                <div key={`${ev.ts ?? "event"}-${idx}`} className="flex gap-2">
+                  <span className="text-gray-400 w-14 shrink-0">
+                    {formatEventTime(ev.ts)}
+                  </span>
+                  <span
+                    className={`font-semibold ${
+                      ev.level === "error"
+                        ? "text-red-600"
+                        : ev.level === "warning"
+                          ? "text-orange-600"
+                          : "text-gray-500"
+                    }`}
+                  >
+                    {ev.level ?? "info"}
+                  </span>
+                  <span className="text-gray-700">{ev.message}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Leaderboard */}
         <Leaderboard papers={leaderboard} />

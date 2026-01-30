@@ -103,6 +103,14 @@ export interface PipelineRequest {
   notification_email?: string;
 }
 
+export interface PipelineEvent {
+  ts?: string;
+  type: string;
+  level?: "info" | "warning" | "error";
+  phase?: string;
+  message: string;
+}
+
 export interface PipelineResponse {
   job_id: string;
   status:
@@ -114,6 +122,7 @@ export interface PipelineResponse {
     | "failed";
   query: string;
   created_at?: string;
+  updated_at?: string;
   phase?: string;
   phase_step?: number;
   phase_step_name?: string;
@@ -123,6 +132,8 @@ export interface PipelineResponse {
   papers?: LeaderboardEntry[];
   report_data?: ReportData | null;
   error?: string;
+  events?: PipelineEvent[];
+  alerts?: PipelineEvent[];
 }
 
 export interface HealthResponse {

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import shutil
 import tempfile
@@ -10,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from .clients import get_results_container_client
-from .config import RESULTS_CONTAINER, logger
+from .config import RESULTS_CONTAINER, REPORT_TIMEOUT_SECONDS, logger
 from .jobs import append_event, update_job_progress
 from .results import results_path
 from .utils import now_iso, slugify
@@ -95,7 +96,7 @@ async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[s
     from papernavigator.events import NullEventHandler
     from papernavigator.models import SnowballCandidate
     from papernavigator.profiler import generate_query_profile
-    from papernavigator.report.generator import generate_report, report_to_dict
+    from papernavigator.report.generator import generate_report, report_to_dict, final_citation_check
     from papernavigator.service import run_search
 
     class RankingProgressHandler(NullEventHandler):
@@ -174,15 +175,36 @@ async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[s
                 events=events,
             )
 
-        accepted_papers = await run_search(
-            query=query,
-            num_results=num_results,
-            output_file=str(snowball_path),
-            max_iterations=max_iterations,
-            max_accepted=max_accepted,
-            top_n=top_n,
-            progress_callback=search_progress_callback,
-        )
+        try:
+            accepted_papers = await run_search(
+                query=query,
+                num_results=num_results,
+                output_file=str(snowball_path),
+                max_iterations=max_iterations,
+                max_accepted=max_accepted,
+                top_n=top_n,
+                progress_callback=search_progress_callback,
+            )
+        except Exception as exc:
+            logger.exception("Search phase failed for job %s", job_id)
+            events = append_event(
+                events,
+                "phase_error",
+                "search",
+                f"Search phase failed: {exc}",
+                level="error",
+                error=str(exc),
+            )
+            update_job_progress(
+                job_id,
+                "failed",
+                "search",
+                0,
+                f"Search failed: {exc}",
+                events=events,
+                error=str(exc),
+            )
+            raise
 
         events = append_event(
             events,
@@ -200,7 +222,10 @@ async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[s
         )
 
         if not accepted_papers:
-            raise ValueError("No papers found during search")
+            message = "No papers found during search"
+            events = append_event(events, "phase_error", "search", message, level="error")
+            update_job_progress(job_id, "failed", "search", 6, message, events=events, error=message)
+            raise ValueError(message)
 
         # Phase 2: Ranking
         events = append_event(events, "phase_start", "ranking", "Starting ELO ranking phase")
@@ -245,9 +270,30 @@ async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[s
             update_every=elo_concurrency,
             top_k=5,
         )
-        profile = await generate_query_profile(query)
-        ranker = EloRanker(profile, candidates, ranker_config, event_handler=ranking_handler)
-        ranked_candidates = await ranker.rank_candidates()
+        try:
+            profile = await generate_query_profile(query)
+            ranker = EloRanker(profile, candidates, ranker_config, event_handler=ranking_handler)
+            ranked_candidates = await ranker.rank_candidates()
+        except Exception as exc:
+            logger.exception("Ranking phase failed for job %s", job_id)
+            events = append_event(
+                events,
+                "phase_error",
+                "ranking",
+                f"Ranking phase failed: {exc}",
+                level="error",
+                error=str(exc),
+            )
+            update_job_progress(
+                job_id,
+                "failed",
+                "ranking",
+                0,
+                f"Ranking failed: {exc}",
+                events=events,
+                error=str(exc),
+            )
+            raise
 
         elo_path = results_dir / f"elo_ranked_k{int(k_factor)}_p{pairing}.json"
         elo_data = {
@@ -309,12 +355,61 @@ async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[s
                 events=events,
             )
 
-        report = await generate_report(
-            snowball_file=snowball_path,
-            elo_file=elo_path,
-            top_k=report_top_k,
-            progress_callback=report_progress_callback,
-        )
+        try:
+            report = await asyncio.wait_for(
+                generate_report(
+                    snowball_file=snowball_path,
+                    elo_file=elo_path,
+                    top_k=report_top_k,
+                    progress_callback=report_progress_callback,
+                ),
+                timeout=REPORT_TIMEOUT_SECONDS,
+            )
+        except asyncio.TimeoutError:
+            message = f"Report generation timed out after {REPORT_TIMEOUT_SECONDS}s"
+            logger.error(message)
+            events = append_event(
+                events,
+                "phase_error",
+                "report",
+                message,
+                level="error",
+                timeout_sec=REPORT_TIMEOUT_SECONDS,
+            )
+            update_job_progress(job_id, "failed", "report", 4, message, events=events, error=message)
+            raise
+        except Exception as exc:
+            logger.exception("Report generation failed for job %s", job_id)
+            events = append_event(
+                events,
+                "phase_error",
+                "report",
+                f"Report generation failed: {exc}",
+                level="error",
+                error=str(exc),
+            )
+            update_job_progress(
+                job_id,
+                "failed",
+                "report",
+                4,
+                f"Report generation failed: {exc}",
+                events=events,
+                error=str(exc),
+            )
+            raise
+
+        # Collect citation warnings for UI visibility (no report mutation).
+        _, citation_warnings = final_citation_check(report)
+        if citation_warnings:
+            events = append_event(
+                events,
+                "phase_warning",
+                "report",
+                f"Final citation check raised {len(citation_warnings)} warnings",
+                level="warning",
+                warnings=citation_warnings[:5],
+            )
 
         report_path = results_dir / f"report_top_k{report_top_k}.json"
         report_dict = report_to_dict(report)
@@ -347,7 +442,20 @@ async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[s
         update_job_progress(job_id, "running", "upload", 0, "Uploading to Blob...", events=events)
 
         blob_prefix = results_path(query_slug, job_id)
-        artifacts = upload_artifacts_to_blob(results_dir, blob_prefix)
+        try:
+            artifacts = upload_artifacts_to_blob(results_dir, blob_prefix)
+        except Exception as exc:
+            logger.exception("Upload phase failed for job %s", job_id)
+            events = append_event(
+                events,
+                "phase_error",
+                "upload",
+                f"Upload failed: {exc}",
+                level="error",
+                error=str(exc),
+            )
+            update_job_progress(job_id, "failed", "upload", 0, f"Upload failed: {exc}", events=events, error=str(exc))
+            raise
         events = append_event(events, "phase_complete", "upload", f"Uploaded {len(artifacts)} files")
 
         artifact_bytes_total = sum(
@@ -366,16 +474,16 @@ async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[s
             "artifact_count": len(artifacts),
             "artifact_bytes_total": artifact_bytes_total,
             "phase_durations_sec": phase_durations_sec,
-    "top_papers": [
-        {
-            "paper_id": c.candidate.paper_id,
-            "title": c.candidate.title,
-            "elo": round(c.elo, 1),
-            "wins": c.wins,
-            "losses": c.losses,
-        }
-        for c in ranked_candidates[:5]
-    ],
+            "top_papers": [
+                {
+                    "paper_id": c.candidate.paper_id,
+                    "title": c.candidate.title,
+                    "elo": round(c.elo, 1),
+                    "wins": c.wins,
+                    "losses": c.losses,
+                }
+                for c in ranked_candidates[:5]
+            ],
         }
 
         return result
@@ -422,15 +530,36 @@ async def run_search_job(job_id: str, payload: dict[str, Any], events: list[dict
                 events=events,
             )
 
-        accepted_papers = await run_search(
-            query=query,
-            num_results=num_results,
-            output_file=str(snowball_path),
-            max_iterations=max_iterations,
-            max_accepted=max_accepted,
-            top_n=top_n,
-            progress_callback=search_progress_callback,
-        )
+        try:
+            accepted_papers = await run_search(
+                query=query,
+                num_results=num_results,
+                output_file=str(snowball_path),
+                max_iterations=max_iterations,
+                max_accepted=max_accepted,
+                top_n=top_n,
+                progress_callback=search_progress_callback,
+            )
+        except Exception as exc:
+            logger.exception("Search-only job failed for job %s", job_id)
+            events = append_event(
+                events,
+                "phase_error",
+                "search",
+                f"Search phase failed: {exc}",
+                level="error",
+                error=str(exc),
+            )
+            update_job_progress(
+                job_id,
+                "failed",
+                "search",
+                0,
+                f"Search failed: {exc}",
+                events=events,
+                error=str(exc),
+            )
+            raise
 
         events = append_event(
             events,

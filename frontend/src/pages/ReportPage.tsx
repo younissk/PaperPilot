@@ -144,6 +144,21 @@ export default function ReportPage() {
               <strong>Report generation failed:</strong>{" "}
               {pipelineStatus.error || "Unknown error"}
             </div>
+            {pipelineStatus.alerts && pipelineStatus.alerts.length > 0 && (
+              <div className="stack stack-sm">
+                {pipelineStatus.alerts.slice(-3).map((alert, idx) => (
+                  <div
+                    key={`${alert.ts ?? "alert"}-${idx}`}
+                    className={`alert ${
+                      alert.level === "error" ? "alert-error" : "alert-warning"
+                    }`}
+                  >
+                    <strong className="capitalize">{alert.level || "warning"}:</strong>{" "}
+                    {alert.message}
+                  </div>
+                ))}
+              </div>
+            )}
             <Link to="/" className="btn btn-secondary mt-4">
               Try Again
             </Link>
