@@ -21,6 +21,12 @@ export interface Paper {
   draws?: number;
 }
 
+export interface LeaderboardEntry {
+  paper_id: string;
+  title: string;
+  elo: number;
+}
+
 export interface ResearchItem {
   title: string;
   summary: string;
@@ -111,7 +117,7 @@ export interface PipelineResponse {
   phase_progress?: number;
   phase_total?: number;
   progress_message?: string;
-  papers?: Paper[];
+  papers?: LeaderboardEntry[];
   report_data?: ReportData | null;
   error?: string;
 }

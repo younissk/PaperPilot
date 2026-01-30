@@ -53,10 +53,46 @@ def upload_artifacts_to_blob(local_dir: Path, prefix: str) -> list[dict[str, Any
 
 async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[str, Any]]) -> dict[str, Any]:
     from papernavigator.elo_ranker import EloRanker, RankerConfig
+    from papernavigator.events import NullEventHandler
     from papernavigator.models import SnowballCandidate
     from papernavigator.profiler import generate_query_profile
     from papernavigator.report.generator import generate_report, report_to_dict
     from papernavigator.service import run_search
+
+    class RankingProgressHandler(NullEventHandler):
+        def __init__(self, job_id: str, update_every: int = 1, top_k: int = 5) -> None:
+            self.job_id = job_id
+            self.update_every = max(1, update_every)
+            self.top_k = top_k
+
+        def on_elo_update(self, candidates, match_num: int, total_matches: int, **kwargs: Any) -> None:
+            if match_num % self.update_every != 0 and match_num != total_matches:
+                return
+
+            leaderboard = sorted(candidates, key=lambda c: c.elo, reverse=True)[: self.top_k]
+            top_papers = [
+                {
+                    "paper_id": c.candidate.paper_id,
+                    "title": c.candidate.title,
+                    "elo": round(c.elo, 1),
+                }
+                for c in leaderboard
+            ]
+
+            update_job_progress(
+                self.job_id,
+                "running",
+                "ranking",
+                1,
+                f"Ranking match {match_num} / {total_matches}",
+                current=match_num,
+                total=total_matches,
+                step_name="Ranking Papers",
+                result={
+                    "top_papers": top_papers,
+                    "matches_played": match_num,
+                },
+            )
 
     query = payload.get("query", "")
     num_results = payload.get("num_results", 5)
@@ -127,7 +163,6 @@ async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[s
 
         # Phase 2: Ranking
         events = append_event(events, "phase_start", "ranking", "Starting ELO ranking phase")
-        update_job_progress(job_id, "running", "ranking", 0, "Starting ranking...", events=events)
 
         candidates = [
             SnowballCandidate(
@@ -144,8 +179,6 @@ async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[s
             for p in accepted_papers
         ]
 
-        profile = await generate_query_profile(query)
-
         ranker_config = RankerConfig(
             k_factor=k_factor,
             pairing_strategy=pairing,
@@ -153,8 +186,26 @@ async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[s
             batch_size=elo_concurrency,
             interactive=False,
         )
+        expected_matches = ranker_config.max_matches or (len(candidates) * 3)
+        update_job_progress(
+            job_id,
+            "running",
+            "ranking",
+            0,
+            "Starting ranking...",
+            current=0,
+            total=expected_matches,
+            step_name="Ranking Papers",
+            events=events,
+        )
 
-        ranker = EloRanker(profile, candidates, ranker_config)
+        ranking_handler = RankingProgressHandler(
+            job_id,
+            update_every=elo_concurrency,
+            top_k=5,
+        )
+        profile = await generate_query_profile(query)
+        ranker = EloRanker(profile, candidates, ranker_config, event_handler=ranking_handler)
         ranked_candidates = await ranker.rank_candidates()
 
         elo_path = results_dir / f"elo_ranked_k{int(k_factor)}_p{pairing}.json"
@@ -192,6 +243,9 @@ async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[s
             "ranking",
             1,
             f"Ranking complete: {len(ranker.match_history)} matches",
+            current=len(ranker.match_history),
+            total=len(ranker.match_history),
+            step_name="Ranking Papers",
             events=events,
         )
 
