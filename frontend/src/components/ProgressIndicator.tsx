@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import type { PipelineResponse, PipelineEvent } from "@/lib/types";
+import type { PipelineResponse, PipelineEvent, LeaderboardEntry } from "@/lib/types";
 
 // Brutalist coral shadow styles
 const brutalShadow = { boxShadow: "3px 3px 0 #F3787A" };
@@ -130,6 +130,103 @@ function PipelineTimeline({ currentPhase }: { currentPhase: string }) {
   );
 }
 
+/**
+ * Rank badge for top positions - brutalist style
+ */
+function RankBadge({ rank }: { rank: number }) {
+  if (rank === 1) {
+    return (
+      <span
+        className="inline-flex items-center justify-center w-6 h-6 bg-black text-white font-bold text-xs border-2 border-black"
+        style={brutalShadowSmall}
+      >
+        1
+      </span>
+    );
+  }
+  if (rank === 2) {
+    return (
+      <span className="inline-flex items-center justify-center w-6 h-6 bg-white text-black font-bold text-xs border-2 border-black">
+        2
+      </span>
+    );
+  }
+  if (rank === 3) {
+    return (
+      <span className="inline-flex items-center justify-center w-6 h-6 bg-white text-black font-bold text-xs border-2 border-black">
+        3
+      </span>
+    );
+  }
+  return <span className="text-gray-500 font-medium w-6 text-center">{rank}</span>;
+}
+
+/**
+ * Leaderboard table showing top papers - brutalist style
+ */
+function Leaderboard({ papers }: { papers: LeaderboardEntry[] }) {
+  if (papers.length === 0) return null;
+
+  return (
+    <div className="mt-6 text-left">
+      <h3 className="text-xs font-bold text-black uppercase tracking-wide mb-2 lowercase">
+        live leaderboard
+      </h3>
+      <div className="overflow-hidden border-2 border-black" style={brutalShadow}>
+        <table className="w-full text-sm">
+          <thead className="bg-black text-white text-xs uppercase tracking-wider">
+            <tr>
+              <th className="px-3 py-2 text-center w-10">#</th>
+              <th className="px-3 py-2 text-left">paper</th>
+              <th className="px-2 py-2 text-center w-10">w</th>
+              <th className="px-2 py-2 text-center w-10">l</th>
+              <th className="px-3 py-2 text-right w-16">elo</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-black bg-white">
+            {papers.map((paper, idx) => {
+              const rank = idx + 1;
+
+              return (
+                <tr
+                  key={paper.paper_id}
+                  className="transition-colors hover:bg-gray-50"
+                >
+                  <td className="px-3 py-2 text-center">
+                    <RankBadge rank={rank} />
+                  </td>
+                  <td className="px-3 py-2">
+                    <span
+                      className="block truncate max-w-[200px] text-black cursor-default"
+                      title={paper.title}
+                    >
+                      {paper.title}
+                    </span>
+                  </td>
+                  <td className="px-2 py-2 text-center">
+                    <span className="text-black font-bold">
+                      {paper.wins ?? "-"}
+                    </span>
+                  </td>
+                  <td className="px-2 py-2 text-center">
+                    <span className="text-gray-500">
+                      {paper.losses ?? "-"}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <span className="font-bold text-black">
+                      {Number.isFinite(paper.elo) ? Math.round(paper.elo) : "-"}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 /**
  * Statistics display for the current pipeline run - brutalist style
@@ -196,6 +293,12 @@ export function ProgressIndicator({
   const alerts = status.alerts ?? [];
   const recentEvents: PipelineEvent[] = events.slice(-5);
   const { isStale, minutesSince, label: updatedLabel } = getStaleInfo(status.updated_at);
+
+  // Leaderboard data during ranking phase
+  const leaderboard =
+    phase === "ranking" && status.papers
+      ? [...status.papers].sort((a, b) => (b.elo ?? 0) - (a.elo ?? 0)).slice(0, 5)
+      : [];
 
   // Calculate progress percentage
   let percent = 0;
@@ -290,6 +393,9 @@ export function ProgressIndicator({
           phaseProgress={status.phase_progress}
           phaseTotal={status.phase_total}
         />
+
+        {/* Leaderboard */}
+        <Leaderboard papers={leaderboard} />
 
         {/* Logs Accordion */}
         {recentEvents.length > 0 && (

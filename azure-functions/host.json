@@ -9,11 +9,15 @@
     },
     "logLevel": {
       "default": "Information",
+      "papernavigator": "Information",
+      "papernavigator.azure": "Information",
+      "app": "Information",
       "Host.Results": "Error",
       "Function": "Information",
       "Host.Aggregator": "Trace"
     }
   },
+  "functionTimeout": "00:30:00",
   "extensionBundle": {
     "id": "Microsoft.Azure.Functions.ExtensionBundle",
     "version": "[4.*, 5.0.0)"
