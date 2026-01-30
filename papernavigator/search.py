@@ -10,20 +10,12 @@ import xml.etree.ElementTree as ET
 
 import aiohttp
 
+from papernavigator.async_utils import get_loop_semaphore
 from papernavigator.models import ArxivEntry, ArxivFeed, Author, Category, Link
 
 # arXiv rate limiting - be respectful of their API
 ARXIV_MAX_CONCURRENT = 3
 ARXIV_RATE_LIMIT_DELAY = 0.5  # 500ms between requests
-_arxiv_semaphore: asyncio.Semaphore | None = None
-
-
-def _get_arxiv_semaphore() -> asyncio.Semaphore:
-    """Get or create the arXiv semaphore for rate limiting."""
-    global _arxiv_semaphore
-    if _arxiv_semaphore is None:
-        _arxiv_semaphore = asyncio.Semaphore(ARXIV_MAX_CONCURRENT)
-    return _arxiv_semaphore
 
 
 def _parse_arxiv_response(data: bytes) -> ArxivFeed:
@@ -142,7 +134,7 @@ async def search_articles(
     encoded_query = urllib.parse.quote(query)
     url = f'http://export.arxiv.org/api/query?search_query=all:{encoded_query}&start=0&max_results={max_results}'
 
-    semaphore = _get_arxiv_semaphore()
+    semaphore = get_loop_semaphore("arxiv", ARXIV_MAX_CONCURRENT)
 
     async with semaphore:
         await asyncio.sleep(ARXIV_RATE_LIMIT_DELAY)

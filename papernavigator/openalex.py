@@ -20,6 +20,7 @@ from typing import Any
 
 import aiohttp
 
+from papernavigator.async_utils import get_loop_semaphore
 from papernavigator.logging import get_logger
 
 logger = get_logger(__name__)
@@ -31,13 +32,11 @@ OPENALEX_EMAIL = os.getenv("OPENALEX_EMAIL", "")  # Optional: for polite pool
 
 # Concurrency limits
 OPENALEX_MAX_CONCURRENT = 10
-_openalex_semaphore: asyncio.Semaphore | None = None
 
 # Semantic Scholar config
 SEMANTIC_SCHOLAR_API_BASE = "https://api.semanticscholar.org/graph/v1"
 SEMANTIC_SCHOLAR_RATE_LIMIT_DELAY = 1.0  # S2 is more restrictive
 SEMANTIC_SCHOLAR_MAX_CONCURRENT = 1
-_s2_semaphore: asyncio.Semaphore | None = None
 
 # Fields to select for efficiency
 WORK_SELECT_FIELDS = "id,title,abstract_inverted_index,publication_year,cited_by_count,referenced_works,authorships,type"
@@ -45,18 +44,12 @@ WORK_SELECT_FIELDS = "id,title,abstract_inverted_index,publication_year,cited_by
 
 def _get_openalex_semaphore() -> asyncio.Semaphore:
     """Get or create the OpenAlex semaphore for rate limiting."""
-    global _openalex_semaphore
-    if _openalex_semaphore is None:
-        _openalex_semaphore = asyncio.Semaphore(OPENALEX_MAX_CONCURRENT)
-    return _openalex_semaphore
+    return get_loop_semaphore("openalex", OPENALEX_MAX_CONCURRENT)
 
 
 def _get_s2_semaphore() -> asyncio.Semaphore:
     """Get or create the Semantic Scholar semaphore for rate limiting."""
-    global _s2_semaphore
-    if _s2_semaphore is None:
-        _s2_semaphore = asyncio.Semaphore(SEMANTIC_SCHOLAR_MAX_CONCURRENT)
-    return _s2_semaphore
+    return get_loop_semaphore("semantic_scholar", SEMANTIC_SCHOLAR_MAX_CONCURRENT)
 
 
 def _build_headers() -> dict[str, str]:

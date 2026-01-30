@@ -11,6 +11,7 @@ import re
 
 from openai import AsyncOpenAI
 
+from papernavigator.async_utils import get_loop_semaphore
 from papernavigator.models import (
     JudgmentResult,
     QueryProfile,
@@ -25,7 +26,6 @@ async_client = AsyncOpenAI(
 
 # Concurrency limits for OpenAI API
 OPENAI_MAX_CONCURRENT = 50
-_openai_semaphore: asyncio.Semaphore | None = None
 
 # Timeout for OpenAI API calls (seconds)
 OPENAI_TIMEOUT_SECONDS = 30
@@ -33,10 +33,7 @@ OPENAI_TIMEOUT_SECONDS = 30
 
 def _get_openai_semaphore() -> asyncio.Semaphore:
     """Get or create the OpenAI semaphore for rate limiting."""
-    global _openai_semaphore
-    if _openai_semaphore is None:
-        _openai_semaphore = asyncio.Semaphore(OPENAI_MAX_CONCURRENT)
-    return _openai_semaphore
+    return get_loop_semaphore("openai_judge", OPENAI_MAX_CONCURRENT)
 
 
 def keyword_gate(profile: QueryProfile, title: str, summary: str) -> bool:

@@ -12,6 +12,7 @@ from collections.abc import Callable
 
 from openai import AsyncOpenAI
 
+from papernavigator.async_utils import get_loop_semaphore
 from papernavigator.logging import get_logger
 from papernavigator.report.models import PaperCard
 
@@ -22,7 +23,6 @@ _async_client: AsyncOpenAI | None = None
 
 # Concurrency limits
 OPENAI_MAX_CONCURRENT = 20
-_openai_semaphore: asyncio.Semaphore | None = None
 
 # Timeout for OpenAI API calls (seconds)
 OPENAI_TIMEOUT_SECONDS = int(os.getenv("OPENAI_TIMEOUT_SECONDS", "30"))
@@ -44,10 +44,7 @@ def _get_async_client() -> AsyncOpenAI:
 
 def _get_semaphore() -> asyncio.Semaphore:
     """Get or create the concurrency semaphore."""
-    global _openai_semaphore
-    if _openai_semaphore is None:
-        _openai_semaphore = asyncio.Semaphore(OPENAI_MAX_CONCURRENT)
-    return _openai_semaphore
+    return get_loop_semaphore("report_cards", OPENAI_MAX_CONCURRENT)
 
 
 def _build_card_prompt(paper: dict) -> str:
