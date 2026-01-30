@@ -19,6 +19,9 @@ concurrency:
 
 env:
   AZURE_FUNCTIONAPP_NAME: 'paperpilot-api'
+  AZURE_RESOURCE_GROUP: 'PaperPilot'
+  AZURE_STORAGE_ACCOUNT: 'paperpilot91b3'
+  AZURE_KEYVAULT_NAME: 'paperpilot-kv-prod'
   PYTHON_VERSION: '3.12'
 
 jobs:
@@ -72,6 +75,21 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Set AzureWebJobsStorage for deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          RG="${AZURE_RESOURCE_GROUP}"
+          STORAGE="${AZURE_STORAGE_ACCOUNT}"
+          FUNC_APP="${AZURE_FUNCTIONAPP_NAME}"
+          CONN="$(az storage account show-connection-string -g "${RG}" -n "${STORAGE}" --query connectionString -o tsv)"
+          if [ -z "${CONN}" ]; then
+            echo "Failed to resolve AzureWebJobsStorage connection string" >&2
+            exit 1
+          fi
+          echo "::add-mask::${CONN}"
+          az functionapp config appsettings set -g "${RG}" -n "${FUNC_APP}" --settings "AzureWebJobsStorage=${CONN}" 1>/dev/null
+
       - name: Deploy to Azure Functions
         uses: Azure/functions-action@v1
         with:
@@ -79,6 +97,18 @@ jobs:
           package: ./azure-functions
           scm-do-build-during-deployment: false
           enable-oryx-build: false
+
+      - name: Restore AzureWebJobsStorage Key Vault reference
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          RG="${AZURE_RESOURCE_GROUP}"
+          FUNC_APP="${AZURE_FUNCTIONAPP_NAME}"
+          KV_NAME="${AZURE_KEYVAULT_NAME}"
+          KV_URI="https://${KV_NAME}.vault.azure.net"
+          az functionapp config appsettings set -g "${RG}" -n "${FUNC_APP}" --settings \
+            "AzureWebJobsStorage=@Microsoft.KeyVault(SecretUri=${KV_URI}/secrets/AZURE-WEBJOBS-STORAGE)" 1>/dev/null
 
       - name: Verify deployment
         run: |

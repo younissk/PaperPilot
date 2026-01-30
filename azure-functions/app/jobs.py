@@ -26,6 +26,22 @@ def test_cosmos_connection() -> bool:
         return False
 
 
+def test_service_bus_connection() -> bool:
+    """Test if Service Bus is accessible. Returns True if connected, False otherwise."""
+    if not SERVICE_BUS_CONNECTION:
+        return False
+
+    try:
+        # Creating a sender exercises DNS/auth/connection without sending messages.
+        with get_service_bus_client() as sb_client:
+            with sb_client.get_queue_sender(QUEUE_NAME):
+                pass
+        return True
+    except Exception as exc:
+        logger.warning("Service Bus connection test failed: %s", exc)
+        return False
+
+
 def append_event(
     events: list[dict[str, Any]],
     event_type: str,

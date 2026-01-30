@@ -5,6 +5,10 @@
 import { API_BASE_URL, API_ENDPOINTS } from "./config";
 import type {
   HealthResponse,
+  ReadinessResponse,
+  MonitoringReportsResponse,
+  MonitoringPipelinesResponse,
+  MonitoringCostsResponse,
   AllResultsResponse,
   PipelineRequest,
   PipelineResponse,
@@ -54,6 +58,43 @@ async function apiRequest<T>(
  */
 export async function healthCheck(): Promise<HealthResponse> {
   return apiRequest<HealthResponse>(API_ENDPOINTS.health);
+}
+
+/**
+ * Readiness check endpoint.
+ */
+export async function readinessCheck(): Promise<ReadinessResponse> {
+  return apiRequest<ReadinessResponse>(API_ENDPOINTS.ready);
+}
+
+export async function getMonitoringReports(
+  windowDays = 30,
+): Promise<MonitoringReportsResponse> {
+  return apiRequest<MonitoringReportsResponse>(
+    `${API_ENDPOINTS.monitoringReports}?window_days=${encodeURIComponent(
+      String(windowDays),
+    )}`,
+  );
+}
+
+export async function getMonitoringPipelines(
+  windowDays = 30,
+): Promise<MonitoringPipelinesResponse> {
+  return apiRequest<MonitoringPipelinesResponse>(
+    `${API_ENDPOINTS.monitoringPipelines}?window_days=${encodeURIComponent(
+      String(windowDays),
+    )}`,
+  );
+}
+
+export async function getMonitoringCosts(
+  windowDays = 30,
+): Promise<MonitoringCostsResponse> {
+  return apiRequest<MonitoringCostsResponse>(
+    `${API_ENDPOINTS.monitoringCosts}?window_days=${encodeURIComponent(
+      String(windowDays),
+    )}`,
+  );
 }
 
 /**

@@ -7,6 +7,7 @@ export const API_BASE_URL =
 
 export const API_ENDPOINTS = {
   health: "/api/health",
+  ready: "/api/ready",
   search: "/api/search",
   ranking: "/api/ranking",
   clustering: "/api/clustering",
@@ -16,6 +17,9 @@ export const API_ENDPOINTS = {
   pipeline: "/api/pipeline",
   everything: "/api/everything",
   results: "/api/results",
+  monitoringReports: "/api/monitoring/reports",
+  monitoringPipelines: "/api/monitoring/pipelines",
+  monitoringCosts: "/api/monitoring/costs",
 } as const;
 
 export const DEFAULT_PIPELINE_PARAMS = {

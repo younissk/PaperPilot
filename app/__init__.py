@@ -1,1 +1,0 @@
-"""PaperPilot Azure Functions modules."""

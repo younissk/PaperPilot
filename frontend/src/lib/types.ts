@@ -128,3 +128,60 @@ export interface HealthResponse {
   storage?: string;
   database?: string;
 }
+
+export interface ReadinessResponse {
+  status: "ok" | "degraded";
+  ready: boolean;
+  version: string;
+  checks: {
+    storage: string;
+    database: string;
+    service_bus: string;
+  };
+}
+
+export interface MonitoringDailyCount {
+  date: string; // YYYY-MM-DD
+  count: number;
+}
+
+export interface MonitoringReportsResponse {
+  window_days: number;
+  reports_generated: number;
+  daily: MonitoringDailyCount[];
+  sample_limit: number;
+  sampled_jobs: number;
+}
+
+export interface MonitoringPipelinesResponse {
+  window_days: number;
+  sample_limit: number;
+  sampled_jobs: number;
+  duration_sec: {
+    avg: number | null;
+    p50: number | null;
+    p95: number | null;
+    count: number;
+  };
+  per_phase_avg_duration_sec: Record<string, number | null>;
+}
+
+export interface MonitoringCostsResponse {
+  window_days: number;
+  sample_limit: number;
+  sampled_jobs: number;
+  cost_proxies: {
+    bytes_uploaded_total: number;
+    avg_bytes_uploaded_per_pipeline: number | null;
+    artifact_count_total: number;
+    avg_artifacts_per_pipeline: number | null;
+    avg_duration_sec: number | null;
+    duration_p95_sec: number | null;
+    coverage: {
+      bytes_samples: number;
+      artifact_samples: number;
+      duration_samples: number;
+    };
+  };
+  notes: string[];
+}

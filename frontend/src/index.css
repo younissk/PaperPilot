@@ -231,4 +231,19 @@
   .citation:hover {
     @apply bg-primary-100 no-underline;
   }
+
+  /* Heartbeat monitor */
+  @keyframes ecgDash {
+    from {
+      stroke-dashoffset: 0;
+    }
+    to {
+      stroke-dashoffset: -200;
+    }
+  }
+
+  .ecg-line {
+    stroke-dasharray: 12 8;
+    animation: ecgDash 1.2s linear infinite;
+  }
 }

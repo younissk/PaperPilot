@@ -7,8 +7,13 @@ import azure.functions as func
 from .http_utils import cors_preflight, json_response, safe
 from .jobs import create_job, enqueue_job, get_job
 from .parsing import normalize_pipeline_payload, normalize_search_payload, parse_json
-from .jobs import test_cosmos_connection
+from .jobs import test_cosmos_connection, test_service_bus_connection
 from .results import get_query_metadata, get_query_results, list_result_slugs, test_storage_connection
+from .monitoring import (
+    get_costs_metrics,
+    get_pipeline_metrics,
+    get_report_metrics,
+)
 
 bp = func.Blueprint()
 
@@ -38,6 +43,32 @@ def health_check(req: func.HttpRequest) -> func.HttpResponse:
     return safe(handler)
 
 
+@bp.route(route="ready", methods=["GET", "OPTIONS"])
+def readiness_check(req: func.HttpRequest) -> func.HttpResponse:
+    if req.method == "OPTIONS":
+        return cors_preflight()
+
+    def handler():
+        storage_ok = test_storage_connection()
+        database_ok = test_cosmos_connection()
+        service_bus_ok = test_service_bus_connection()
+
+        ready = storage_ok and database_ok and service_bus_ok
+
+        return json_response({
+            "status": "ok" if ready else "degraded",
+            "ready": bool(ready),
+            "version": "0.1.0",
+            "checks": {
+                "storage": "connected" if storage_ok else "unavailable",
+                "database": "connected" if database_ok else "unavailable",
+                "service_bus": "connected" if service_bus_ok else "unavailable",
+            },
+        })
+
+    return safe(handler)
+
+
 @bp.route(route="", methods=["GET", "OPTIONS"])
 def root(req: func.HttpRequest) -> func.HttpResponse:
     if req.method == "OPTIONS":
@@ -47,6 +78,7 @@ def root(req: func.HttpRequest) -> func.HttpResponse:
         "version": "0.1.0",
         "endpoints": {
             "health": "GET /api/health",
+            "ready": "GET /api/ready",
             "create_pipeline": "POST /api/pipeline",
             "create_search": "POST /api/search",
             "create_job": "POST /api/jobs",
@@ -54,6 +86,9 @@ def root(req: func.HttpRequest) -> func.HttpResponse:
             "get_job_events": "GET /api/jobs/{job_id}/events",
             "pipeline_status": "GET /api/pipeline/{job_id}",
             "results": "GET /api/results",
+            "monitoring_reports": "GET /api/monitoring/reports",
+            "monitoring_pipelines": "GET /api/monitoring/pipelines",
+            "monitoring_costs": "GET /api/monitoring/costs",
         },
     }))
 
@@ -350,3 +385,24 @@ def get_report_results(req: func.HttpRequest) -> func.HttpResponse:
         return json_response(results["report"])
 
     return safe(handler)
+
+
+@bp.route(route="monitoring/reports", methods=["GET", "OPTIONS"])
+def monitoring_reports(req: func.HttpRequest) -> func.HttpResponse:
+    if req.method == "OPTIONS":
+        return cors_preflight()
+    return safe(lambda: json_response(get_report_metrics(req)))
+
+
+@bp.route(route="monitoring/pipelines", methods=["GET", "OPTIONS"])
+def monitoring_pipelines(req: func.HttpRequest) -> func.HttpResponse:
+    if req.method == "OPTIONS":
+        return cors_preflight()
+    return safe(lambda: json_response(get_pipeline_metrics(req)))
+
+
+@bp.route(route="monitoring/costs", methods=["GET", "OPTIONS"])
+def monitoring_costs(req: func.HttpRequest) -> func.HttpResponse:
+    if req.method == "OPTIONS":
+        return cors_preflight()
+    return safe(lambda: json_response(get_costs_metrics(req)))

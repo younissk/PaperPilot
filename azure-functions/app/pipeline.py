@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import shutil
 import tempfile
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -49,6 +50,44 @@ def upload_artifacts_to_blob(local_dir: Path, prefix: str) -> list[dict[str, Any
         })
 
     return artifacts
+
+
+def _parse_iso(ts: str | None) -> datetime | None:
+    if not ts:
+        return None
+    try:
+        return datetime.fromisoformat(ts)
+    except ValueError:
+        return None
+
+
+def _phase_durations_from_events(events: list[dict[str, Any]] | None) -> dict[str, float]:
+    if not events:
+        return {}
+
+    starts: dict[str, datetime] = {}
+    completes: dict[str, datetime] = {}
+
+    for ev in events:
+        ev_type = ev.get("type")
+        phase = ev.get("phase")
+        ts = _parse_iso(ev.get("ts"))
+        if not isinstance(phase, str) or not ts:
+            continue
+        if ev_type == "phase_start":
+            starts[phase] = min(starts.get(phase, ts), ts)
+        elif ev_type == "phase_complete":
+            completes[phase] = max(completes.get(phase, ts), ts)
+
+    durations: dict[str, float] = {}
+    for phase, start_ts in starts.items():
+        end_ts = completes.get(phase)
+        if not end_ts:
+            continue
+        sec = (end_ts - start_ts).total_seconds()
+        if sec >= 0:
+            durations[phase] = sec
+    return durations
 
 
 async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[str, Any]]) -> dict[str, Any]:
@@ -309,6 +348,11 @@ async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[s
         artifacts = upload_artifacts_to_blob(results_dir, blob_prefix)
         events = append_event(events, "phase_complete", "upload", f"Uploaded {len(artifacts)} files")
 
+        artifact_bytes_total = sum(
+            a.get("size", 0) for a in artifacts if isinstance(a, dict) and isinstance(a.get("size"), int)
+        )
+        phase_durations_sec = _phase_durations_from_events(events)
+
         result = {
             "papers_found": len(accepted_papers),
             "papers_ranked": len(ranked_candidates),
@@ -317,6 +361,9 @@ async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[s
             "results_container": RESULTS_CONTAINER,
             "results_prefix": blob_prefix,
             "artifacts": [a["name"] for a in artifacts],
+            "artifact_count": len(artifacts),
+            "artifact_bytes_total": artifact_bytes_total,
+            "phase_durations_sec": phase_durations_sec,
             "top_papers": [
                 {
                     "title": c.candidate.title,
@@ -410,11 +457,19 @@ async def run_search_job(job_id: str, payload: dict[str, Any], events: list[dict
         blob_prefix = results_path(query_slug, job_id)
         artifacts = upload_artifacts_to_blob(results_dir, blob_prefix)
 
+        artifact_bytes_total = sum(
+            a.get("size", 0) for a in artifacts if isinstance(a, dict) and isinstance(a.get("size"), int)
+        )
+        phase_durations_sec = _phase_durations_from_events(events)
+
         return {
             "papers_found": len(accepted_papers),
             "results_container": RESULTS_CONTAINER,
             "results_prefix": blob_prefix,
             "artifacts": [a["name"] for a in artifacts],
+            "artifact_count": len(artifacts),
+            "artifact_bytes_total": artifact_bytes_total,
+            "phase_durations_sec": phase_durations_sec,
         }
 
     finally:
