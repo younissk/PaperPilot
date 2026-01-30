@@ -188,6 +188,21 @@ def append_job_event(
     events = job.get("events", []) or []
     events = append_event(events, event_type, phase, message, **kwargs)
     update_job_document(job_id, {"events": events, "updated_at": now_iso()})
+    resolved_level = EVENT_LEVELS.get(event_type, "info")
+    level = logging.INFO
+    if resolved_level == "warning":
+        level = logging.WARNING
+    elif resolved_level == "error":
+        level = logging.ERROR
+    log_event(
+        logger,
+        level,
+        event_type,
+        job_id=job_id,
+        phase=phase,
+        event_message=message,
+        **kwargs,
+    )
 
 
 def enqueue_job(job_id: str, job_type: str, payload: dict[str, Any]) -> bool:

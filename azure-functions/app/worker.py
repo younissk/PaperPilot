@@ -110,13 +110,51 @@ def process_job(job_id: str, job_type: str, payload: dict[str, Any]) -> tuple[di
             next_payload = dict(payload)
             next_payload["stage"] = "ranking"
             enqueue_job(job_id, "pipeline", next_payload)
-            return result, events, True, False
+            refreshed = get_job(job_id)
+            current_events = (refreshed or {}).get("events", []) or events
+            current_events = append_event(
+                current_events,
+                "progress",
+                "ranking",
+                "Queued ranking stage",
+                step=0,
+                step_name="Queued",
+            )
+            update_job_progress(
+                job_id,
+                "running",
+                "ranking",
+                0,
+                "Queued ranking stage",
+                step_name="Queued",
+                events=current_events,
+            )
+            return result, current_events, True, False
         if stage == "ranking":
             result = asyncio.run(run_ranking_stage(job_id, payload, events))
             next_payload = dict(payload)
             next_payload["stage"] = "report"
             enqueue_job(job_id, "pipeline", next_payload)
-            return result, events, True, False
+            refreshed = get_job(job_id)
+            current_events = (refreshed or {}).get("events", []) or events
+            current_events = append_event(
+                current_events,
+                "progress",
+                "report",
+                "Queued report stage",
+                step=0,
+                step_name="Queued",
+            )
+            update_job_progress(
+                job_id,
+                "running",
+                "report",
+                0,
+                "Queued report stage",
+                step_name="Queued",
+                events=current_events,
+            )
+            return result, current_events, True, False
         if stage == "report":
             result = asyncio.run(run_report_stage(job_id, payload, events))
             return result, events, True, True

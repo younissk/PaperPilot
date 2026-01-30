@@ -291,7 +291,7 @@ export function ProgressIndicator({
   const title = PHASE_NAMES[phase] || status.status || "processing...";
   const events = status.events ?? [];
   const alerts = status.alerts ?? [];
-  const recentEvents: PipelineEvent[] = events.slice(-5);
+  const recentEvents: PipelineEvent[] = events.slice(-10);
   const { isStale, minutesSince, label: updatedLabel } = getStaleInfo(status.updated_at);
 
   // Leaderboard data during ranking phase
@@ -308,7 +308,10 @@ export function ProgressIndicator({
 
   // Phase details
   let details = "";
-  if (phase === "search") {
+  if (status.status === "queued") {
+    const queuedPhase = phase || "search";
+    details = `queued for ${queuedPhase}`;
+  } else if (phase === "search") {
     details = `step: ${status.phase_step_name || ""}`;
   } else if (phase === "ranking") {
     const progress = status.phase_progress ?? 0;
@@ -366,6 +369,13 @@ export function ProgressIndicator({
             <strong className="text-black lowercase">pipeline appears stalled.</strong>{" "}
             No progress updates in {minutesSince} minutes. You can keep waiting, or
             start a new run if it doesn’t recover.
+          </div>
+        )}
+
+        {status.error && status.status !== "failed" && (
+          <div className="mt-4 text-left p-3 border-2 border-black bg-white">
+            <div className="text-sm font-bold lowercase text-red-600">last error</div>
+            <div className="text-xs mt-1 text-gray-700">{status.error}</div>
           </div>
         )}
 
