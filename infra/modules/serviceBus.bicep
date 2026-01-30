@@ -52,7 +52,7 @@ resource queue 'Microsoft.ServiceBus/namespaces/queues@2024-01-01' = {
     enableBatchedOperations: true
     enableExpress: false
     enablePartitioning: false
-    lockDuration: 'PT1M'
+    lockDuration: 'PT5M'
     maxDeliveryCount: 10
     maxMessageSizeInKilobytes: 256
     maxSizeInMegabytes: 1024
