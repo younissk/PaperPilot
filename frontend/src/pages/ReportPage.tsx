@@ -271,7 +271,78 @@ export default function ReportPage() {
 
   // Report display
   if (!reportData) {
-    return null;
+    const prettyQuery = metadata?.query || queryId?.replace(/_/g, " ") || "this query";
+    const paperCount =
+      papers.length ||
+      results?.snowball?.total_accepted ||
+      metadata?.snowball_count ||
+      0;
+
+    const hasAnyPapers = papers.length > 0;
+
+    return (
+      <>
+        <SEO title={`Report Unavailable: ${prettyQuery}`} noindex />
+        <div className="container container-lg py-12 px-4">
+          <div className="bg-white border-2 border-black p-6" style={brutalShadow}>
+            <h1 className="text-3xl font-bold text-black text-shadow-brutal lowercase">
+              report not available
+            </h1>
+            <p className="text-gray-700 mt-2 lowercase">
+              {paperCount === 0
+                ? "we couldn't find any papers for this query, so there is no report to show."
+                : "we found papers for this query, but the report artifact is missing or empty."}
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3 mt-6">
+              <Link to="/" className="btn btn-brutal lowercase" style={brutalShadow}>
+                try a new search
+              </Link>
+              <Link
+                to="/queries"
+                className="btn border-2 border-black bg-white text-black hover:bg-gray-50 lowercase"
+              >
+                back to queries
+              </Link>
+            </div>
+
+            {paperCount === 0 && (
+              <div className="mt-6 p-4 border-2 border-black border-l-4 bg-white" style={{ borderLeftColor: "#F3787A" }}>
+                <p className="text-sm text-gray-700 lowercase">
+                  try broadening the query, adding a study type (e.g., "systematic review"), or removing overly specific terms.
+                </p>
+              </div>
+            )}
+
+            {hasAnyPapers && (
+              <div className="mt-8">
+                <h2 className="text-black font-bold text-lg mb-3 lowercase">
+                  papers found (without report)
+                </h2>
+                <ul className="list-disc pl-5 space-y-2">
+                  {[...papers]
+                    .sort((a, b) => (b.citation_count || 0) - (a.citation_count || 0))
+                    .slice(0, 10)
+                    .map((p) => (
+                      <li key={p.paper_id} className="text-sm text-gray-800">
+                        <a
+                          href={getPaperUrl(p.paper_id)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:underline"
+                        >
+                          {p.title}
+                        </a>
+                        {p.year ? <span className="text-gray-500"> ({p.year})</span> : null}
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      </>
+    );
   }
 
   return (
@@ -315,6 +386,18 @@ export default function ReportPage() {
                 </span>
               </div>
             </header>
+
+            {(reportData.total_papers_used === 0 ||
+              (reportData.current_research.length === 0 &&
+                reportData.paper_cards.length === 0 &&
+                !reportData.introduction.trim())) && (
+              <div className="mb-8 p-4 border-2 border-black border-l-4 bg-white" style={{ borderLeftColor: "#F3787A" }}>
+                <strong className="lowercase">empty report:</strong>{" "}
+                <span className="lowercase">
+                  no usable papers were available to generate a full report. try rerunning with a broader query.
+                </span>
+              </div>
+            )}
 
             {/* Mobile TOC (accordion) */}
             <MobileTOC reportData={reportData} />

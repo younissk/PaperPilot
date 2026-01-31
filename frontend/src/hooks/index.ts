@@ -1,6 +1,7 @@
 export { useHealthCheck } from "./useHealthCheck";
 export { usePipelineStatus } from "./usePipelineStatus";
 export { useQueries } from "./useQueries";
+export { useQueriesWithMetadata } from "./useQueriesWithMetadata";
 export { useAllResults } from "./useAllResults";
 export { useReadinessCheck } from "./useReadinessCheck";
 export { useMonitoringReports } from "./useMonitoringReports";

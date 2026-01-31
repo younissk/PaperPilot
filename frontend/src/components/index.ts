@@ -16,3 +16,4 @@ export { InfrastructureSection } from "./InfrastructureSection";
 export { DocumentRain } from "./DocumentRain";
 export { SplashScreen } from "./SplashScreen";
 export { MemoryGame } from "./MemoryGame";
+export { QueryCard, QueryCardSkeleton } from "./QueryCard";

@@ -142,6 +142,7 @@ uv run pyright
 | `AZURE_RESULTS_PREFIX` | Blob prefix for results | No |
 | `AZURE_KEY_VAULT_URL` | Key Vault URL (optional) | No |
 | `OPENAI_API_KEY_SECRET_NAME` | Key Vault secret name (optional) | No |
+| `PAPERPILOT_FALLBACK_SEED_COUNT` | When strict filtering yields 0 papers, use this many OpenAlex fallback seeds (default: 8) | No |
 
 ## Infrastructure as Code (recommended)
 

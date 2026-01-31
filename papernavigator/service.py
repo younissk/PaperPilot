@@ -7,7 +7,9 @@ that can be used by CLI, API, or other interfaces.
 
 import asyncio
 import json
+import os
 from collections.abc import Callable
+from typing import Any
 
 import aiohttp
 
@@ -16,6 +18,7 @@ from papernavigator.filter import filter_results
 from papernavigator.models import (
     AcceptedPaper,
     EdgeType,
+    QueryProfile,
     ReducedArxivEntry,
     SnowballCandidate,
 )
@@ -30,6 +33,97 @@ from papernavigator.openalex import (
 from papernavigator.profiler import generate_query_profile
 from papernavigator.search import search_all_queries
 from papernavigator.snowball import SnowballEngine
+
+
+def _relax_profile_for_recall(profile: QueryProfile) -> QueryProfile:
+    """Create a more recall-oriented variant of a QueryProfile.
+
+    Used only when strict filtering rejects all retrieved papers.
+    """
+    relaxed = profile.model_copy(deep=True)
+
+    if relaxed.required_concept_groups:
+        relaxed.required_concept_groups = relaxed.required_concept_groups[:2]
+        relaxed.required_concepts = [
+            term for group in relaxed.required_concept_groups for term in group
+        ]
+
+    recall_boundary = (
+        "IN scope: papers plausibly related to the CORE query, including partial matches "
+        "and foundational/methodological work. OUT of scope: clearly unrelated domains."
+    )
+    if relaxed.domain_boundaries:
+        relaxed.domain_boundaries = f"{relaxed.domain_boundaries}\n\n{recall_boundary}"
+    else:
+        relaxed.domain_boundaries = recall_boundary
+
+    return relaxed
+
+
+async def _build_fallback_seeds_from_openalex(
+    session: aiohttp.ClientSession,
+    *,
+    query: str,
+    profile: QueryProfile,
+    initial_openalex_results: list[dict[str, Any]],
+    seed_count: int,
+    num_results_per_query: int,
+) -> list[SnowballCandidate]:
+    """Build 'best available' OpenAlex seeds when strict filtering yields zero papers."""
+
+    candidates: list[dict[str, Any]] = list(initial_openalex_results)
+
+    fallback_queries = (profile.fallback_queries or [])[:8]
+    if fallback_queries:
+        extra = await search_openalex(
+            session,
+            fallback_queries,
+            num_results_per_query=min(5, num_results_per_query),
+            min_citations=0,
+        )
+        candidates.extend(extra)
+
+    by_id: dict[str, dict[str, Any]] = {}
+    for work in candidates:
+        work_id = str(work.get("id", ""))
+        if not work_id:
+            continue
+        openalex_id = work_id.replace("https://openalex.org/", "")
+        if not openalex_id:
+            continue
+        by_id.setdefault(openalex_id, work)
+
+    unique = list(by_id.items())
+    unique.sort(
+        key=lambda item: (
+            int(item[1].get("cited_by_count", 0) or 0),
+            len(item[1].get("abstract") or ""),
+        ),
+        reverse=True,
+    )
+
+    picked = unique[: max(1, seed_count)]
+
+    seeds: list[SnowballCandidate] = []
+    for openalex_id, work in picked:
+        seeds.append(
+            SnowballCandidate(
+                paper_id=openalex_id,
+                title=str(work.get("title", "")),
+                abstract=work.get("abstract") or None,
+                year=work.get("publication_year"),
+                citation_count=int(work.get("cited_by_count", 0) or 0),
+                influential_citation_count=0,
+                discovered_from=str(work.get("source_query") or f"{query} (fallback)"),
+                edge_type=EdgeType.SEED,
+                depth=0,
+                arxiv_id=None,
+                seed_reason="Fallback seed (no papers passed initial relevance filtering)",
+                seed_confidence=0.2,
+            )
+        )
+
+    return seeds
 
 
 async def run_search(
@@ -61,6 +155,7 @@ async def run_search(
         if progress_callback:
             progress_callback(0, "Generating Query Profile", 0, 0, "Analyzing query to extract concepts...", 0, max_iterations)
         profile = await generate_query_profile(query)
+        profile_for_snowball = profile
 
         # Step 1: Augment the search query
         if progress_callback:
@@ -137,7 +232,93 @@ async def run_search(
         if progress_callback:
             progress_callback(3, "Filtering Results", len(filtered_results), len(all_results), f"Filtered to {len(filtered_results)} relevant papers", 0, max_iterations)
 
+        if not filtered_results and all_results:
+            profile_for_snowball = _relax_profile_for_recall(profile)
+            if progress_callback:
+                progress_callback(
+                    3,
+                    "Filtering Results",
+                    0,
+                    len(all_results),
+                    "No papers passed strict filtering; retrying with a recall-oriented profile...",
+                    0,
+                    max_iterations,
+                )
+            filtered_results, _, _ = await filter_results(profile_for_snowball, all_results)
+            if progress_callback:
+                progress_callback(
+                    3,
+                    "Filtering Results",
+                    len(filtered_results),
+                    len(all_results),
+                    f"Recall-oriented filtering kept {len(filtered_results)} papers",
+                    0,
+                    max_iterations,
+                )
+
         if not filtered_results:
+            # If we found papers but filtered them all out, fall back to "best available"
+            # OpenAlex seeds so the pipeline can still produce something useful.
+            if all_results and openalex_results:
+                try:
+                    configured = int(os.getenv("PAPERPILOT_FALLBACK_SEED_COUNT", "8") or "8")
+                except ValueError:
+                    configured = 8
+                fallback_seed_count = min(configured, max(1, num_results))
+                if progress_callback:
+                    progress_callback(
+                        3,
+                        "Filtering Results",
+                        0,
+                        0,
+                        f"Falling back to {fallback_seed_count} high-signal OpenAlex seed papers...",
+                        0,
+                        max_iterations,
+                    )
+
+                seeds = await _build_fallback_seeds_from_openalex(
+                    session,
+                    query=query,
+                    profile=profile_for_snowball,
+                    initial_openalex_results=openalex_results,
+                    seed_count=fallback_seed_count,
+                    num_results_per_query=num_results,
+                )
+
+                if seeds:
+                    if progress_callback:
+                        progress_callback(
+                            5,
+                            "Running Snowball Search",
+                            0,
+                            0,
+                            f"Starting snowball search with {len(seeds)} fallback seed papers...",
+                            0,
+                            max_iterations,
+                        )
+
+                    engine = SnowballEngine(
+                        profile=profile_for_snowball,
+                        max_iterations=max_iterations,
+                        top_n_per_iteration=top_n,
+                        min_new_papers_threshold=3,
+                        max_total_accepted=max_accepted,
+                    )
+                    accepted_papers = await engine.run(session, seeds, progress_callback, max_iterations)
+
+                    if progress_callback:
+                        progress_callback(
+                            6,
+                            "Exporting Results",
+                            0,
+                            0,
+                            f"Saving {len(accepted_papers)} papers to file...",
+                            max_iterations,
+                            max_iterations,
+                        )
+                    export_results(accepted_papers, query, output_file)
+                    return accepted_papers
+
             # Ensure downstream consumers (pipeline, UI, artifacts) always have a snowball JSON,
             # even when no papers pass filtering/resolution.
             export_results([], query, output_file)
@@ -159,7 +340,7 @@ async def run_search(
         if progress_callback:
             progress_callback(5, "Running Snowball Search", 0, 0, f"Starting snowball search with {len(seeds)} seed papers...", 0, max_iterations)
         engine = SnowballEngine(
-            profile=profile,
+            profile=profile_for_snowball,
             max_iterations=max_iterations,
             top_n_per_iteration=top_n,
             min_new_papers_threshold=3,

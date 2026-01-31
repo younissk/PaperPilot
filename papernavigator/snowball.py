@@ -118,8 +118,8 @@ class SnowballEngine:
                 discovered_from=seed.discovered_from,
                 edge_type=EdgeType.SEED,
                 depth=0,
-                judge_reason="Seed paper from initial search",
-                judge_confidence=1.0,
+                judge_reason=seed.seed_reason or "Seed paper from initial search",
+                judge_confidence=seed.seed_confidence if seed.seed_confidence is not None else 1.0,
             )
             self.accepted.append(accepted)
             current_frontier.append(seed)

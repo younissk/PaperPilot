@@ -110,6 +110,10 @@ class SnowballCandidate(BaseModel):
     depth: int
     priority_score: float = 0.0
     arxiv_id: str | None = None             # arXiv ID for S2 fallback
+    # Optional metadata for seed papers (used when we fall back to "best available"
+    # seeds after strict filtering yields zero papers).
+    seed_reason: str | None = None
+    seed_confidence: float | None = None
 
 
 class AcceptedPaper(BaseModel):
