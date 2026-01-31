@@ -22,8 +22,7 @@ export function EloBracketDiagram() {
 
   return (
     <div
-      className="my-8 p-4 border-2 border-black bg-white"
-      style={{ boxShadow: "4px 4px 0 #F3787A" }}
+      className="my-4 py-2"
       role="img"
       aria-label="Diagram showing ELO ranking tournament between papers"
     >
@@ -300,10 +299,6 @@ export function EloBracketDiagram() {
           </marker>
         </defs>
       </svg>
-
-      <p className="text-xs text-gray-500 text-center mt-2 lowercase">
-        elo ranking: papers compete, best rise to the top
-      </p>
     </div>
   );
 }

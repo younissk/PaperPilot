@@ -1,5 +1,11 @@
-import { useEffect, useState } from "react";
-import { QueryFlowDiagram, SnowballDiagram, EloBracketDiagram } from "./diagrams";
+import { useEffect, useState, Fragment } from "react";
+import {
+  QueryProfileDiagram,
+  QueryAugmentDiagram,
+  CitationsDiagram,
+  EloBracketDiagram,
+  EloTableDiagram,
+} from "./diagrams";
 
 interface Step {
   id: string;
@@ -89,7 +95,7 @@ export function HowItWorks() {
   }, []);
 
   return (
-    <section id="how-it-works" className="py-20 px-4 overflow-hidden">
+    <section id="how-it-works" className="py-20 px-4">
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="text-center mb-16">
@@ -119,7 +125,7 @@ export function HowItWorks() {
               >
                 {/* Sticky Header - contains number, icon, and title */}
                 <div
-                  className="sticky top-0 bg-white pt-6 pb-4 pl-20 md:pl-28 border-b-2 border-black"
+                  className="sticky top-12 bg-white pt-6 pb-4 pl-20 md:pl-28 border-b-2 border-black"
                   style={{ zIndex: 10 + index }}
                 >
                   {/* Timeline node - positioned absolutely relative to sticky header */}
@@ -168,27 +174,33 @@ export function HowItWorks() {
                     {step.description}
                   </p>
 
-                  {/* Interactive Diagrams */}
-                  {step.id === "search" && (
-                    <div className="space-y-4">
-                      <QueryFlowDiagram />
-                      <SnowballDiagram />
-                    </div>
-                  )}
-                  {step.id === "rank" && <EloBracketDiagram />}
-
-                  {/* Details List - always visible, no card wrapper */}
-                  <ul className="space-y-3 mt-6">
+                  {/* Details List with inline diagrams after specific items */}
+                  <ul className="space-y-3">
                     {step.details.map((detail, detailIndex) => (
-                      <li
-                        key={detail}
-                        className="flex items-start gap-3 text-sm text-gray-600 lowercase"
-                      >
-                        <span className="w-5 h-5 bg-black text-white text-xs flex items-center justify-center shrink-0 mt-0.5">
-                          {detailIndex + 1}
-                        </span>
-                        <span className="leading-relaxed">{detail}</span>
-                      </li>
+                      <Fragment key={detail}>
+                        <li className="flex items-start gap-3 text-sm text-gray-600 lowercase">
+                          <span className="w-5 h-5 bg-black text-white text-xs flex items-center justify-center shrink-0 mt-0.5">
+                            {detailIndex + 1}
+                          </span>
+                          <span className="leading-relaxed">{detail}</span>
+                        </li>
+                        {/* Inline diagrams after specific items */}
+                        {step.id === "search" && detailIndex === 0 && (
+                          <QueryProfileDiagram />
+                        )}
+                        {step.id === "search" && detailIndex === 1 && (
+                          <QueryAugmentDiagram />
+                        )}
+                        {step.id === "search" && detailIndex === 3 && (
+                          <CitationsDiagram />
+                        )}
+                        {step.id === "rank" && detailIndex === 0 && (
+                          <EloBracketDiagram />
+                        )}
+                        {step.id === "rank" && detailIndex === 3 && (
+                          <EloTableDiagram />
+                        )}
+                      </Fragment>
                     ))}
                   </ul>
                 </div>

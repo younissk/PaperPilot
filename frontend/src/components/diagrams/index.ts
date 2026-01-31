@@ -1,3 +1,5 @@
-export { QueryFlowDiagram } from "./QueryFlowDiagram";
-export { SnowballDiagram } from "./SnowballDiagram";
+export { QueryProfileDiagram } from "./QueryProfileDiagram";
+export { QueryAugmentDiagram } from "./QueryAugmentDiagram";
+export { CitationsDiagram } from "./CitationsDiagram";
 export { EloBracketDiagram } from "./EloBracketDiagram";
+export { EloTableDiagram } from "./EloTableDiagram";

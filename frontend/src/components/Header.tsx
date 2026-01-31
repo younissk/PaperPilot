@@ -29,7 +29,7 @@ export function Header() {
 
   return (
     <>
-      <header className="bg-transparent h-12 flex items-center sticky top-0 z-50">
+      <header className="bg-gray-50 h-12 flex items-center sticky top-0 z-50">
         <div className="w-full max-w-7xl mx-auto flex items-center px-4">
           {/* Logo */}
           <Link
