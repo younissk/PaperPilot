@@ -49,7 +49,7 @@ export function Footer() {
         {/* Links */}
         <nav className="flex items-center gap-6 text-sm">
           <a
-            href="https://github.com/younisskandah/PaperPilot"
+            href="https://github.com/younissk/PaperNavigator"
             target="_blank"
             rel="noopener noreferrer"
             className="text-gray-600 hover:text-black no-underline lowercase transition-colors"

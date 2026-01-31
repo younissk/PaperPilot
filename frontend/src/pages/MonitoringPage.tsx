@@ -35,7 +35,15 @@ function formatBytes(value: number | null | undefined): string {
     u += 1;
   }
   const decimals = u === 0 ? 0 : 1;
-  return `${n.toFixed(decimals)} ${units[u]}`;
+  // Use non-breaking space to prevent unit from wrapping to next line
+  return `${n.toFixed(decimals)}\u00A0${units[u]}`;
+}
+
+function formatNumber(value: number | null | undefined, decimals = 2): string {
+  if (value === null || value === undefined || !Number.isFinite(value)) {
+    return "—";
+  }
+  return value.toFixed(decimals);
 }
 
 type MonitorState = "ok" | "degraded" | "down";
@@ -183,26 +191,28 @@ export default function MonitoringPage() {
                     <div className="text-4xl font-bold text-black text-shadow-brutal">
                       {reports.data?.reports_generated ?? 0}
                     </div>
-                    <div className="mt-3">
-                      <div className="flex items-end gap-0.5 h-10">
-                        {daily.slice(-windowDays).map((d) => (
-                          <div
-                            key={d.date}
-                            className="w-1 bg-black"
-                            style={{
-                              height: `${Math.max(
-                                8,
-                                Math.round((d.count / maxDaily) * 100),
-                              )}%`,
-                            }}
-                            title={`${d.date}: ${d.count}`}
-                          />
-                        ))}
+                    {daily.length > 0 && (
+                      <div className="mt-3">
+                        <div className="flex items-end gap-0.5 h-10">
+                          {daily.slice(-windowDays).map((d) => (
+                            <div
+                              key={d.date}
+                              className="w-1 bg-black"
+                              style={{
+                                height: `${Math.max(
+                                  8,
+                                  Math.round((d.count / maxDaily) * 100),
+                                )}%`,
+                              }}
+                              title={`${d.date}: ${d.count}`}
+                            />
+                          ))}
+                        </div>
+                        <p className="text-xs text-gray-600 mt-2 lowercase">
+                          daily counts (sparkline)
+                        </p>
                       </div>
-                      <p className="text-xs text-gray-600 mt-2 lowercase">
-                        daily counts (sparkline)
-                      </p>
-                    </div>
+                    )}
                   </>
                 )}
               </div>
@@ -271,7 +281,7 @@ export default function MonitoringPage() {
             <div className="bg-white border-2 border-black p-6" style={brutalShadow}>
               <div className="stack stack-sm">
                 <h2 className="text-base font-bold text-black lowercase">
-                  cost signals (excluding openai)
+                  cost signals
                 </h2>
                 {costs.isLoading ? (
                   <div className="flex items-center gap-2 text-gray-600 lowercase">
@@ -310,8 +320,7 @@ export default function MonitoringPage() {
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600 lowercase">avg artifacts / pipeline</span>
                         <span className="font-medium text-black">
-                          {costs.data?.cost_proxies.avg_artifacts_per_pipeline ??
-                            "—"}
+                          {formatNumber(costs.data?.cost_proxies.avg_artifacts_per_pipeline)}
                         </span>
                       </div>
                     </div>
