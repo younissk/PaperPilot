@@ -8,6 +8,7 @@ import {
   CitationsDiagram,
   EloBracketDiagram,
 } from "./diagrams";
+import { MemoryGame } from "./MemoryGame";
 
 // Brutalist coral shadow styles
 const brutalShadow = { boxShadow: "3px 3px 0 #F3787A" };
@@ -296,6 +297,7 @@ export function ProgressIndicator({
   queryTitle,
 }: ProgressIndicatorProps) {
   const [logsExpanded, setLogsExpanded] = useState(false);
+  const [showGame, setShowGame] = useState(false);
   const phase = status.phase || "";
   const normalizedPhase = PIPELINE_PHASES.includes(phase as (typeof PIPELINE_PHASES)[number])
     ? phase
@@ -563,7 +565,25 @@ export function ProgressIndicator({
           </div>
         )}
 
+        {/* Tired of waiting? Play a game */}
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <span className="text-sm text-gray-500 lowercase">tired of waiting?</span>
+            <button
+              type="button"
+              onClick={() => setShowGame(true)}
+              className="px-4 py-2 text-sm font-bold lowercase border-2 border-black bg-white hover:bg-black hover:text-white transition-colors"
+              style={brutalShadow}
+            >
+              play a game
+            </button>
+          </div>
+        </div>
+
       </div>
+
+      {/* Memory Game Overlay */}
+      {showGame && <MemoryGame onClose={() => setShowGame(false)} />}
     </div>
   );
 }

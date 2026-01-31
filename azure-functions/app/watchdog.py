@@ -10,7 +10,7 @@ import azure.functions as func
 
 from .clients import get_jobs_container
 from .config import logger
-from .jobs import append_event, update_job_progress
+from .jobs import append_event, enqueue_job, update_job_progress
 from .pipeline import run_ranking_stage, run_report_stage, run_search_job
 from .utils import is_job_stale, load_openai_api_key
 
@@ -202,7 +202,7 @@ def queued_job_watchdog(timer: func.TimerRequest) -> None:
                         error=message,
                     )
                     return
-                # Queue next stage in-job (no Service Bus)
+                # Queue next stage (prefer Service Bus when available).
                 events = append_event(
                     events,
                     "progress",
@@ -222,6 +222,9 @@ def queued_job_watchdog(timer: func.TimerRequest) -> None:
                     events=events,
                     result=result,
                 )
+                next_payload = dict(payload)
+                next_payload["stage"] = "ranking"
+                enqueue_job(job_id, "pipeline", next_payload)
             elif stage == "ranking":
                 result = asyncio.run(run_ranking_stage(job_id, payload, events))
                 events = append_event(
@@ -243,6 +246,9 @@ def queued_job_watchdog(timer: func.TimerRequest) -> None:
                     events=events,
                     result=result,
                 )
+                next_payload = dict(payload)
+                next_payload["stage"] = "report"
+                enqueue_job(job_id, "pipeline", next_payload)
             elif stage == "report":
                 result = asyncio.run(run_report_stage(job_id, payload, events))
                 events = append_event(events, "job_complete", "complete", "Job completed")

@@ -12,5 +12,7 @@ export { OutputPreview } from "./OutputPreview";
 export { HowItWorks } from "./HowItWorks";
 export { PrivacySection } from "./PrivacySection";
 export { AboutSection } from "./AboutSection";
+export { InfrastructureSection } from "./InfrastructureSection";
 export { DocumentRain } from "./DocumentRain";
 export { SplashScreen } from "./SplashScreen";
+export { MemoryGame } from "./MemoryGame";

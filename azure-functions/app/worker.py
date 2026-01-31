@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 from typing import Any
 
 import azure.functions as func
@@ -66,6 +67,12 @@ def process_job(job_id: str, job_type: str, payload: dict[str, Any]) -> tuple[di
     """
     existing_job = get_job(job_id)
     stage = payload.get("stage") if isinstance(payload, dict) else None
+    requeue_count = 0
+    if isinstance(payload, dict):
+        try:
+            requeue_count = int(payload.get("_requeue_count", 0))
+        except (TypeError, ValueError):
+            requeue_count = 0
     
     # Idempotency check: skip if job already completed or failed
     phase_order = {"search": 0, "ranking": 1, "report": 2}
@@ -101,13 +108,36 @@ def process_job(job_id: str, job_type: str, payload: dict[str, Any]) -> tuple[di
                         )
                         return {}, existing_job.get("events", []), False, False
                     if phase_order[stage_norm] > phase_order[current_phase]:
-                        logger.warning(
-                            "Job %s stage '%s' ahead of current phase '%s', skipping",
-                            job_id,
-                            stage_norm,
-                            current_phase,
-                        )
-                        return {}, existing_job.get("events", []), False, False
+                        # Cosmos can briefly return a stale job document right after we update progress
+                        # and enqueue the next stage. In that case, skipping would drop the stage
+                        # message (auto-complete is enabled), leaving the job stuck until watchdog.
+                        if requeue_count < 5:
+                            logger.warning(
+                                "Job %s stage '%s' ahead of current phase '%s' (possible stale read); requeuing",
+                                job_id,
+                                stage_norm,
+                                current_phase,
+                            )
+                            # Brief pause, then re-read once; if still inconsistent, re-enqueue.
+                            time.sleep(0.25)
+                            refreshed = get_job(job_id) or {}
+                            refreshed_progress = refreshed.get("progress") or {}
+                            refreshed_phase = (refreshed_progress.get("phase") or "").lower()
+                            if refreshed_phase == stage_norm:
+                                existing_job = refreshed
+                            else:
+                                next_payload = dict(payload)
+                                next_payload["_requeue_count"] = requeue_count + 1
+                                enqueue_job(job_id, job_type, next_payload)
+                                return {}, existing_job.get("events", []), False, False
+                        else:
+                            logger.warning(
+                                "Job %s stage '%s' ahead of current phase '%s' and requeue limit reached; skipping",
+                                job_id,
+                                stage_norm,
+                                current_phase,
+                            )
+                            return {}, existing_job.get("events", []), False, False
 
                 # Only execute a running job when it's explicitly marked as queued for this stage.
                 if stage_norm != current_phase:

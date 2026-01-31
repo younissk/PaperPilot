@@ -5,6 +5,7 @@ import {
   OutputPreview,
   HowItWorks,
   AboutSection,
+  InfrastructureSection,
   PrivacySection,
 } from "@/components";
 
@@ -34,6 +35,9 @@ export default function HomePage() {
 
         {/* About Section */}
         <AboutSection />
+
+        {/* Infrastructure Section */}
+        <InfrastructureSection />
 
         {/* Privacy Section */}
         <PrivacySection />
