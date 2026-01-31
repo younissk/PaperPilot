@@ -114,6 +114,53 @@ def extract_cited_ids(text: str) -> list[str]:
     return list(set(matches))
 
 
+def normalize_citations(text: str, valid_ids: set[str] | None = None) -> str:
+    """Normalize malformed citation formats to the expected [paper_id] format.
+    
+    Handles common LLM citation format errors:
+    - (id1; id2) -> [id1] [id2]
+    - (id) -> [id]
+    - id1, id2 in parentheses -> [id1] [id2]
+    
+    Args:
+        text: Text that may contain malformed citations
+        valid_ids: Optional set of valid paper IDs to filter against
+        
+    Returns:
+        Text with normalized citations in [paper_id] format
+    """
+    # Pattern to match paper IDs (OpenAlex W... or Semantic Scholar S2:...)
+    id_pattern = r'[A-Za-z0-9_:-]+'
+    
+    def replace_parenthetical(match: re.Match[str]) -> str:
+        """Convert parenthetical citations to bracket format."""
+        content = match.group(1)
+        # Split on semicolons or commas
+        ids = re.split(r'[;,]\s*', content)
+        # Filter to valid paper ID formats and optionally check against valid_ids
+        normalized = []
+        for id_str in ids:
+            id_str = id_str.strip()
+            # Check if it looks like a paper ID (starts with W or S2:)
+            if re.match(r'^(W\d+|S2:[A-Za-z0-9]+)$', id_str):
+                if valid_ids is None or id_str in valid_ids:
+                    normalized.append(f'[{id_str}]')
+        if normalized:
+            return ' '.join(normalized)
+        # If no valid IDs found, return original match
+        return match.group(0)
+    
+    # Match parenthetical citations like (W123; S2:abc) or (W123, W456)
+    paren_pattern = rf'\(({id_pattern}(?:[;,]\s*{id_pattern})*)\)'
+    result = re.sub(paren_pattern, replace_parenthetical, text)
+    
+    # Also handle single IDs in parentheses that look like paper IDs
+    single_paren_pattern = r'\((W\d+|S2:[A-Za-z0-9]+)\)'
+    result = re.sub(single_paren_pattern, r'[\1]', result)
+    
+    return result
+
+
 async def write_section(
     section: SectionPlan,
     cards: list[PaperCard],
@@ -522,6 +569,10 @@ async def write_introduction(query: str, cards: list[PaperCard]) -> str:
     claims = [f"- {c.claim} [{c.id}]" for c in cards[:10]]
     claims_text = "\n".join(claims)
 
+    # Get example IDs for the prompt
+    example_ids = [c.id for c in cards[:2]] if len(cards) >= 2 else [c.id for c in cards]
+    valid_ids = ", ".join([c.id for c in cards[:10]])
+
     prompt = f"""Write a brief introduction (2-3 paragraphs) for a research survey on:
 
 Query: {query}
@@ -529,10 +580,15 @@ Query: {query}
 Sample of papers covered (showing their main claims):
 {claims_text}
 
-The introduction should:
+CITATION FORMAT: Use [paper_id] for each citation. Example:
+"This field has seen significant advances [{example_ids[0] if example_ids else 'paper_id'}]. Recent work explores new approaches [{example_ids[1] if len(example_ids) > 1 else example_ids[0] if example_ids else 'paper_id'}]."
+
+Rules:
 1. Introduce the research topic and its importance
 2. Briefly outline what aspects the survey covers
-3. Include 2-3 citations to key foundational papers [paper_id]
+3. Include 2-3 citations to key foundational papers using [paper_id] format
+4. Each citation must be a SINGLE ID in square brackets - do NOT combine multiple IDs
+5. Use ONLY IDs from: {valid_ids}
 
 Write concise, academic prose. Return only the introduction text."""
 
@@ -559,6 +615,11 @@ Write concise, academic prose. Return only the introduction text."""
             operation="write_introduction",
             duration_sec=round(time.monotonic() - start_time, 2),
         )
+        
+        # Normalize any malformed citations to [paper_id] format
+        valid_id_set = {c.id for c in cards[:10]}
+        content = normalize_citations(content, valid_id_set)
+        
         log.info("introduction_complete", word_count=len(content.split()))
         return content
 
@@ -647,6 +708,11 @@ Write academic prose. Return only the conclusion text (no citations needed in co
             operation="write_conclusion",
             duration_sec=round(time.monotonic() - start_time, 2),
         )
+        
+        # Normalize any malformed citations (defensive - conclusion shouldn't have citations)
+        valid_id_set = {c.id for c in cards}
+        content = normalize_citations(content, valid_id_set)
+        
         log.info("conclusion_complete", word_count=len(content.split()))
         return content
 
