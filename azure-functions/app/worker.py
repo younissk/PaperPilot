@@ -67,12 +67,6 @@ def process_job(job_id: str, job_type: str, payload: dict[str, Any]) -> tuple[di
     """
     existing_job = get_job(job_id)
     stage = payload.get("stage") if isinstance(payload, dict) else None
-    requeue_count = 0
-    if isinstance(payload, dict):
-        try:
-            requeue_count = int(payload.get("_requeue_count", 0))
-        except (TypeError, ValueError):
-            requeue_count = 0
     
     # Idempotency check: skip if job already completed or failed
     phase_order = {"search": 0, "ranking": 1, "report": 2}
@@ -109,35 +103,45 @@ def process_job(job_id: str, job_type: str, payload: dict[str, Any]) -> tuple[di
                         return {}, existing_job.get("events", []), False, False
                     if phase_order[stage_norm] > phase_order[current_phase]:
                         # Cosmos can briefly return a stale job document right after we update progress
-                        # and enqueue the next stage. In that case, skipping would drop the stage
-                        # message (auto-complete is enabled), leaving the job stuck until watchdog.
-                        if requeue_count < 5:
-                            logger.warning(
-                                "Job %s stage '%s' ahead of current phase '%s' (possible stale read); requeuing",
-                                job_id,
-                                stage_norm,
-                                current_phase,
-                            )
-                            # Brief pause, then re-read once; if still inconsistent, re-enqueue.
-                            time.sleep(0.25)
-                            refreshed = get_job(job_id) or {}
-                            refreshed_progress = refreshed.get("progress") or {}
+                        # and enqueue the next stage. Re-enqueueing (and returning) can amplify cold-start
+                        # delays, so prefer an in-process short wait + refresh. If still mismatched, allow
+                        # execution only when the stage is the next sequential step.
+                        deadline = time.time() + 2.0
+                        refreshed = existing_job
+                        while time.time() < deadline:
+                            time.sleep(0.15)
+                            refreshed = get_job(job_id) or refreshed
+                            refreshed_progress = (refreshed.get("progress") or {}) if isinstance(refreshed, dict) else {}
                             refreshed_phase = (refreshed_progress.get("phase") or "").lower()
                             if refreshed_phase == stage_norm:
                                 existing_job = refreshed
+                                progress = refreshed_progress
+                                current_phase = refreshed_phase
+                                step_name = (progress.get("step_name") or "").lower()
+                                progress_message = (progress.get("message") or "").lower()
+                                is_queued_marker = "queued" in step_name or "queued" in progress_message
+                                break
+
+                        if current_phase != stage_norm:
+                            diff = phase_order[stage_norm] - phase_order.get(current_phase, 0)
+                            if diff == 1:
+                                logger.warning(
+                                    "Job %s stage '%s' ahead of current phase '%s' after refresh; proceeding (likely stale read)",
+                                    job_id,
+                                    stage_norm,
+                                    current_phase,
+                                )
+                                # Allow execution for the next sequential stage to avoid dropping messages.
+                                current_phase = stage_norm
+                                is_queued_marker = True
                             else:
-                                next_payload = dict(payload)
-                                next_payload["_requeue_count"] = requeue_count + 1
-                                enqueue_job(job_id, job_type, next_payload)
+                                logger.warning(
+                                    "Job %s stage '%s' ahead of current phase '%s' after refresh; skipping",
+                                    job_id,
+                                    stage_norm,
+                                    current_phase,
+                                )
                                 return {}, existing_job.get("events", []), False, False
-                        else:
-                            logger.warning(
-                                "Job %s stage '%s' ahead of current phase '%s' and requeue limit reached; skipping",
-                                job_id,
-                                stage_norm,
-                                current_phase,
-                            )
-                            return {}, existing_job.get("events", []), False, False
 
                 # Only execute a running job when it's explicitly marked as queued for this stage.
                 if stage_norm != current_phase:
@@ -253,7 +257,22 @@ def process_job(job_id: str, job_type: str, payload: dict[str, Any]) -> tuple[di
 )
 def process_job_message(msg: func.ServiceBusMessage):
     body = msg.get_body().decode("utf-8")
-    logger.info("Processing message: %s", body)
+    try:
+        from datetime import UTC, datetime
+
+        enqueued_time = getattr(msg, "enqueued_time_utc", None) or getattr(msg, "enqueued_time", None)
+        if enqueued_time:
+            latency_ms = (datetime.now(UTC) - enqueued_time).total_seconds() * 1000.0
+            logger.info(
+                "Processing message (latency_ms=%.0f, message_id=%s): %s",
+                latency_ms,
+                getattr(msg, "message_id", None),
+                body,
+            )
+        else:
+            logger.info("Processing message: %s", body)
+    except Exception:
+        logger.info("Processing message: %s", body)
 
     job_id = None
     try:

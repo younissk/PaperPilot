@@ -3,16 +3,14 @@ import { useState, useEffect, useCallback } from "react";
 // Brutalist coral shadow styles
 const brutalShadow = { boxShadow: "3px 3px 0 #F3787A" };
 
-// Document colors for the memory pairs
+// Document colors for the memory pairs - high contrast, distinct colors
 const DOC_COLORS = [
-  "#F3787A", // coral (brand)
-  "#38b2ac", // teal (primary)
-  "#805AD5", // purple
-  "#DD6B20", // orange
-  "#38A169", // green
-  "#E53E3E", // red
-  "#3182CE", // blue
-  "#D69E2E", // yellow
+  "#E11D48", // rose/red
+  "#2563EB", // blue
+  "#16A34A", // green
+  "#9333EA", // purple
+  "#EA580C", // orange
+  "#0891B2", // cyan
 ];
 
 interface Card {
@@ -23,10 +21,11 @@ interface Card {
 }
 
 /**
- * Colored document SVG component
+ * Flat document SVG component - shows colored lines when revealed
  */
 function ColoredDoc({ color, size = 48 }: { color: string; size?: number }) {
   const scale = size / 360;
+  const strokeWidth = 20 * Math.max(scale, 0.5);
   return (
     <svg
       width={size}
@@ -35,25 +34,25 @@ function ColoredDoc({ color, size = 48 }: { color: string; size?: number }) {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      {/* Document body fill */}
+      {/* Document body with color fill */}
       <path
         d="M350 450H10V10H230L350 130V450Z"
         fill={color}
-        fillOpacity={0.2}
-      />
-      {/* Folded corner */}
-      <path
-        d="M340 130H230V20"
-        stroke="black"
-        strokeWidth={20 * Math.max(scale, 0.5)}
-        strokeMiterlimit="10"
-        strokeLinecap="round"
+        fillOpacity={0.15}
       />
       {/* Document outline */}
       <path
         d="M350 450H10V10H230L350 130V450Z"
-        stroke="black"
-        strokeWidth={20 * Math.max(scale, 0.5)}
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeMiterlimit="10"
+        strokeLinecap="round"
+      />
+      {/* Folded corner */}
+      <path
+        d="M340 130H230V20"
+        stroke={color}
+        strokeWidth={strokeWidth}
         strokeMiterlimit="10"
         strokeLinecap="round"
       />
@@ -66,13 +65,28 @@ function ColoredDoc({ color, size = 48 }: { color: string; size?: number }) {
 }
 
 /**
- * Card back design
+ * Black document SVG for hidden cards - completely filled black
  */
-function CardBack() {
+function BlackDoc({ size = 48 }: { size?: number }) {
   return (
-    <div className="w-full h-full flex items-center justify-center bg-black">
-      <span className="text-white font-bold text-lg">?</span>
-    </div>
+    <svg
+      width={size}
+      height={size * (460 / 360)}
+      viewBox="0 0 360 460"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {/* Document body - solid black fill */}
+      <path
+        d="M350 450H10V10H230L350 130V450Z"
+        fill="black"
+      />
+      {/* Folded corner triangle */}
+      <path
+        d="M230 10L350 130H230V10Z"
+        fill="#333"
+      />
+    </svg>
   );
 }
 
@@ -83,16 +97,13 @@ function MemoryCard({
   card,
   onClick,
   disabled,
-  size,
 }: {
   card: Card;
   onClick: () => void;
   disabled: boolean;
-  size: "sm" | "md";
 }) {
   const isRevealed = card.isFlipped || card.isMatched;
-  const dimensions = size === "sm" ? "w-14 h-18 sm:w-16 sm:h-20" : "w-16 h-20 sm:w-20 sm:h-24";
-  const docSize = size === "sm" ? 36 : 48;
+  const docSize = 56;
 
   return (
     <button
@@ -100,20 +111,16 @@ function MemoryCard({
       onClick={onClick}
       disabled={disabled || card.isMatched}
       className={`
-        ${dimensions} border-2 border-black bg-white
+        p-1 bg-transparent
         transition-all duration-200 transform
         ${card.isMatched ? "opacity-50" : ""}
-        ${!disabled && !card.isMatched ? "hover:scale-105 active:scale-95" : ""}
-        ${isRevealed ? "" : "hover:bg-gray-50"}
+        ${!disabled && !card.isMatched ? "hover:scale-110 active:scale-95" : ""}
       `}
-      style={isRevealed && !card.isMatched ? brutalShadow : undefined}
     >
       {isRevealed ? (
-        <div className="w-full h-full flex items-center justify-center p-1">
-          <ColoredDoc color={DOC_COLORS[card.colorIndex]} size={docSize} />
-        </div>
+        <ColoredDoc color={DOC_COLORS[card.colorIndex]} size={docSize} />
       ) : (
-        <CardBack />
+        <BlackDoc size={docSize} />
       )}
     </button>
   );
@@ -122,6 +129,8 @@ function MemoryCard({
 interface MemoryGameProps {
   onClose: () => void;
 }
+
+const NUM_PAIRS = 6; // Always 12 cards
 
 /**
  * Memory matching game component
@@ -133,14 +142,9 @@ export function MemoryGame({ onClose }: MemoryGameProps) {
   const [matches, setMatches] = useState(0);
   const [isChecking, setIsChecking] = useState(false);
   const [gameComplete, setGameComplete] = useState(false);
-  const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("easy");
-
-  const pairCounts = { easy: 4, medium: 6, hard: 8 };
-  const gridCols = { easy: 4, medium: 4, hard: 4 };
 
   const initializeGame = useCallback(() => {
-    const numPairs = pairCounts[difficulty];
-    const colorIndices = Array.from({ length: numPairs }, (_, i) => i % DOC_COLORS.length);
+    const colorIndices = Array.from({ length: NUM_PAIRS }, (_, i) => i % DOC_COLORS.length);
     
     // Create pairs
     const cardPairs: Card[] = [];
@@ -163,7 +167,7 @@ export function MemoryGame({ onClose }: MemoryGameProps) {
     setMatches(0);
     setIsChecking(false);
     setGameComplete(false);
-  }, [difficulty]);
+  }, []);
 
   useEffect(() => {
     initializeGame();
@@ -198,7 +202,7 @@ export function MemoryGame({ onClose }: MemoryGameProps) {
           );
           setMatches((m) => {
             const newMatches = m + 1;
-            if (newMatches === pairCounts[difficulty]) {
+            if (newMatches === NUM_PAIRS) {
               setGameComplete(true);
             }
             return newMatches;
@@ -215,8 +219,6 @@ export function MemoryGame({ onClose }: MemoryGameProps) {
       }, 800);
     }
   };
-
-  const cardSize = difficulty === "hard" ? "sm" : "md";
 
   return (
     <div
@@ -240,22 +242,6 @@ export function MemoryGame({ onClose }: MemoryGameProps) {
           </button>
         </div>
 
-        {/* Difficulty selector */}
-        <div className="flex gap-2 p-4 border-b-2 border-black">
-          {(["easy", "medium", "hard"] as const).map((d) => (
-            <button
-              key={d}
-              type="button"
-              onClick={() => setDifficulty(d)}
-              className={`px-3 py-1 text-xs font-bold lowercase border-2 border-black transition-colors ${
-                difficulty === d ? "bg-black text-white" : "bg-white hover:bg-gray-100"
-              }`}
-            >
-              {d} ({pairCounts[d] * 2})
-            </button>
-          ))}
-        </div>
-
         {/* Stats */}
         <div className="flex justify-center gap-4 p-3 text-xs lowercase border-b-2 border-black">
           <div className="flex items-center gap-1 px-2 py-1 border border-black">
@@ -264,7 +250,7 @@ export function MemoryGame({ onClose }: MemoryGameProps) {
           </div>
           <div className="flex items-center gap-1 px-2 py-1 border border-black">
             <span className="font-bold">{matches}</span>
-            <span className="text-gray-600">/ {pairCounts[difficulty]} matched</span>
+            <span className="text-gray-600">/ {NUM_PAIRS} matched</span>
           </div>
         </div>
 
@@ -288,9 +274,10 @@ export function MemoryGame({ onClose }: MemoryGameProps) {
             </div>
           ) : (
             <div
-              className="grid gap-2 justify-center"
+              className="grid gap-1 justify-items-center"
               style={{
-                gridTemplateColumns: `repeat(${gridCols[difficulty]}, minmax(0, 1fr))`,
+                gridTemplateColumns: "repeat(4, auto)",
+                justifyContent: "center",
               }}
             >
               {cards.map((card, index) => (
@@ -299,7 +286,6 @@ export function MemoryGame({ onClose }: MemoryGameProps) {
                   card={card}
                   onClick={() => handleCardClick(index)}
                   disabled={isChecking}
-                  size={cardSize}
                 />
               ))}
             </div>
@@ -315,6 +301,9 @@ export function MemoryGame({ onClose }: MemoryGameProps) {
           >
             restart game
           </button>
+          <p className="text-[10px] text-gray-400 mt-2 lowercase">
+            colorblind? lol good luck
+          </p>
         </div>
       </div>
     </div>

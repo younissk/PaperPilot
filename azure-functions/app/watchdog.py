@@ -100,14 +100,16 @@ def stale_job_watchdog(timer: func.TimerRequest) -> None:
 
 
 @bp.timer_trigger(
-    schedule="0 */1 * * * *",
+    schedule="*/30 * * * * *",
     arg_name="timer",
     run_on_startup=False,
     use_monitor=True,
 )
 def queued_job_watchdog(timer: func.TimerRequest) -> None:
     """Rescue queued jobs when the Service Bus trigger is not consuming."""
-    max_queued_minutes = int(os.getenv("JOB_QUEUED_MINUTES", "3"))
+    # Use seconds to avoid the coarse "whole minutes" delay that can make short cold starts
+    # feel like multi-minute queue times.
+    max_queued_seconds = int(os.getenv("JOB_QUEUED_SECONDS", "60"))
 
     try:
         container = get_jobs_container()
@@ -150,9 +152,9 @@ def queued_job_watchdog(timer: func.TimerRequest) -> None:
         if not updated_at:
             continue
 
-        minutes = int((now - updated_at).total_seconds() // 60)
+        queued_seconds = int((now - updated_at).total_seconds())
         is_queued_marker = "queued" in step_name or "queued" in message or status == "queued"
-        if not is_queued_marker or minutes < max_queued_minutes:
+        if not is_queued_marker or queued_seconds < max_queued_seconds:
             continue
 
         # Determine stage to run based on phase
@@ -173,8 +175,9 @@ def queued_job_watchdog(timer: func.TimerRequest) -> None:
                 events,
                 "progress",
                 stage,
-                f"Rescue watchdog running {stage} stage (queued {minutes}m)",
+                f"Rescue watchdog running {stage} stage (queued {queued_seconds}s)",
                 reason="queued_watchdog",
+                queued_seconds=queued_seconds,
             )
             update_job_progress(
                 job_id,

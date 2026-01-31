@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useSearchParams, useNavigate, Link } from "react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { SEO, PaperCard, ProgressIndicator } from "@/components";
 import { useAllResults, usePipelineStatus } from "@/hooks";
 import type { ReportData } from "@/lib/types";
@@ -97,6 +98,7 @@ export default function ReportPage() {
   const { queryId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const jobId = searchParams.get("job");
 
   const { results, metadata, isLoading, error, notFound } = useAllResults(queryId);
@@ -112,13 +114,41 @@ export default function ReportPage() {
   // Poll pipeline status if job is provided
   const { data: pipelineStatus } = usePipelineStatus(jobId);
 
-  // Redirect when pipeline completes
+  const [finalizingSince, setFinalizingSince] = useState<number | null>(null);
+
+  const shouldFinalize =
+    !!jobId && pipelineStatus?.status === "completed" && !reportData;
+  const finalizingTimedOut =
+    finalizingSince !== null && Date.now() - finalizingSince >= 45_000;
+  const isFinalizing = shouldFinalize && !finalizingTimedOut;
+
+  // When the pipeline completes, keep the `job` param until the report artifact is readable.
+  // Otherwise we can briefly render "report not available" due to cached /all results.
   useEffect(() => {
-    if (pipelineStatus?.status === "completed" && jobId) {
-      // Remove job parameter and reload
+    if (shouldFinalize) {
+      setFinalizingSince((prev) => prev ?? Date.now());
+    }
+  }, [shouldFinalize]);
+
+  useEffect(() => {
+    if (!isFinalizing || !queryId) return;
+
+    const tick = () => {
+      void queryClient.invalidateQueries({ queryKey: ["results", queryId] });
+      void queryClient.invalidateQueries({ queryKey: ["metadata", queryId] });
+    };
+
+    tick();
+    const intervalId = window.setInterval(tick, 1500);
+    return () => window.clearInterval(intervalId);
+  }, [isFinalizing, queryId, queryClient]);
+
+  useEffect(() => {
+    if (pipelineStatus?.status === "completed" && jobId && reportData && queryId) {
+      setFinalizingSince(null);
       navigate(`/report/${queryId}`, { replace: true });
     }
-  }, [pipelineStatus?.status, jobId, queryId, navigate]);
+  }, [pipelineStatus?.status, jobId, reportData, queryId, navigate]);
 
   // Display title
   const queryTitle = reportData?.query || queryId?.replace(/_/g, " ") || "Research Report";
@@ -258,15 +288,36 @@ export default function ReportPage() {
       );
     }
 
-    return (
-      <>
-        <SEO title="Generating Report..." noindex />
-        <ProgressIndicator
-          status={pipelineStatus}
-          queryTitle={queryId?.replace(/_/g, " ")}
-        />
-      </>
-    );
+    if (pipelineStatus.status === "completed" && isFinalizing) {
+      return (
+        <>
+          <SEO title="Finalizing Report..." noindex />
+          <div className="flex justify-center items-center min-h-[400px]">
+            <div className="text-center">
+              <div className="spinner mx-auto mb-4" />
+              <p className="text-gray-600 lowercase">
+                finalizing report artifacts...
+              </p>
+              <p className="text-gray-500 text-sm mt-2 lowercase">
+                this can take a few seconds after completion.
+              </p>
+            </div>
+          </div>
+        </>
+      );
+    }
+
+    if (pipelineStatus.status !== "completed") {
+      return (
+        <>
+          <SEO title="Generating Report..." noindex />
+          <ProgressIndicator
+            status={pipelineStatus}
+            queryTitle={queryId?.replace(/_/g, " ")}
+          />
+        </>
+      );
+    }
   }
 
   // Report display
