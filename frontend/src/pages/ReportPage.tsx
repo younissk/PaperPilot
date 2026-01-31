@@ -438,6 +438,14 @@ export default function ReportPage() {
               </div>
             </header>
 
+            {/* LLM Disclaimer */}
+            <div className="mb-8 p-4 border-2 border-black bg-gray-50 text-sm text-gray-700">
+              <strong className="lowercase">disclaimer:</strong>{" "}
+              <span className="lowercase">
+                this report was generated using LLMs (with citations of papers). due to the nature of LLMs, they can hallucinate and make mistakes.
+              </span>
+            </div>
+
             {(reportData.total_papers_used === 0 ||
               (reportData.current_research.length === 0 &&
                 reportData.paper_cards.length === 0 &&
