@@ -318,7 +318,13 @@ class SnowballEngine:
                     continue
 
                 # Check if this paper has indexed references
-                ref_count = work.get("referenced_works_count", 0)
+                ref_count = work.get("referenced_works_count")
+                if ref_count is None:
+                    referenced = work.get("referenced_works")
+                    if isinstance(referenced, list):
+                        ref_count = len(referenced)
+                    else:
+                        ref_count = 0
                 cite_count = work.get("cited_by_count", 0)
 
                 if ref_count == 0:
@@ -377,14 +383,14 @@ class SnowballEngine:
         # 1. Core query - papers at intersection of all concepts
         queries.append({
             "query": self.profile.core_query,
-            "min_citations": 10,
+            "min_citations": 0,
             "type": "core"
         })
 
         # 2. Add survey/review queries
         queries.append({
             "query": f"{self.profile.core_query} survey",
-            "min_citations": 20,
+            "min_citations": 0,
             "type": "survey"
         })
 
@@ -393,7 +399,7 @@ class SnowballEngine:
             for i, query in enumerate(self.profile.fallback_queries):
                 queries.append({
                     "query": query,
-                    "min_citations": 20,  # Lower bar to find more papers
+                    "min_citations": 0,
                     "type": f"llm_fallback_{i}"
                 })
 
@@ -404,7 +410,7 @@ class SnowballEngine:
                 group_terms = " ".join(group[:2])
                 queries.append({
                     "query": f"{group_terms} survey review",
-                    "min_citations": 50,  # Higher bar for foundational
+                    "min_citations": 0,
                     "type": f"foundation_group_{i}"
                 })
 
@@ -429,12 +435,12 @@ class SnowballEngine:
         if any(term in all_concepts for term in ["llm", "language model", "transformer", "gpt", "bert"]):
             queries.append({
                 "query": "transformer attention mechanism deep learning",
-                "min_citations": 100,
+                "min_citations": 0,
                 "type": "foundation_nlp"
             })
             queries.append({
                 "query": "BERT pre-training language representation",
-                "min_citations": 100,
+                "min_citations": 0,
                 "type": "foundation_nlp"
             })
 
@@ -442,17 +448,17 @@ class SnowballEngine:
         if any(term in all_concepts for term in ["recommend", "personalized", "collaborative", "user-item"]):
             queries.append({
                 "query": "collaborative filtering matrix factorization recommender",
-                "min_citations": 100,
+                "min_citations": 0,
                 "type": "foundation_recsys"
             })
             queries.append({
                 "query": "sequential recommendation neural network",
-                "min_citations": 50,
+                "min_citations": 0,
                 "type": "foundation_recsys"
             })
             queries.append({
                 "query": "personalized ranking implicit feedback",
-                "min_citations": 50,
+                "min_citations": 0,
                 "type": "foundation_recsys"
             })
 
@@ -460,7 +466,7 @@ class SnowballEngine:
         if any(term in all_concepts for term in ["neural", "deep learning", "embedding"]):
             queries.append({
                 "query": "neural network embedding representation learning",
-                "min_citations": 100,
+                "min_citations": 0,
                 "type": "foundation_ml"
             })
 

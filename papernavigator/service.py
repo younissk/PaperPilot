@@ -34,7 +34,7 @@ from papernavigator.snowball import SnowballEngine
 
 async def run_search(
     query: str,
-    num_results: int = 5,
+    num_results: int = 15,
     output_file: str = "snowball_results.json",
     max_iterations: int = 5,
     max_accepted: int = 200,

@@ -137,7 +137,7 @@ async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[s
             )
 
     query = payload.get("query", "")
-    num_results = payload.get("num_results", 5)
+    num_results = payload.get("num_results", 15)
     max_iterations = payload.get("max_iterations", 5)
     max_accepted = payload.get("max_accepted", 200)
     top_n = payload.get("top_n", 50)
@@ -779,7 +779,7 @@ async def run_search_job(job_id: str, payload: dict[str, Any], events: list[dict
     from papernavigator.service import export_results, run_search
 
     query = payload.get("query", "")
-    num_results = payload.get("num_results", 5)
+    num_results = payload.get("num_results", 15)
     max_iterations = payload.get("max_iterations", 5)
     max_accepted = payload.get("max_accepted", 200)
     top_n = payload.get("top_n", 50)

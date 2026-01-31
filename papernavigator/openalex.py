@@ -447,7 +447,7 @@ async def search_related_works(
     session: aiohttp.ClientSession,
     query: str,
     limit: int = 50,
-    min_citations: int = 10,
+    min_citations: int = 0,
     verbose: bool = True
 ) -> list[dict[str, Any]]:
     """Search for related works by keyword query.
@@ -466,11 +466,17 @@ async def search_related_works(
         List of work metadata dictionaries
     """
     encoded_query = urllib.parse.quote(query)
-    url = (f"{OPENALEX_API_BASE}/works?"
-           f"search={encoded_query}&"
-           f"filter=cited_by_count:>{min_citations}&"
-           f"sort=cited_by_count:desc&"
-           f"per_page={limit}")
+    filter_part = ""
+    if isinstance(min_citations, int) and min_citations > 0:
+        filter_part = f"filter=cited_by_count:>{min_citations}&"
+
+    url = (
+        f"{OPENALEX_API_BASE}/works?"
+        f"search={encoded_query}&"
+        f"{filter_part}"
+        f"sort=cited_by_count:desc&"
+        f"per_page={limit}"
+    )
 
     if verbose:
         logger.debug("Searching OpenAlex", query=query, min_citations=min_citations)
@@ -501,7 +507,7 @@ async def search_papers(
     session: aiohttp.ClientSession,
     queries: list[str],
     num_results_per_query: int = 10,
-    min_citations: int = 5,
+    min_citations: int = 0,
 ) -> list[dict[str, Any]]:
     """Search OpenAlex for papers matching multiple queries concurrently.
     

@@ -38,7 +38,22 @@ def _get_openai_semaphore() -> asyncio.Semaphore:
     return semaphore
 
 
-def keyword_gate(profile: QueryProfile, title: str, summary: str) -> bool:
+def _format_required_concept_groups(profile: QueryProfile) -> str:
+    groups = profile.required_concept_groups or []
+    if not groups:
+        return "None specified"
+
+    lines: list[str] = []
+    for idx, group in enumerate(groups, 1):
+        if not group:
+            continue
+        preview = ", ".join(group[:10])
+        suffix = " ..." if len(group) > 10 else ""
+        lines.append(f"- Group {idx}: {preview}{suffix}")
+    return "\n".join(lines) if lines else "None specified"
+
+
+def keyword_gate(profile: QueryProfile, title: str, summary: str, *, min_groups: int = 1) -> bool:
     """Fast pre-filter using dynamic keyword patterns from the profile.
     
     Returns True if the paper passes the keyword gate, False otherwise.
@@ -49,17 +64,18 @@ def keyword_gate(profile: QueryProfile, title: str, summary: str) -> bool:
 
     text = f"{title} {summary}"
 
-    # All patterns must match (AND logic) for the paper to pass
+    matches = 0
     for pattern_str in profile.keyword_patterns:
         try:
             pattern = re.compile(pattern_str, re.IGNORECASE)
-            if not pattern.search(text):
-                return False
+            if pattern.search(text):
+                matches += 1
         except re.error:
             # Skip invalid patterns
             continue
 
-    return True
+    threshold = max(1, min_groups)
+    return matches >= min(threshold, len(profile.keyword_patterns))
 
 
 async def judge_result(
@@ -78,12 +94,13 @@ async def judge_result(
         True if the paper is relevant, False otherwise.
     """
 
-    # 1. Cheap keyword gate (sync, no API call)
-    if not keyword_gate(profile, result.title, result.summary):
+    # 1. Cheap keyword gate (sync, no API call). Keep this permissive to avoid
+    # over-filtering niche queries; the LLM does the heavy lifting.
+    if not keyword_gate(profile, result.title, result.summary, min_groups=1):
         return False
 
     # 2. Build dynamic prompt from QueryProfile
-    required_concepts_str = ", ".join(profile.required_concepts) if profile.required_concepts else "None specified"
+    required_groups_str = _format_required_concept_groups(profile)
     optional_concepts_str = ", ".join(profile.optional_concepts) if profile.optional_concepts else "None specified"
     exclusion_concepts_str = ", ".join(profile.exclusion_concepts) if profile.exclusion_concepts else "None specified"
 
@@ -96,8 +113,8 @@ You will be given:
 (3) a paper title + abstract/summary
 
 Goal:
-Return relevant=true ONLY if this paper belongs in a survey about the CORE topic
-AND it is relevant to the SOURCE query intent.
+Return relevant=true if this paper belongs in a survey about the CORE topic.
+The SOURCE query is a hint about why it was retrieved; it does NOT need to match perfectly.
 
 Domain definition:
 {profile.domain_description}
@@ -105,8 +122,11 @@ Domain definition:
 Domain boundaries:
 {profile.domain_boundaries}
 
-Required concepts (paper must clearly relate to ALL of these):
-{required_concepts_str}
+Required concept groups:
+The CORE topic typically involves ALL groups below. Ideally, a relevant paper will clearly match
+at least ONE term from EACH group. For niche topics, you may accept a paper that matches the CORE topic
+strongly even if one group is only implicit (use lower confidence).
+{required_groups_str}
 
 Optional concepts (boost relevance if present):
 {optional_concepts_str}
@@ -116,7 +136,7 @@ Exclusion signals (if the primary focus is one of these, mark as irrelevant):
 
 Relevance rules:
 1) The paper must match the CORE topic domain as defined above.
-2) The paper must match the SOURCE query intent.
+2) The paper should usually align with the SOURCE query intent, but do not reject solely for mismatch.
 3) Exclude papers where the primary focus is outside the defined domain boundaries.
 
 Use ONLY title and summary. Do NOT use the link. If unsure, return relevant=false.
@@ -155,11 +175,11 @@ Paper summary: {result.summary}
         return bool(data.get("relevant", False))
 
     except asyncio.TimeoutError:
-        # Timeout - treat as not relevant to continue processing
-        return False
+        # Timeout - bias toward recall so the pipeline doesn't collapse to 0 papers.
+        return True
     except Exception:
-        # Fallback for parsing errors or API issues
-        return False
+        # API/parsing failure - bias toward recall so we still have seeds.
+        return True
 
 
 async def judge_candidate(
@@ -181,7 +201,7 @@ async def judge_candidate(
         JudgmentResult with relevant, confidence, and reason fields
     """
     # Build dynamic prompt from QueryProfile
-    required_concepts_str = ", ".join(profile.required_concepts) if profile.required_concepts else "None specified"
+    required_groups_str = _format_required_concept_groups(profile)
     optional_concepts_str = ", ".join(profile.optional_concepts) if profile.optional_concepts else "None specified"
     exclusion_concepts_str = ", ".join(profile.exclusion_concepts) if profile.exclusion_concepts else "None specified"
 
@@ -227,8 +247,10 @@ Domain definition:
 Domain boundaries:
 {profile.domain_boundaries}
 
-Required concept domains:
-{required_concepts_str}
+Required concept groups:
+The CORE topic typically involves ALL groups below. A strong CORE paper matches at least one term from EACH group.
+Foundational papers may primarily match one group but be essential building blocks for the CORE topic.
+{required_groups_str}
 
 Optional concepts (boost relevance if present):
 {optional_concepts_str}
