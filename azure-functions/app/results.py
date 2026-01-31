@@ -16,6 +16,37 @@ def results_path(*parts: str) -> str:
     return prefix + "/".join(part.strip("/") for part in parts if part)
 
 
+def _blob_name_variants(blob_name: str) -> list[str]:
+    """Return plausible blob-name variants for prefix drift/migrations.
+
+    This makes reads more resilient when `AZURE_RESULTS_PREFIX` changes over time.
+    """
+    name = blob_name.strip("/")
+    prefix = (RESULTS_PREFIX or "").strip("/")
+
+    variants: list[str] = [name]
+
+    if prefix:
+        # If the prefix is duplicated, try removing one layer.
+        double_prefix = f"{prefix}/{prefix}/"
+        if name.startswith(double_prefix):
+            variants.append(name[len(prefix) + 1 :])
+
+        if name.startswith(f"{prefix}/"):
+            variants.append(name[len(prefix) + 1 :])
+        else:
+            variants.append(f"{prefix}/{name}")
+
+    # De-dupe while preserving order
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for v in variants:
+        if v and v not in seen:
+            seen.add(v)
+            deduped.append(v)
+    return deduped
+
+
 def test_storage_connection() -> bool:
     """Test if blob storage is accessible. Returns True if connected, False otherwise."""
     if not RESULTS_CONNECTION_STRING and not RESULTS_ACCOUNT_URL:
@@ -58,19 +89,23 @@ def get_blob_json(blob_name: str) -> dict[str, Any] | None:
     if not RESULTS_CONNECTION_STRING and not RESULTS_ACCOUNT_URL:
         return None
 
-    try:
-        container = get_results_container_client()
-        blob_client = container.get_blob_client(blob_name)
-        content = blob_client.download_blob().readall().decode("utf-8")
-        return json.loads(content)
-    except ResourceNotFoundError:
-        return None
-    except json.JSONDecodeError as exc:
-        logger.error("Invalid JSON in blob %s: %s", blob_name, exc)
-        return None
-    except Exception as exc:
-        logger.error("Failed to read blob %s: %s", blob_name, exc)
-        return None
+    container = get_results_container_client()
+
+    for candidate in _blob_name_variants(blob_name):
+        try:
+            blob_client = container.get_blob_client(candidate)
+            content = blob_client.download_blob().readall().decode("utf-8")
+            return json.loads(content)
+        except ResourceNotFoundError:
+            continue
+        except json.JSONDecodeError as exc:
+            logger.error("Invalid JSON in blob %s: %s", candidate, exc)
+            return None
+        except Exception as exc:
+            logger.error("Failed to read blob %s: %s", candidate, exc)
+            return None
+
+    return None
 
 
 def download_blob_to_path(blob_name: str, file_path: Path) -> bool:
@@ -79,19 +114,23 @@ def download_blob_to_path(blob_name: str, file_path: Path) -> bool:
     if not RESULTS_CONNECTION_STRING and not RESULTS_ACCOUNT_URL:
         return False
 
-    try:
-        container = get_results_container_client()
-        blob_client = container.get_blob_client(blob_name)
-        data = blob_client.download_blob().readall()
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(file_path, "wb") as f:
-            f.write(data)
-        return True
-    except ResourceNotFoundError:
-        return False
-    except Exception as exc:
-        logger.error("Failed to download blob %s: %s", blob_name, exc)
-        return False
+    container = get_results_container_client()
+
+    for candidate in _blob_name_variants(blob_name):
+        try:
+            blob_client = container.get_blob_client(candidate)
+            data = blob_client.download_blob().readall()
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(file_path, "wb") as f:
+                f.write(data)
+            return True
+        except ResourceNotFoundError:
+            continue
+        except Exception as exc:
+            logger.error("Failed to download blob %s: %s", candidate, exc)
+            return False
+
+    return False
 
 
 def find_latest_job_for_query(query_slug: str) -> str | None:

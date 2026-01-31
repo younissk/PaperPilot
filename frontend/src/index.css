@@ -241,6 +241,21 @@
     @apply bg-primary-100 no-underline;
   }
 
+  /* Citation pill - numbered reference badge */
+  .citation-pill {
+    @apply inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-semibold 
+           bg-black text-white border border-black no-underline;
+    box-shadow: 1.5px 1.5px 0 #F3787A;
+    min-width: 18px;
+    vertical-align: super;
+    font-size: 9px;
+    line-height: 1;
+  }
+
+  .citation-pill:hover {
+    @apply bg-gray-800 no-underline;
+  }
+
   /* ECG trace animation - sweeping line like hospital monitor */
   @keyframes ecgSweep {
     0% {

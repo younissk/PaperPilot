@@ -1,22 +1,92 @@
-import { useEffect } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, useSearchParams, useNavigate, Link } from "react-router";
 import { SEO, PaperCard, ProgressIndicator } from "@/components";
 import { useAllResults, usePipelineStatus } from "@/hooks";
+import type { ReportData } from "@/lib/types";
 
 // Brutalist shadow styles
 const brutalShadow = { boxShadow: "3px 3px 0 #F3787A" };
 
 /**
- * Helper function to format citations in text.
- * Converts [W123456789] to clickable OpenAlex links.
+ * Build a citation map from report data.
+ * Extracts all paper IDs and assigns sequential numbers.
  */
-function formatCitations(text: string): string {
+function buildCitationMap(report: ReportData): Map<string, number> {
+  const paperIds = new Set<string>();
+  
+  // Extract from introduction
+  const introMatches = report.introduction.matchAll(/\[([A-Za-z0-9_:-]+)\]/g);
+  for (const match of introMatches) {
+    paperIds.add(match[1]);
+  }
+  
+  // Extract from current research
+  for (const item of report.current_research) {
+    const summaryMatches = item.summary.matchAll(/\[([A-Za-z0-9_:-]+)\]/g);
+    for (const match of summaryMatches) {
+      paperIds.add(match[1]);
+    }
+    for (const id of item.paper_ids) {
+      paperIds.add(id);
+    }
+  }
+  
+  // Extract from open problems
+  for (const problem of report.open_problems) {
+    const textMatches = problem.text.matchAll(/\[([A-Za-z0-9_:-]+)\]/g);
+    for (const match of textMatches) {
+      paperIds.add(match[1]);
+    }
+    for (const id of problem.paper_ids) {
+      paperIds.add(id);
+    }
+  }
+  
+  // Extract from conclusion
+  const conclusionMatches = report.conclusion.matchAll(/\[([A-Za-z0-9_:-]+)\]/g);
+  for (const match of conclusionMatches) {
+    paperIds.add(match[1]);
+  }
+  
+  // Create numbered map
+  const citationMap = new Map<string, number>();
+  let counter = 1;
+  for (const id of paperIds) {
+    citationMap.set(id, counter++);
+  }
+  
+  return citationMap;
+}
+
+/**
+ * Get URL for a paper ID.
+ * Handles OpenAlex (W...) and Semantic Scholar (S2:...) IDs.
+ */
+function getPaperUrl(paperId: string): string {
+  // OpenAlex Work IDs start with W
+  if (paperId.startsWith("W")) {
+    return `https://openalex.org/${paperId}`;
+  }
+  
+  // Semantic Scholar IDs start with S2:
+  if (paperId.startsWith("S2:")) {
+    const s2Id = paperId.substring(3); // Remove "S2:" prefix
+    return `https://www.semanticscholar.org/paper/${s2Id}`;
+  }
+  
+  // Fallback: try Google Scholar search
+  return `https://scholar.google.com/scholar?q=${encodeURIComponent(paperId)}`;
+}
+
+/**
+ * Helper function to format citations in text with numbered pills.
+ * Converts [W123456789] to clickable numbered pill links.
+ */
+function formatCitationsWithNumbers(text: string, citationMap: Map<string, number>): string {
   return text.replace(/\[([A-Za-z0-9_:-]+)\]/g, (_match, paperId) => {
-    const isOpenAlex = paperId.startsWith("W");
-    const url = isOpenAlex
-      ? `https://openalex.org/${paperId}`
-      : `https://openalex.org/search?q=${encodeURIComponent(paperId)}`;
-    return `<a href="${url}" target="_blank" rel="noopener" class="citation" title="View paper">[${paperId}]</a>`;
+    const number = citationMap.get(paperId) ?? "?";
+    const url = getPaperUrl(paperId);
+    return `<a href="${url}" target="_blank" rel="noopener" class="citation-pill" title="${paperId}">${number}</a>`;
   });
 }
 
@@ -32,6 +102,12 @@ export default function ReportPage() {
   const { results, metadata, isLoading, error, notFound } = useAllResults(queryId);
   const reportData = results?.report ?? null;
   const papers = results?.snowball?.papers ?? [];
+
+  // Build citation map for numbered references
+  const citationMap = useMemo(() => {
+    if (!reportData) return new Map<string, number>();
+    return buildCitationMap(reportData);
+  }, [reportData]);
 
   // Poll pipeline status if job is provided
   const { data: pipelineStatus } = usePipelineStatus(jobId);
@@ -207,202 +283,146 @@ export default function ReportPage() {
         jsonLd={jsonLd}
       />
 
-      <div className="container container-lg py-12 px-4">
-        <article className="max-w-4xl mx-auto">
-          {/* Header */}
-          <header
-            className="bg-black text-white p-8 mb-8 border-2 border-black"
-            style={brutalShadow}
-          >
-            <h1 className="text-white text-2xl md:text-3xl mb-4 lowercase">
-              research report: <span>{reportData.query}</span>
-            </h1>
-            <div className="flex gap-2 flex-wrap">
-              <span
-                className="inline-flex items-center px-3 py-1 text-sm border border-white text-white lowercase"
-              >
-                {new Date(reportData.generated_at).toLocaleDateString()}
-              </span>
-              <span
-                className="inline-flex items-center px-3 py-1 text-sm border border-white text-white lowercase"
-              >
-                {reportData.total_papers_used} papers used
-              </span>
-            </div>
-          </header>
+      <div className="max-w-7xl mx-auto py-12 px-4">
+        <div className="lg:flex lg:gap-8">
+          {/* Desktop TOC Sidebar */}
+          <aside className="hidden lg:block lg:w-64 lg:flex-shrink-0">
+            <nav
+              className="sticky top-20 bg-white p-6 border-2 border-black"
+              style={brutalShadow}
+            >
+              <h3 className="text-base font-bold text-black mb-4 lowercase">table of contents</h3>
+              <TableOfContentsLinks reportData={reportData} />
+            </nav>
+          </aside>
 
-          {/* Table of Contents */}
-          <nav
-            className="bg-white p-6 border-2 border-black mb-8"
-            style={brutalShadow}
-          >
-            <h3 className="text-base font-bold text-black mb-4 lowercase">table of contents</h3>
-            <ul className="list-none p-0 m-0">
-              <li className="mb-2">
-                <a href="#introduction" className="text-gray-700 hover:text-black no-underline hover:underline lowercase">
-                  introduction
-                </a>
-              </li>
-              <li className="mb-2">
-                <a href="#current-research" className="text-gray-700 hover:text-black no-underline hover:underline lowercase">
-                  current research
-                </a>
-                {reportData.current_research.length > 0 && (
-                  <ul className="list-none p-0 ml-6 mt-1">
-                    {reportData.current_research.map((item, idx) => (
-                      <li key={idx} className="text-sm mb-1">
-                        <a href={`#research-${idx}`} className="text-gray-600 hover:text-black no-underline hover:underline">
-                          {item.title}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-              {reportData.open_problems.length > 0 && (
-                <li className="mb-2">
-                  <a href="#open-problems" className="text-gray-700 hover:text-black no-underline hover:underline lowercase">
-                    open problems
-                  </a>
-                </li>
-              )}
-              <li className="mb-2">
-                <a href="#conclusion" className="text-gray-700 hover:text-black no-underline hover:underline lowercase">
-                  conclusion
-                </a>
-              </li>
-              <li>
-                <a href="#sources" className="text-gray-700 hover:text-black no-underline hover:underline lowercase">
-                  sources
-                </a>
-              </li>
-            </ul>
-          </nav>
-
-          {/* Introduction */}
-          <ReportSection id="introduction" title="introduction">
-            <p
-              className="leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: formatCitations(reportData.introduction) }}
-            />
-          </ReportSection>
-
-          {/* Current Research */}
-          <ReportSection id="current-research" title="current research">
-            {reportData.current_research.map((item, idx) => (
-              <div
-                key={idx}
-                id={`research-${idx}`}
-                className="mb-8 pb-6 border-b border-black last:mb-0 last:pb-0 last:border-b-0"
-              >
-                <h3 className="text-black font-bold mb-4">{item.title}</h3>
-                <p
-                  className="leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: formatCitations(item.summary) }}
-                />
-                {item.paper_ids.length > 0 && (
-                  <div className="mt-4 p-4 border border-black bg-white text-sm">
-                    <strong className="lowercase">referenced papers:</strong>
-                    <ul className="list-none p-0 mt-2">
-                      {item.paper_ids.map((paperId) => {
-                        const card = reportData.paper_cards.find((c) => c.id === paperId);
-                        const isOpenAlex = paperId.startsWith("W");
-                        const url = isOpenAlex
-                          ? `https://openalex.org/${paperId}`
-                          : `https://openalex.org/search?q=${encodeURIComponent(paperId)}`;
-                        return (
-                          <li key={paperId} className="mb-1 flex items-baseline gap-2">
-                            <a
-                              href={url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="citation"
-                            >
-                              [{paperId}]
-                            </a>
-                            {card && <span className="text-gray-600">{card.title}</span>}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                )}
+          {/* Main Content */}
+          <article className="flex-1 max-w-4xl">
+            {/* Header */}
+            <header
+              className="bg-black text-white p-8 mb-8 border-2 border-black"
+              style={brutalShadow}
+            >
+              <h1 className="text-white text-2xl md:text-3xl mb-4 lowercase">
+                research report: <span>{reportData.query}</span>
+              </h1>
+              <div className="flex gap-2 flex-wrap">
+                <span className="inline-flex items-center px-3 py-1 text-sm border border-white text-white lowercase">
+                  {new Date(reportData.generated_at).toLocaleDateString()}
+                </span>
+                <span className="inline-flex items-center px-3 py-1 text-sm border border-white text-white lowercase">
+                  {reportData.total_papers_used} papers used
+                </span>
               </div>
-            ))}
-          </ReportSection>
+            </header>
 
-          {/* Open Problems */}
-          {reportData.open_problems.length > 0 && (
-            <ReportSection id="open-problems" title="open problems">
-              {reportData.open_problems.map((problem, idx) => (
+            {/* Mobile TOC (accordion) */}
+            <MobileTOC reportData={reportData} />
+
+            {/* Introduction */}
+            <ReportSection id="introduction" title="introduction">
+              <p
+                className="leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: formatCitationsWithNumbers(reportData.introduction, citationMap) }}
+              />
+            </ReportSection>
+
+            {/* Current Research */}
+            <ReportSection id="current-research" title="current research">
+              {reportData.current_research.map((item, idx) => (
                 <div
                   key={idx}
-                  className="mb-6 p-6 bg-white border-2 border-black border-l-4"
-                  style={{ borderLeftColor: "#F3787A" }}
+                  id={`research-${idx}`}
+                  className="mb-8 pb-6 border-b border-gray-200 last:mb-0 last:pb-0 last:border-b-0"
                 >
-                  <h3 className="text-black font-bold mb-4">{problem.title}</h3>
+                  <h3 className="text-black font-bold text-lg mb-4">{item.title}</h3>
                   <p
                     className="leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: formatCitations(problem.text) }}
+                    dangerouslySetInnerHTML={{ __html: formatCitationsWithNumbers(item.summary, citationMap) }}
                   />
-                  {problem.paper_ids.length > 0 && (
-                    <div className="mt-4 flex gap-1 flex-wrap items-center">
-                      <strong className="lowercase">sources:</strong>
-                      {problem.paper_ids.map((paperId) => {
-                        const isOpenAlex = paperId.startsWith("W");
-                        const url = isOpenAlex
-                          ? `https://openalex.org/${paperId}`
-                          : `https://openalex.org/search?q=${encodeURIComponent(paperId)}`;
-                        return (
-                          <a
-                            key={paperId}
-                            href={url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="citation"
-                          >
-                            [{paperId}]
-                          </a>
-                        );
-                      })}
-                    </div>
+                  {item.paper_ids.length > 0 && (
+                    <ReferencesAccordion
+                      paperIds={item.paper_ids}
+                      paperCards={reportData.paper_cards}
+                      citationMap={citationMap}
+                    />
                   )}
                 </div>
               ))}
             </ReportSection>
-          )}
 
-          {/* Conclusion */}
-          <ReportSection id="conclusion" title="conclusion">
-            <p
-              className="leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: formatCitations(reportData.conclusion) }}
-            />
-          </ReportSection>
-
-          {/* Sources */}
-          <ReportSection id="sources" title="sources">
-            <p className="text-gray-600 text-sm mb-6 lowercase">
-              {papers.length} papers were analyzed for this report. click on any paper
-              to view it on openalex.
-            </p>
-
-            {reportData.paper_cards.length > 0 && (
-              <div className="grid gap-4">
-                {reportData.paper_cards.map((card) => (
-                  <PaperCard key={card.id} card={card} />
+            {/* Open Problems */}
+            {reportData.open_problems.length > 0 && (
+              <ReportSection id="open-problems" title="open problems">
+                {reportData.open_problems.map((problem, idx) => (
+                  <div
+                    key={idx}
+                    className="mb-6 p-6 bg-white border-2 border-black border-l-4"
+                    style={{ borderLeftColor: "#F3787A" }}
+                  >
+                    <h3 className="text-black font-bold text-lg mb-4">{problem.title}</h3>
+                    <p
+                      className="leading-relaxed"
+                      dangerouslySetInnerHTML={{ __html: formatCitationsWithNumbers(problem.text, citationMap) }}
+                    />
+                    {problem.paper_ids.length > 0 && (
+                      <div className="mt-4 flex gap-1 flex-wrap items-center">
+                        <span className="text-sm text-gray-600 lowercase mr-1">sources:</span>
+                        {problem.paper_ids.map((paperId) => {
+                          const number = citationMap.get(paperId) ?? "?";
+                          const url = getPaperUrl(paperId);
+                          return (
+                            <a
+                              key={paperId}
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="citation-pill"
+                              title={paperId}
+                            >
+                              {number}
+                            </a>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 ))}
-              </div>
+              </ReportSection>
             )}
-          </ReportSection>
-        </article>
+
+            {/* Conclusion */}
+            <ReportSection id="conclusion" title="conclusion">
+              <p
+                className="leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: formatCitationsWithNumbers(reportData.conclusion, citationMap) }}
+              />
+            </ReportSection>
+
+            {/* Sources */}
+            <ReportSection id="sources" title="sources">
+              <p className="text-gray-600 text-sm mb-6 lowercase">
+                {papers.length} papers were analyzed for this report. click on any paper
+                to view it on openalex.
+              </p>
+
+              {reportData.paper_cards.length > 0 && (
+                <div className="grid gap-4">
+                  {reportData.paper_cards.map((card) => (
+                    <PaperCard key={card.id} card={card} />
+                  ))}
+                </div>
+              )}
+            </ReportSection>
+          </article>
+        </div>
       </div>
     </>
   );
 }
 
 /**
- * Report section wrapper component - brutalist design.
+ * Report section wrapper component - flat layout with brutalist title.
  */
 function ReportSection({
   id,
@@ -414,15 +434,156 @@ function ReportSection({
   children: React.ReactNode;
 }) {
   return (
-    <section
-      id={id}
-      className="bg-white p-8 mb-6 border-2 border-black"
-      style={brutalShadow}
-    >
-      <h2 className="text-black font-bold text-xl mb-6 pb-2 border-b-2 border-black lowercase">
+    <section id={id} className="mb-10">
+      <h2
+        className="text-black font-bold text-xl mb-6 pb-2 border-b-2 border-black lowercase inline-block pr-4"
+        style={brutalShadow}
+      >
         {title}
       </h2>
-      {children}
+      <div className="mt-4">{children}</div>
     </section>
+  );
+}
+
+/**
+ * Table of Contents links - reusable for desktop and mobile.
+ */
+function TableOfContentsLinks({ reportData }: { reportData: ReportData }) {
+  return (
+    <ul className="list-none p-0 m-0">
+      <li className="mb-2">
+        <a href="#introduction" className="text-gray-700 hover:text-black no-underline hover:underline lowercase">
+          introduction
+        </a>
+      </li>
+      <li className="mb-2">
+        <a href="#current-research" className="text-gray-700 hover:text-black no-underline hover:underline lowercase">
+          current research
+        </a>
+        {reportData.current_research.length > 0 && (
+          <ul className="list-none p-0 ml-4 mt-1">
+            {reportData.current_research.map((item, idx) => (
+              <li key={idx} className="text-sm mb-1">
+                <a href={`#research-${idx}`} className="text-gray-600 hover:text-black no-underline hover:underline">
+                  {item.title}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </li>
+      {reportData.open_problems.length > 0 && (
+        <li className="mb-2">
+          <a href="#open-problems" className="text-gray-700 hover:text-black no-underline hover:underline lowercase">
+            open problems
+          </a>
+        </li>
+      )}
+      <li className="mb-2">
+        <a href="#conclusion" className="text-gray-700 hover:text-black no-underline hover:underline lowercase">
+          conclusion
+        </a>
+      </li>
+      <li>
+        <a href="#sources" className="text-gray-700 hover:text-black no-underline hover:underline lowercase">
+          sources
+        </a>
+      </li>
+    </ul>
+  );
+}
+
+/**
+ * Mobile TOC - collapsible accordion.
+ */
+function MobileTOC({ reportData }: { reportData: ReportData }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="lg:hidden mb-8">
+      <div className="border-2 border-black bg-white" style={brutalShadow}>
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full p-4 flex justify-between items-center text-left hover:bg-gray-50 transition-colors"
+        >
+          <span className="text-base font-bold text-black lowercase">table of contents</span>
+          <svg
+            className={`w-5 h-5 transition-transform ${isOpen ? "rotate-180" : ""}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {isOpen && (
+          <div className="p-4 pt-0 border-t border-black">
+            <TableOfContentsLinks reportData={reportData} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * References Accordion - collapsible list of referenced papers.
+ */
+function ReferencesAccordion({
+  paperIds,
+  paperCards,
+  citationMap,
+}: {
+  paperIds: string[];
+  paperCards: Array<{ id: string; title: string }>;
+  citationMap: Map<string, number>;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="mt-4 border border-black">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full p-3 flex justify-between items-center bg-white hover:bg-gray-50 transition-colors"
+      >
+        <span className="text-sm font-medium lowercase">
+          referenced papers ({paperIds.length})
+        </span>
+        <svg
+          className={`w-4 h-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {isOpen && (
+        <div className="p-4 border-t border-black bg-white">
+          <ul className="list-none p-0 m-0">
+            {paperIds.map((paperId) => {
+              const card = paperCards.find((c) => c.id === paperId);
+              const number = citationMap.get(paperId) ?? "?";
+              const url = getPaperUrl(paperId);
+              return (
+                <li key={paperId} className="mb-2 flex items-baseline gap-2 text-sm last:mb-0">
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="citation-pill flex-shrink-0"
+                    title={paperId}
+                  >
+                    {number}
+                  </a>
+                  {card && <span className="text-gray-600">{card.title}</span>}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }

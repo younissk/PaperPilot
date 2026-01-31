@@ -64,11 +64,17 @@ export function Header() {
               <path d="M240 260H80V280H240V260Z" fill="black" />
             </svg>
             <span>-navigator</span>
-            <span
-              className="ml-1 px-1.5 py-0.5 text-[10px] font-semibold bg-gray-100 text-gray-600 rounded-full border border-gray-200 cursor-default"
-              title="Early preview — expect bugs and rough edges!"
-            >
-              v0.1
+            <span className="relative group ml-1.5">
+              <span
+                className="px-1 py-px text-[8px] font-semibold bg-black text-white border border-black cursor-default"
+                style={{ boxShadow: "rgb(243, 120, 122) 1.5px 1.5px 0px" }}
+              >
+                v0.1
+              </span>
+              <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 text-[10px] text-white bg-gray-900 rounded whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-200 pointer-events-none z-50">
+                Early preview — expect bugs!
+                <span className="absolute left-1/2 -translate-x-1/2 -top-1 w-2 h-2 bg-gray-900 rotate-45" />
+              </span>
             </span>
           </Link>
 

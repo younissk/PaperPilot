@@ -138,6 +138,9 @@ async def run_search(
             progress_callback(3, "Filtering Results", len(filtered_results), len(all_results), f"Filtered to {len(filtered_results)} relevant papers", 0, max_iterations)
 
         if not filtered_results:
+            # Ensure downstream consumers (pipeline, UI, artifacts) always have a snowball JSON,
+            # even when no papers pass filtering/resolution.
+            export_results([], query, output_file)
             return []
 
         # Step 4: Resolve arXiv papers to OpenAlex IDs (CONCURRENT)
@@ -149,6 +152,7 @@ async def run_search(
             progress_callback(4, "Resolving Paper IDs", len(seeds), len(filtered_results), f"Resolved {len(seeds)} papers to OpenAlex IDs", 0, max_iterations)
 
         if not seeds:
+            export_results([], query, output_file)
             return []
 
         # Step 5: Run the Snowball Engine

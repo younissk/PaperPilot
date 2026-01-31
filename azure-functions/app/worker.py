@@ -135,6 +135,26 @@ def process_job(job_id: str, job_type: str, payload: dict[str, Any]) -> tuple[di
         stage = payload.get("stage") or "search"
         if stage == "search":
             result = asyncio.run(run_search_job(job_id, payload, events))
+            if result.get("papers_found", 0) <= 0:
+                message = "Search produced 0 papers; cannot continue to ranking/report."
+                current_events = (get_job(job_id) or {}).get("events", []) or events
+                current_events = append_event(
+                    current_events,
+                    "job_failed",
+                    "search",
+                    message,
+                )
+                update_job_progress(
+                    job_id,
+                    "failed",
+                    "search",
+                    0,
+                    message,
+                    events=current_events,
+                    result=result,
+                    error=message,
+                )
+                return result, current_events, True, True
             next_payload = dict(payload)
             next_payload["stage"] = "ranking"
             refreshed = get_job(job_id)

@@ -533,6 +533,11 @@ async def run_ranking_stage(job_id: str, payload: dict[str, Any], events: list[d
     results_dir.mkdir(parents=True, exist_ok=True)
 
     try:
+        metadata_blob = results_path(query_slug, job_id, "metadata.json")
+        metadata = get_blob_json(metadata_blob) or {}
+        if metadata.get("snowball_count", None) == 0:
+            raise ValueError("Search produced 0 papers; cannot run ranking.")
+
         snowball_blob = results_path(query_slug, job_id, "snowball.json")
         snowball_path = results_dir / "snowball.json"
         if not download_blob_to_path(snowball_blob, snowball_path):
@@ -606,8 +611,6 @@ async def run_ranking_stage(job_id: str, payload: dict[str, Any], events: list[d
             json.dump(elo_data, f, indent=2)
 
         # Update metadata if present
-        metadata_blob = results_path(query_slug, job_id, "metadata.json")
-        metadata = get_blob_json(metadata_blob) or {}
         metadata.update({
             "elo_file": elo_path.name,
             "elo_matches": len(ranker.match_history),
@@ -666,14 +669,17 @@ async def run_report_stage(job_id: str, payload: dict[str, Any], events: list[di
     results_dir.mkdir(parents=True, exist_ok=True)
 
     try:
+        metadata_blob = results_path(query_slug, job_id, "metadata.json")
+        metadata = get_blob_json(metadata_blob) or {}
+        if metadata.get("snowball_count", None) == 0:
+            raise ValueError("Search produced 0 papers; cannot generate a report.")
+
         snowball_blob = results_path(query_slug, job_id, "snowball.json")
         snowball_path = results_dir / "snowball.json"
         if not download_blob_to_path(snowball_blob, snowball_path):
             raise FileNotFoundError(f"Missing snowball blob: {snowball_blob}")
 
         # Use latest elo file from metadata if available
-        metadata_blob = results_path(query_slug, job_id, "metadata.json")
-        metadata = get_blob_json(metadata_blob) or {}
         elo_name = metadata.get("elo_file", "elo_ranked_k32_pswiss.json")
         elo_blob = results_path(query_slug, job_id, elo_name)
         elo_path = results_dir / elo_name
@@ -770,7 +776,7 @@ async def run_report_stage(job_id: str, payload: dict[str, Any], events: list[di
 
 
 async def run_search_job(job_id: str, payload: dict[str, Any], events: list[dict[str, Any]]) -> dict[str, Any]:
-    from papernavigator.service import run_search
+    from papernavigator.service import export_results, run_search
 
     query = payload.get("query", "")
     num_results = payload.get("num_results", 5)
@@ -834,6 +840,10 @@ async def run_search_job(job_id: str, payload: dict[str, Any], events: list[dict
                 error=str(exc),
             )
             raise
+
+        # Safety net: ensure the expected artifact exists even if upstream short-circuits.
+        if not snowball_path.exists():
+            export_results([], query, str(snowball_path))
 
         events = append_event(
             events,

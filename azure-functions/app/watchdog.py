@@ -188,6 +188,20 @@ def queued_job_watchdog(timer: func.TimerRequest) -> None:
 
             if stage == "search":
                 result = asyncio.run(run_search_job(job_id, payload, events))
+                if result.get("papers_found", 0) <= 0:
+                    message = "Search produced 0 papers; cannot continue to ranking/report."
+                    events = append_event(events, "job_failed", "search", message, reason="queued_watchdog")
+                    update_job_progress(
+                        job_id,
+                        "failed",
+                        "search",
+                        0,
+                        message,
+                        events=events,
+                        result=result,
+                        error=message,
+                    )
+                    return
                 # Queue next stage in-job (no Service Bus)
                 events = append_event(
                     events,
