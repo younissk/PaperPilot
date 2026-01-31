@@ -12,7 +12,7 @@ from typing import Any
 
 from .clients import get_results_container_client
 from .config import RESULTS_CONTAINER, REPORT_TIMEOUT_SECONDS, logger
-from .jobs import append_event, update_job_progress
+from .jobs import append_event, get_job, update_job_progress
 from .results import download_blob_to_path, get_blob_json, results_path
 from .utils import now_iso, slugify
 
@@ -99,6 +99,11 @@ async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[s
     from papernavigator.report.generator import generate_report, report_to_dict, final_citation_check
     from papernavigator.service import run_search
 
+    existing_job = get_job(job_id) or {}
+    result_state: dict[str, Any] = {}
+    if isinstance(existing_job.get("result"), dict):
+        result_state.update(existing_job["result"])
+
     class RankingProgressHandler(NullEventHandler):
         def __init__(self, job_id: str, update_every: int = 1, top_k: int = 5) -> None:
             self.job_id = job_id
@@ -106,6 +111,7 @@ async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[s
             self.top_k = top_k
 
         def on_elo_update(self, candidates, match_num: int, total_matches: int, **kwargs: Any) -> None:
+            nonlocal events, result_state
             if match_num % self.update_every != 0 and match_num != total_matches:
                 return
 
@@ -121,19 +127,34 @@ async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[s
                 for c in leaderboard
             ]
 
+            msg = f"Ranking match {match_num} / {total_matches}"
+            events = append_event(
+                events,
+                "progress",
+                "ranking",
+                msg,
+                step=1,
+                step_name="Ranking Papers",
+                current=match_num,
+                total=total_matches,
+            )
+            result_state.update({
+                "top_papers": top_papers,
+                "matches_played": match_num,
+            })
             update_job_progress(
                 self.job_id,
                 "running",
                 "ranking",
                 1,
-                f"Ranking match {match_num} / {total_matches}",
+                msg,
                 current=match_num,
                 total=total_matches,
                 step_name="Ranking Papers",
                 result={
-                    "top_papers": top_papers,
-                    "matches_played": match_num,
+                    **result_state,
                 },
+                events=events,
             )
 
     query = payload.get("query", "")
@@ -516,6 +537,7 @@ async def run_pipeline(job_id: str, payload: dict[str, Any], events: list[dict[s
 async def run_ranking_stage(job_id: str, payload: dict[str, Any], events: list[dict[str, Any]]) -> dict[str, Any]:
     """Run only the ranking stage using existing search artifacts from blob."""
     from papernavigator.elo_ranker import EloRanker, RankerConfig
+    from papernavigator.events import NullEventHandler
     from papernavigator.models import SnowballCandidate
     from papernavigator.profiler import generate_query_profile
     from papernavigator.report.generator import load_papers_from_file
@@ -533,6 +555,11 @@ async def run_ranking_stage(job_id: str, payload: dict[str, Any], events: list[d
     results_dir.mkdir(parents=True, exist_ok=True)
 
     try:
+        existing_job = get_job(job_id) or {}
+        result_state: dict[str, Any] = {}
+        if isinstance(existing_job.get("result"), dict):
+            result_state.update(existing_job["result"])
+
         metadata_blob = results_path(query_slug, job_id, "metadata.json")
         metadata = get_blob_json(metadata_blob) or {}
         if metadata.get("snowball_count", None) == 0:
@@ -544,7 +571,15 @@ async def run_ranking_stage(job_id: str, payload: dict[str, Any], events: list[d
             raise FileNotFoundError(f"Missing snowball blob: {snowball_blob}")
 
         events = append_event(events, "phase_start", "ranking", "Starting ELO ranking phase")
-        update_job_progress(job_id, "running", "ranking", 0, "Starting ranking...", events=events)
+        update_job_progress(
+            job_id,
+            "running",
+            "ranking",
+            0,
+            "Starting ranking...",
+            step_name="Ranking Papers",
+            events=events,
+        )
 
         papers, query = load_papers_from_file(snowball_path)
         candidates = [
@@ -583,8 +618,65 @@ async def run_ranking_stage(job_id: str, payload: dict[str, Any], events: list[d
             events=events,
         )
 
+        class RankingProgressHandler(NullEventHandler):
+            def __init__(self, job_id: str, update_every: int = 1, top_k: int = 5) -> None:
+                self.job_id = job_id
+                self.update_every = max(1, update_every)
+                self.top_k = top_k
+
+            def on_elo_update(self, candidates, match_num: int, total_matches: int, **kwargs: Any) -> None:
+                nonlocal events, result_state
+                if match_num % self.update_every != 0 and match_num != total_matches:
+                    return
+
+                leaderboard = sorted(candidates, key=lambda c: c.elo, reverse=True)[: self.top_k]
+                top_papers = [
+                    {
+                        "paper_id": c.candidate.paper_id,
+                        "title": c.candidate.title,
+                        "elo": round(c.elo, 1),
+                        "wins": c.wins,
+                        "losses": c.losses,
+                    }
+                    for c in leaderboard
+                ]
+
+                msg = f"Ranking match {match_num} / {total_matches}"
+                events = append_event(
+                    events,
+                    "progress",
+                    "ranking",
+                    msg,
+                    step=1,
+                    step_name="Ranking Papers",
+                    current=match_num,
+                    total=total_matches,
+                )
+                result_state.update({
+                    "top_papers": top_papers,
+                    "matches_played": match_num,
+                })
+                update_job_progress(
+                    self.job_id,
+                    "running",
+                    "ranking",
+                    1,
+                    msg,
+                    current=match_num,
+                    total=total_matches,
+                    step_name="Ranking Papers",
+                    events=events,
+                    result={**result_state},
+                )
+
         profile = await generate_query_profile(query)
-        ranker = EloRanker(profile, candidates, ranker_config)
+        # Emit interim progress/leaderboard updates so the UI doesn't appear stuck on "Queued".
+        ranking_handler = RankingProgressHandler(
+            job_id,
+            update_every=elo_concurrency,
+            top_k=5,
+        )
+        ranker = EloRanker(profile, candidates, ranker_config, event_handler=ranking_handler)
         ranked_candidates = await ranker.rank_candidates()
 
         elo_path = results_dir / f"elo_ranked_k{int(k_factor)}_p{pairing}.json"
@@ -632,6 +724,20 @@ async def run_ranking_stage(job_id: str, payload: dict[str, Any], events: list[d
             "ranking",
             f"Ranking complete: {len(ranker.match_history)} matches played",
         )
+        result_state.update({
+            "papers_ranked": len(ranked_candidates),
+            "matches_played": len(ranker.match_history),
+            "top_papers": [
+                {
+                    "paper_id": c.candidate.paper_id,
+                    "title": c.candidate.title,
+                    "elo": round(c.elo, 1),
+                    "wins": c.wins,
+                    "losses": c.losses,
+                }
+                for c in ranked_candidates[:5]
+            ],
+        })
         update_job_progress(
             job_id,
             "running",
@@ -642,6 +748,7 @@ async def run_ranking_stage(job_id: str, payload: dict[str, Any], events: list[d
             total=len(ranker.match_history),
             step_name="Ranking Papers",
             events=events,
+            result={**result_state},
         )
 
         return {

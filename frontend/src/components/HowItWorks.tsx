@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { QueryFlowDiagram, SnowballDiagram, EloBracketDiagram } from "./diagrams";
 
 interface Step {
   id: string;
@@ -71,11 +72,11 @@ const STEPS: Step[] = [
 ];
 
 /**
- * How it works section with vertical timeline and animated steps.
+ * How it works section with vertical timeline and sticky step headers.
  * Brutalist design with staggered entrance animations.
+ * Details are always visible, no accordion.
  */
 export function HowItWorks() {
-  const [expandedStep, setExpandedStep] = useState<string | null>(null);
   const [visibleSteps, setVisibleSteps] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -86,10 +87,6 @@ export function HowItWorks() {
       }, 200 + index * 150);
     });
   }, []);
-
-  const toggleStep = (stepId: string) => {
-    setExpandedStep(expandedStep === stepId ? null : stepId);
-  };
 
   return (
     <section id="how-it-works" className="py-20 px-4 overflow-hidden">
@@ -110,121 +107,90 @@ export function HowItWorks() {
           <div className="absolute left-8 md:left-12 top-0 bottom-0 w-0.5 bg-black" />
 
           {/* Steps */}
-          <div className="space-y-8">
+          <div className="space-y-0">
             {STEPS.map((step, index) => (
               <div
                 key={step.id}
-                className={`relative pl-20 md:pl-28 transition-all duration-700 ease-out ${
+                className={`relative transition-all duration-700 ease-out ${
                   visibleSteps.has(step.id)
                     ? "opacity-100 translate-x-0"
                     : "opacity-0 -translate-x-8"
                 }`}
               >
-                {/* Timeline node */}
-                <div className="absolute left-4 md:left-8 top-6 flex items-center justify-center">
-                  <div
-                    className={`w-8 h-8 md:w-9 md:h-9 bg-white border-2 border-black flex items-center justify-center z-10 transition-all duration-500 ${
-                      visibleSteps.has(step.id) ? "scale-100" : "scale-0"
-                    }`}
-                    style={{
-                      boxShadow: "2px 2px 0 #F3787A",
-                      transitionDelay: `${index * 150 + 100}ms`,
-                    }}
-                  >
-                    <span className="text-xs font-bold">{step.number}</span>
+                {/* Sticky Header - contains number, icon, and title */}
+                <div
+                  className="sticky top-0 bg-white pt-6 pb-4 pl-20 md:pl-28 border-b-2 border-black"
+                  style={{ zIndex: 10 + index }}
+                >
+                  {/* Timeline node - positioned absolutely relative to sticky header */}
+                  <div className="absolute left-4 md:left-8 top-6 flex items-center justify-center">
+                    <div
+                      className={`w-8 h-8 md:w-9 md:h-9 bg-white border-2 border-black flex items-center justify-center z-10 transition-all duration-500 ${
+                        visibleSteps.has(step.id) ? "scale-100" : "scale-0"
+                      }`}
+                      style={{
+                        boxShadow: "2px 2px 0 #F3787A",
+                        transitionDelay: `${index * 150 + 100}ms`,
+                      }}
+                    >
+                      <span className="text-xs font-bold">{step.number}</span>
+                    </div>
+                    {/* Pulse ring animation */}
+                    <div
+                      className={`absolute w-8 h-8 md:w-9 md:h-9 border-2 border-black animate-ping-slow opacity-30 ${
+                        visibleSteps.has(step.id) ? "block" : "hidden"
+                      }`}
+                      style={{ animationDelay: `${index * 200}ms` }}
+                    />
                   </div>
-                  {/* Pulse ring animation */}
-                  <div
-                    className={`absolute w-8 h-8 md:w-9 md:h-9 border-2 border-black animate-ping-slow opacity-30 ${
-                      visibleSteps.has(step.id) ? "block" : "hidden"
-                    }`}
-                    style={{ animationDelay: `${index * 200}ms` }}
-                  />
+
+                  {/* Step header content */}
+                  <div className="flex items-center gap-4">
+                    {/* Icon */}
+                    <div
+                      className="w-12 h-12 bg-black text-white flex items-center justify-center shrink-0"
+                      style={{ boxShadow: "2px 2px 0 #F3787A" }}
+                    >
+                      {step.icon}
+                    </div>
+
+                    {/* Title */}
+                    <h3 className="text-xl md:text-2xl font-bold text-gray-900 lowercase">
+                      {step.title}
+                    </h3>
+                  </div>
                 </div>
 
-                {/* Step Card */}
-                <div
-                  className="bg-white border-2 border-black transition-all duration-300 hover:-translate-y-1"
-                  style={{ boxShadow: "4px 4px 0 #F3787A" }}
-                >
-                  {/* Card Header */}
-                  <div className="p-6 pb-4">
-                    <div className="flex items-start gap-4">
-                      {/* Icon */}
-                      <div
-                        className="w-12 h-12 bg-black text-white flex items-center justify-center shrink-0"
-                        style={{ boxShadow: "2px 2px 0 #F3787A" }}
-                      >
-                        {step.icon}
-                      </div>
+                {/* Step Content - always visible, flat layout */}
+                <div className="pl-20 md:pl-28 py-6">
+                  {/* Description */}
+                  <p className="text-gray-600 lowercase leading-relaxed mb-6 text-lg">
+                    {step.description}
+                  </p>
 
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-xl md:text-2xl font-bold text-gray-900 lowercase mb-1">
-                          {step.title}
-                        </h3>
-                        <p className="text-gray-600 lowercase leading-relaxed">
-                          {step.description}
-                        </p>
-                      </div>
+                  {/* Interactive Diagrams */}
+                  {step.id === "search" && (
+                    <div className="space-y-4">
+                      <QueryFlowDiagram />
+                      <SnowballDiagram />
                     </div>
-                  </div>
+                  )}
+                  {step.id === "rank" && <EloBracketDiagram />}
 
-                  {/* Expandable Details */}
-                  <div className="border-t-2 border-black">
-                    <button
-                      type="button"
-                      onClick={() => toggleStep(step.id)}
-                      className="flex items-center justify-between w-full px-6 py-3 text-sm font-medium bg-gray-50 hover:bg-gray-100 transition-colors lowercase group"
-                      aria-expanded={expandedStep === step.id}
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 bg-black rounded-full group-hover:scale-125 transition-transform" />
-                        {expandedStep === step.id ? "hide details" : "see details"}
-                      </span>
-                      <svg
-                        className={`w-4 h-4 transition-transform duration-300 ${
-                          expandedStep === step.id ? "rotate-180" : ""
-                        }`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                  {/* Details List - always visible, no card wrapper */}
+                  <ul className="space-y-3 mt-6">
+                    {step.details.map((detail, detailIndex) => (
+                      <li
+                        key={detail}
+                        className="flex items-start gap-3 text-sm text-gray-600 lowercase"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
-                    </button>
-
-                    {/* Details Panel */}
-                    <div
-                      className={`overflow-hidden transition-all duration-300 ease-out ${
-                        expandedStep === step.id ? "max-h-96" : "max-h-0"
-                      }`}
-                    >
-                      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-                        <ul className="space-y-3">
-                          {step.details.map((detail, detailIndex) => (
-                            <li
-                              key={detail}
-                              className="flex items-start gap-3 text-sm text-gray-600 lowercase"
-                              style={{
-                                animationDelay: `${detailIndex * 50}ms`,
-                              }}
-                            >
-                              <span className="w-5 h-5 bg-black text-white text-xs flex items-center justify-center shrink-0 mt-0.5">
-                                {detailIndex + 1}
-                              </span>
-                              <span className="leading-relaxed">{detail}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
+                        <span className="w-5 h-5 bg-black text-white text-xs flex items-center justify-center shrink-0 mt-0.5">
+                          {detailIndex + 1}
+                        </span>
+                        <span className="leading-relaxed">{detail}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </div>
             ))}

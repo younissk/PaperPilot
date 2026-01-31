@@ -60,12 +60,32 @@ export default {
         spin: "spin 0.8s linear infinite",
         pulse: "pulse 1.5s ease-in-out infinite",
         "gradient-shift": "gradientShift 15s ease infinite",
+        "node-glow": "nodeGlow 2s ease-in-out infinite",
+        "pulse-dot": "pulseDot 1.5s ease-in-out infinite",
+        "stroke-draw": "strokeDraw 2s ease-out forwards",
+        "fade-in": "fadeIn 0.5s ease-out forwards",
       },
       keyframes: {
         gradientShift: {
           "0%": { backgroundPosition: "0% 50%" },
           "50%": { backgroundPosition: "100% 50%" },
           "100%": { backgroundPosition: "0% 50%" },
+        },
+        nodeGlow: {
+          "0%, 100%": { filter: "drop-shadow(0 0 0 rgba(243,120,122,0))" },
+          "50%": { filter: "drop-shadow(0 0 8px rgba(243,120,122,0.8))" },
+        },
+        pulseDot: {
+          "0%, 100%": { opacity: "0.4", transform: "scale(0.8)" },
+          "50%": { opacity: "1", transform: "scale(1.2)" },
+        },
+        strokeDraw: {
+          "0%": { strokeDashoffset: "100" },
+          "100%": { strokeDashoffset: "0" },
+        },
+        fadeIn: {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
         },
       },
     },
