@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -100,17 +101,40 @@ def find_latest_job_for_query(query_slug: str) -> str | None:
     try:
         container = get_results_container_client()
         prefix = results_path(query_slug)
-        job_ids: set[str] = set()
+        job_last_modified: dict[str, datetime] = {}
+        job_has_report: set[str] = set()
+        job_has_snowball: set[str] = set()
 
         for blob in container.list_blobs(name_starts_with=f"{prefix}/"):
-            parts = blob.name.split("/")
-            if len(parts) >= 3:
-                job_ids.add(parts[2])
+            if not blob.name.startswith(f"{prefix}/"):
+                continue
 
-        if not job_ids:
+            suffix = blob.name[len(prefix) + 1 :]
+            suffix_parts = suffix.split("/")
+            if not suffix_parts:
+                continue
+
+            job_id = suffix_parts[0]
+            job_last_modified.setdefault(job_id, datetime.min.replace(tzinfo=UTC))
+            last_modified = getattr(blob, "last_modified", None)
+            if isinstance(last_modified, datetime):
+                job_last_modified[job_id] = max(
+                    job_last_modified.get(job_id, datetime.min.replace(tzinfo=UTC)),
+                    last_modified,
+                )
+
+            file_name = suffix_parts[-1]
+            if file_name == "snowball.json":
+                job_has_snowball.add(job_id)
+            elif file_name.startswith("report_top_k") and file_name.endswith(".json"):
+                job_has_report.add(job_id)
+
+        if not job_last_modified:
             return None
 
-        return sorted(job_ids)[-1]
+        # Prefer the latest job that has a report artifact; otherwise fall back to the latest job with snowball data.
+        candidates = job_has_report or job_has_snowball or set(job_last_modified)
+        return max(candidates, key=lambda jid: job_last_modified.get(jid, datetime.min.replace(tzinfo=UTC)))
     except Exception as exc:
         logger.error("Failed to find jobs for query %s: %s", query_slug, exc)
         return None
@@ -140,7 +164,7 @@ def get_query_results(query_slug: str) -> dict[str, Any]:
 
     prefix = results_path(query_slug, job_id)
 
-    metadata = get_query_metadata(query_slug) or {}
+    metadata = get_blob_json(results_path(query_slug, job_id, "metadata.json")) or {}
 
     report_file = metadata.get("report_file")
     if report_file:

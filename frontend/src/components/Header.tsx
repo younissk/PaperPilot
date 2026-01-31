@@ -45,24 +45,31 @@ export function Header() {
               className="shrink-0"
             >
               <path
-                d="M340 130H230V20"
-                stroke="currentColor"
-                strokeWidth="24"
+                d="M350 450H10V10H230L350 130V450Z"
+                fill="#F3787A"
+                stroke="black"
+                strokeWidth="20"
                 strokeMiterlimit="10"
                 strokeLinecap="round"
               />
               <path
-                d="M350 450H10V10H230L350 130V450Z"
-                stroke="currentColor"
-                strokeWidth="24"
+                d="M340 130H230V20"
+                stroke="black"
+                strokeWidth="20"
                 strokeMiterlimit="10"
                 strokeLinecap="round"
               />
-              <path d="M280 200H80V220H280V200Z" fill="currentColor" />
-              <path d="M280 320H80V340H280V320Z" fill="currentColor" />
-              <path d="M240 260H80V280H240V260Z" fill="currentColor" />
+              <path d="M280 200H80V220H280V200Z" fill="black" />
+              <path d="M280 320H80V340H280V320Z" fill="black" />
+              <path d="M240 260H80V280H240V260Z" fill="black" />
             </svg>
             <span>-navigator</span>
+            <span
+              className="ml-1 px-1.5 py-0.5 text-[10px] font-semibold bg-gray-100 text-gray-600 rounded-full border border-gray-200 cursor-default"
+              title="Early preview — expect bugs and rough edges!"
+            >
+              v0.1
+            </span>
           </Link>
 
           {/* Desktop Navigation */}

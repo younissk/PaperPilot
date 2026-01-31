@@ -22,17 +22,18 @@ const STEPS: Step[] = [
       </svg>
     ),
     details: [
-      "query OpenAlex for initial seed papers using semantic matching",
-      "snowball sampling: expand via citations and references",
-      "iteratively grow the candidate pool until saturation",
-      "filter by relevance threshold and publication date",
+      "LLM creates a query profile from your research question",
+      "LLM augments the query into multiple search queries",
+      "search OpenAlex and arXiv for initial seed papers",
+      "citations and references snowball to expand the pool",
+      "filter by relevancy to keep only the best matches",
     ],
   },
   {
     id: "rank",
     number: "02",
     title: "rank",
-    description: "AI-powered pairwise comparisons to surface the best papers",
+    description: "chess-inspired Elo-ranking of papers",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6">
         <path d="M12 20V10" />
@@ -65,7 +66,6 @@ const STEPS: Step[] = [
       "LLM synthesizes findings from top-ranked papers",
       "sections: introduction, current research, open problems, conclusion",
       "every claim includes inline citations to source papers",
-      "JSON export available for programmatic access",
     ],
   },
 ];

@@ -76,32 +76,54 @@ def process_job(job_id: str, job_type: str, payload: dict[str, Any]) -> tuple[di
             return existing_job.get("result", {}), existing_job.get("events", []), False, True
         # Check if job is running but stale (stuck)
         if existing_status == "running":
-            progress = existing_job.get("progress") or {}
-            current_phase = progress.get("phase")
-            step_name = (progress.get("step_name") or "").lower()
-            progress_message = (progress.get("message") or "").lower()
-            is_queued_marker = "queued" in step_name or "queued" in progress_message
-            if stage and current_phase in phase_order and stage in phase_order:
-                if phase_order[stage] < phase_order[current_phase] and not is_job_stale(existing_job):
+            if is_job_stale(existing_job):
+                logger.warning("Job %s is stale (running for too long), allowing retry", job_id)
+            else:
+                progress = existing_job.get("progress") or {}
+                current_phase = (progress.get("phase") or "").lower()
+                step_name = (progress.get("step_name") or "").lower()
+                progress_message = (progress.get("message") or "").lower()
+                is_queued_marker = "queued" in step_name or "queued" in progress_message
+                stage_norm = stage.lower() if isinstance(stage, str) else ""
+
+                if not stage_norm:
+                    logger.warning("Job %s is already running and message has no stage, skipping", job_id)
+                    return {}, existing_job.get("events", []), False, False
+
+                # Enforce phase ordering to avoid running stages out of order.
+                if current_phase in phase_order and stage_norm in phase_order:
+                    if phase_order[stage_norm] < phase_order[current_phase]:
+                        logger.warning(
+                            "Job %s stage '%s' behind current phase '%s', skipping",
+                            job_id,
+                            stage_norm,
+                            current_phase,
+                        )
+                        return {}, existing_job.get("events", []), False, False
+                    if phase_order[stage_norm] > phase_order[current_phase]:
+                        logger.warning(
+                            "Job %s stage '%s' ahead of current phase '%s', skipping",
+                            job_id,
+                            stage_norm,
+                            current_phase,
+                        )
+                        return {}, existing_job.get("events", []), False, False
+
+                # Only execute a running job when it's explicitly marked as queued for this stage.
+                if stage_norm != current_phase:
                     logger.warning(
-                        "Job %s stage '%s' behind current phase '%s', skipping",
+                        "Job %s stage '%s' does not match current phase '%s', skipping",
                         job_id,
-                        stage,
+                        stage_norm,
                         current_phase,
                     )
                     return {}, existing_job.get("events", []), False, False
-            if stage and current_phase == stage and not is_job_stale(existing_job):
-                if is_queued_marker:
-                    logger.info("Job %s stage '%s' is queued; allowing execution", job_id, stage)
-                else:
-                    logger.warning("Job %s stage '%s' already running, skipping duplicate message", job_id, stage)
+
+                if not is_queued_marker:
+                    logger.warning("Job %s stage '%s' already running, skipping duplicate message", job_id, stage_norm)
                     return {}, existing_job.get("events", []), False, False
-            if is_job_stale(existing_job):
-                logger.warning("Job %s is stale (running for too long), allowing retry", job_id)
-                # Continue processing - job will be re-run
-            else:
-                logger.warning("Job %s is already running (possible message redelivery), skipping", job_id)
-                return {}, existing_job.get("events", []), False, False
+
+                logger.info("Job %s stage '%s' is queued; allowing execution", job_id, stage_norm)
     
     events: list[dict[str, Any]] = existing_job.get("events", []) if existing_job else []
     events = append_event(events, "job_start", "init", f"Starting {job_type} job")
@@ -113,10 +135,8 @@ def process_job(job_id: str, job_type: str, payload: dict[str, Any]) -> tuple[di
         stage = payload.get("stage") or "search"
         if stage == "search":
             result = asyncio.run(run_search_job(job_id, payload, events))
-            # Enqueue next stage
             next_payload = dict(payload)
             next_payload["stage"] = "ranking"
-            enqueue_job(job_id, "pipeline", next_payload)
             refreshed = get_job(job_id)
             current_events = (refreshed or {}).get("events", []) or events
             current_events = append_event(
@@ -136,12 +156,13 @@ def process_job(job_id: str, job_type: str, payload: dict[str, Any]) -> tuple[di
                 step_name="Queued",
                 events=current_events,
             )
+            # Enqueue next stage after updating progress to avoid races with the next message.
+            enqueue_job(job_id, "pipeline", next_payload)
             return result, current_events, True, False
         if stage == "ranking":
             result = asyncio.run(run_ranking_stage(job_id, payload, events))
             next_payload = dict(payload)
             next_payload["stage"] = "report"
-            enqueue_job(job_id, "pipeline", next_payload)
             refreshed = get_job(job_id)
             current_events = (refreshed or {}).get("events", []) or events
             current_events = append_event(
@@ -161,6 +182,8 @@ def process_job(job_id: str, job_type: str, payload: dict[str, Any]) -> tuple[di
                 step_name="Queued",
                 events=current_events,
             )
+            # Enqueue next stage after updating progress to avoid races with the next message.
+            enqueue_job(job_id, "pipeline", next_payload)
             return result, current_events, True, False
         if stage == "report":
             result = asyncio.run(run_report_stage(job_id, payload, events))

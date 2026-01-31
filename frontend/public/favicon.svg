@@ -1,6 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
-  <rect width="32" height="32" rx="6" fill="#2c7a7b"/>
-  <path d="M8 8h10a4 4 0 0 1 0 8H8V8z" fill="white" opacity="0.9"/>
-  <path d="M8 16h8a4 4 0 0 1 0 8H8V16z" fill="white" opacity="0.7"/>
-  <circle cx="24" cy="12" r="3" fill="#7CE1D7"/>
+<svg width="360" height="460" viewBox="0 0 360 460" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M350 450H10V10H230L350 130V450Z" fill="#F3787A" stroke="black" stroke-width="20" stroke-miterlimit="10" stroke-linecap="round"/>
+<path d="M340 130H230V20" stroke="black" stroke-width="20" stroke-miterlimit="10" stroke-linecap="round"/>
+<path d="M280 200H80V220H280V200Z" fill="black"/>
+<path d="M280 320H80V340H280V320Z" fill="black"/>
+<path d="M240 260H80V280H240V260Z" fill="black"/>
 </svg>
