@@ -55,8 +55,8 @@ VITE_API_BASE_URL=http://localhost:8000
 
 ## Deployment
 
-The frontend is deployed via Azure Static Web Apps using GitHub Actions.
-See `.github/workflows/azure-static-web-apps.yml` for the pipeline.
+The frontend can be deployed to **GitHub Pages** via GitHub Actions.
+See `.github/workflows/frontend-pages.yml`.
 
 ## Architecture
 

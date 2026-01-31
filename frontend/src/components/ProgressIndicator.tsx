@@ -2,6 +2,12 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { PipelineResponse, PipelineEvent, LeaderboardEntry } from "@/lib/types";
 import { readinessCheck } from "@/lib/api";
+import {
+  QueryProfileDiagram,
+  QueryAugmentDiagram,
+  CitationsDiagram,
+  EloBracketDiagram,
+} from "./diagrams";
 
 // Brutalist coral shadow styles
 const brutalShadow = { boxShadow: "3px 3px 0 #F3787A" };
@@ -476,6 +482,27 @@ export function ProgressIndicator({
                 <div className="text-xs mt-1 text-gray-600">{alert.message}</div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Phase-specific diagrams */}
+        {phase === "search" && (
+          <div className="mt-6 space-y-2">
+            <p className="text-xs text-gray-500 lowercase mb-2">what's happening:</p>
+            {status.phase_step_name?.includes("profile") && <QueryProfileDiagram />}
+            {status.phase_step_name?.includes("augment") && <QueryAugmentDiagram />}
+            {(status.phase_step_name?.includes("snowball") || 
+              status.phase_step_name?.includes("citation") ||
+              status.phase_step_name?.includes("reference")) && <CitationsDiagram />}
+            {/* Default diagram if no specific step matches */}
+            {!status.phase_step_name && <QueryAugmentDiagram />}
+          </div>
+        )}
+
+        {phase === "ranking" && (
+          <div className="mt-6 space-y-2">
+            <p className="text-xs text-gray-500 lowercase mb-2">what's happening:</p>
+            <EloBracketDiagram />
           </div>
         )}
 

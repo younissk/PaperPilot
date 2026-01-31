@@ -366,7 +366,7 @@
   }
 
   .marquee-container {
-    @apply w-full overflow-hidden border-y border-black py-3;
+    @apply w-full overflow-hidden border-y border-black py-3 bg-gray-50;
   }
 
   .marquee-track {
