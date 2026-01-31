@@ -288,6 +288,9 @@ export function ProgressIndicator({
 }: ProgressIndicatorProps) {
   const [logsExpanded, setLogsExpanded] = useState(false);
   const phase = status.phase || "";
+  const normalizedPhase = PIPELINE_PHASES.includes(phase as (typeof PIPELINE_PHASES)[number])
+    ? phase
+    : "search";
   const title = PHASE_NAMES[phase] || status.status || "processing...";
   const events = status.events ?? [];
   const alerts = status.alerts ?? [];
@@ -310,7 +313,7 @@ export function ProgressIndicator({
   // Phase details
   let details = "";
   if (status.status === "queued" || queuedHint) {
-    const queuedPhase = phase || "search";
+    const queuedPhase = normalizedPhase || "search";
     details = `queued for ${queuedPhase}`;
   } else if (phase === "search") {
     details = `step: ${status.phase_step_name || ""}`;
@@ -340,7 +343,7 @@ export function ProgressIndicator({
         )}
 
         {/* Pipeline timeline */}
-        <PipelineTimeline currentPhase={phase} />
+        <PipelineTimeline currentPhase={normalizedPhase} />
 
         {/* Progress bar */}
         <div className="h-3 bg-white border-2 border-black overflow-hidden mb-4">

@@ -63,11 +63,19 @@ export function Footer() {
             reports
           </Link>
           <Link
-            to="/about"
+            to="/monitoring"
             className="text-gray-600 hover:text-black no-underline lowercase transition-colors"
           >
-            about
+            monitoring
           </Link>
+          <a
+            href="https://younissk.github.io"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-600 hover:text-black no-underline lowercase transition-colors"
+          >
+            portfolio
+          </a>
         </nav>
       </div>
     </footer>

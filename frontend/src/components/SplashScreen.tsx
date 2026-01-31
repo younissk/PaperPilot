@@ -1,131 +1,67 @@
 import { useState, useEffect } from "react";
 
-type AnimationPhase = "idle" | "pump1" | "pump2" | "pump3" | "done";
-
-const COLORS = {
-  black: "#000000",
-  teal: "#2c7a7b",
-  coral: "#F3787A",
-} as const;
+type AnimationPhase = "pump1" | "pump2" | "pump3" | "done";
 
 /**
- * Full-page splash screen with animated document icon.
- * 3 dramatic pumps with color changes, culminating in an explosive pop.
+ * Clean full-page splash screen with animated document icon.
+ * 3 subtle pumps with color changes, then fades out to reveal the page.
  */
 export function SplashScreen({ onComplete }: { onComplete: () => void }) {
-  const [phase, setPhase] = useState<AnimationPhase>("idle");
-  const [showRipple, setShowRipple] = useState(false);
+  const [phase, setPhase] = useState<AnimationPhase>("pump1");
 
   useEffect(() => {
-    // Small delay before starting for anticipation
-    const startDelay = setTimeout(() => setPhase("pump1"), 200);
+    const timings = {
+      pump1: 400,
+      pump2: 800,
+      pump3: 1200,
+      done: 1600,
+    };
 
-    return () => clearTimeout(startDelay);
-  }, []);
+    const t1 = setTimeout(() => setPhase("pump2"), timings.pump1);
+    const t2 = setTimeout(() => setPhase("pump3"), timings.pump2);
+    const t3 = setTimeout(() => {
+      setPhase("done");
+      onComplete();
+    }, timings.done);
 
-  useEffect(() => {
-    if (phase === "idle" || phase === "done") return;
-
-    let timer: NodeJS.Timeout;
-
-    if (phase === "pump1") {
-      timer = setTimeout(() => setPhase("pump2"), 500);
-    } else if (phase === "pump2") {
-      timer = setTimeout(() => setPhase("pump3"), 500);
-    } else if (phase === "pump3") {
-      setShowRipple(true);
-      timer = setTimeout(() => {
-        setPhase("done");
-        onComplete();
-      }, 600);
-    }
-
-    return () => clearTimeout(timer);
-  }, [phase, onComplete]);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [onComplete]);
 
   if (phase === "done") return null;
 
-  // Color based on phase
-  const getColor = () => {
-    switch (phase) {
-      case "idle":
-      case "pump1":
-        return COLORS.black;
-      case "pump2":
-        return COLORS.teal;
-      case "pump3":
-        return COLORS.coral;
-      default:
-        return COLORS.black;
-    }
+  const colors = {
+    pump1: "#1a1a1a",
+    pump2: "#2c7a7b",
+    pump3: "#F3787A",
   };
 
-  // Shadow color matches icon color
-  const getShadowColor = () => {
-    switch (phase) {
-      case "pump2":
-        return "rgba(44, 122, 123, 0.4)";
-      case "pump3":
-        return "rgba(243, 120, 122, 0.5)";
-      default:
-        return "rgba(0, 0, 0, 0.2)";
-    }
-  };
-
-  const isPumping = phase === "pump1" || phase === "pump2";
   const isPopping = phase === "pump3";
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-gray-50 overflow-hidden"
+      className={`
+        fixed inset-0 z-50 flex items-center justify-center bg-gray-50
+        transition-opacity duration-300
+        ${isPopping ? "opacity-0" : "opacity-100"}
+      `}
       aria-hidden="true"
     >
-      {/* Expanding ripple on pop */}
-      {showRipple && (
-        <div
-          className="absolute rounded-full animate-ripple-burst"
-          style={{
-            width: 160,
-            height: 160,
-            border: `3px solid ${COLORS.coral}`,
-          }}
-        />
-      )}
-
-      {/* Icon container with animations */}
       <div
-        key={phase} // Force re-mount to restart animation
-        className={`
-          relative transition-all duration-200
-          ${isPumping ? "animate-pump" : ""}
-          ${isPopping ? "animate-pop" : ""}
-        `}
-        style={{
-          color: getColor(),
-          filter: `drop-shadow(0 0 20px ${getShadowColor()})`,
-        }}
+        key={phase}
+        className={isPopping ? "animate-splash-pop" : "animate-splash-pump"}
+        style={{ color: colors[phase] }}
       >
-        {/* Glow pulse behind icon */}
-        <div
-          className={`
-            absolute inset-0 rounded-full blur-2xl transition-opacity duration-300
-            ${isPumping ? "animate-glow-pulse" : ""}
-            ${isPopping ? "opacity-0" : "opacity-60"}
-          `}
-          style={{
-            background: getShadowColor(),
-            transform: "scale(2)",
-          }}
-        />
-
-        {/* The document SVG */}
         <svg
-          width="140"
-          height="180"
+          width="100"
+          height="128"
           viewBox="0 0 360 460"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="relative z-10"
+          className="transition-colors duration-150"
         >
           <path
             d="M340 130H230V20"

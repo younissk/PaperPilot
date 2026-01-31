@@ -78,14 +78,14 @@ export function Header() {
               reports
             </Link>
             <Link
-              to="/about"
+              to="/monitoring"
               className={`text-sm font-medium no-underline transition-colors duration-200 lowercase ${
-                isActive("/about")
+                isActive("/monitoring")
                   ? "text-gray-900"
                   : "text-gray-600 hover:text-gray-900"
               }`}
             >
-              about
+              monitoring
             </Link>
           </nav>
 
@@ -136,14 +136,14 @@ export function Header() {
             reports
           </Link>
           <Link
-            to="/about"
+            to="/monitoring"
             onClick={() => setIsMenuOpen(false)}
             className={`text-5xl font-bold no-underline transition-all duration-300 lowercase ${
-              isActive("/about") ? "text-gray-900" : "text-gray-400 hover:text-gray-900"
+              isActive("/monitoring") ? "text-gray-900" : "text-gray-400 hover:text-gray-900"
             } ${isMenuOpen ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"}`}
             style={{ transitionDelay: isMenuOpen ? "200ms" : "0ms" }}
           >
-            about
+            monitoring
           </Link>
         </nav>
       </div>

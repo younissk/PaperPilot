@@ -4,11 +4,12 @@ import {
   ProofStrip,
   OutputPreview,
   HowItWorks,
+  AboutSection,
   PrivacySection,
 } from "@/components";
 
 /**
- * Home page with hero, proof strip, output preview, how it works, and privacy sections.
+ * Home page with hero, proof strip, how it works, output preview, about, and privacy sections.
  */
 export default function HomePage() {
   return (
@@ -25,11 +26,14 @@ export default function HomePage() {
         {/* Proof Strip - Trust Metrics */}
         <ProofStrip />
 
+        {/* How It Works */}
+        <HowItWorks />
+
         {/* Output Preview */}
         <OutputPreview />
 
-        {/* How It Works */}
-        <HowItWorks />
+        {/* About Section */}
+        <AboutSection />
 
         {/* Privacy Section */}
         <PrivacySection />
