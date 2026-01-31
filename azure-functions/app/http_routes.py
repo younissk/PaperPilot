@@ -5,7 +5,7 @@ from __future__ import annotations
 import azure.functions as func
 
 from .http_utils import cors_preflight, json_response, safe
-from .jobs import create_job, enqueue_job, get_job
+from .jobs import create_job, enqueue_job, get_job, test_openai_connection
 from .parsing import normalize_pipeline_payload, normalize_search_payload, parse_json
 from .jobs import test_cosmos_connection, test_service_bus_connection
 from .results import get_query_metadata, get_query_results, list_result_slugs, test_storage_connection
@@ -52,8 +52,9 @@ def readiness_check(req: func.HttpRequest) -> func.HttpResponse:
         storage_ok = test_storage_connection()
         database_ok = test_cosmos_connection()
         service_bus_ok = test_service_bus_connection()
+        openai_ok, openai_latency_ms, openai_error = test_openai_connection()
 
-        ready = storage_ok and database_ok and service_bus_ok
+        ready = storage_ok and database_ok and service_bus_ok and openai_ok
 
         return json_response({
             "status": "ok" if ready else "degraded",
@@ -63,6 +64,14 @@ def readiness_check(req: func.HttpRequest) -> func.HttpResponse:
                 "storage": "connected" if storage_ok else "unavailable",
                 "database": "connected" if database_ok else "unavailable",
                 "service_bus": "connected" if service_bus_ok else "unavailable",
+                "openai": "connected" if openai_ok else "unavailable",
+            },
+            "signals": {
+                "openai": {
+                    "ok": bool(openai_ok),
+                    "latency_ms": openai_latency_ms,
+                    "error": openai_error,
+                },
             },
         })
 

@@ -151,6 +151,14 @@ export interface ReadinessResponse {
     storage: string;
     database: string;
     service_bus: string;
+    openai?: string;
+  };
+  signals?: {
+    openai?: {
+      ok: boolean;
+      latency_ms?: number | null;
+      error?: string | null;
+    };
   };
 }
 

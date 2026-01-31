@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { PipelineResponse, PipelineEvent, LeaderboardEntry } from "@/lib/types";
+import { readinessCheck } from "@/lib/api";
 
 // Brutalist coral shadow styles
 const brutalShadow = { boxShadow: "3px 3px 0 #F3787A" };
@@ -18,6 +20,7 @@ const PHASE_NAMES: Record<string, string> = {
 
 const PIPELINE_PHASES = ["search", "ranking", "report"] as const;
 const STALE_WARNING_MINUTES = 20;
+const QUEUE_WARNING_MINUTES = 2;
 
 /**
  * Format elapsed time as MM:SS or HH:MM:SS
@@ -296,6 +299,19 @@ export function ProgressIndicator({
   const alerts = status.alerts ?? [];
   const recentEvents: PipelineEvent[] = events.slice(-10);
   const { isStale, minutesSince, label: updatedLabel } = getStaleInfo(status.updated_at);
+  const queuedHint = (status.progress_message || "").toLowerCase().startsWith("queued");
+  const isQueuedUi = status.status === "queued" || queuedHint;
+  const isQueueSlow = minutesSince !== null && minutesSince >= QUEUE_WARNING_MINUTES && isQueuedUi;
+
+  const showDiagnostics = isStale || isQueueSlow;
+  const readiness = useQuery({
+    queryKey: ["ready", "pipeline_diagnostics"],
+    queryFn: readinessCheck,
+    enabled: showDiagnostics,
+    refetchInterval: showDiagnostics ? 15000 : false,
+    retry: false,
+    staleTime: 0,
+  });
 
   // Leaderboard data during ranking phase
   const leaderboard =
@@ -309,7 +325,6 @@ export function ProgressIndicator({
     percent = (status.phase_progress / status.phase_total) * 100;
   }
 
-  const queuedHint = (status.progress_message || "").toLowerCase().startsWith("queued");
   // Phase details
   let details = "";
   if (status.status === "queued" || queuedHint) {
@@ -373,6 +388,69 @@ export function ProgressIndicator({
             <strong className="text-black lowercase">pipeline appears stalled.</strong>{" "}
             No progress updates in {minutesSince} minutes. You can keep waiting, or
             start a new run if it doesn’t recover.
+          </div>
+        )}
+
+        {showDiagnostics && (readiness.data || readiness.error) && (
+          <div className="mt-4 text-left p-4 border-2 border-black bg-white">
+            <div className="text-sm font-bold lowercase text-black">system diagnostics</div>
+            {readiness.error ? (
+              <div className="text-xs mt-2 text-gray-700">
+                failed to load readiness:{" "}
+                {readiness.error instanceof Error ? readiness.error.message : "unknown error"}
+              </div>
+            ) : (
+              <>
+                <div className="mt-2 grid gap-2">
+                  {Object.entries(readiness.data?.checks ?? {}).map(([name, st]) => (
+                    <div key={name} className="flex justify-between text-xs border-b border-black pb-2 last:border-b-0 last:pb-0">
+                      <span className="text-gray-600 lowercase">{name}</span>
+                      <span className="flex items-center gap-2 font-medium text-black">
+                        <span
+                          className={`w-4 h-4 flex items-center justify-center text-xs ${
+                            st === "connected" ? "bg-black text-white" : "border border-black"
+                          }`}
+                        >
+                          {st === "connected" ? "✓" : "×"}
+                        </span>
+                        <span className="lowercase">{st}</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {readiness.data?.signals?.openai && (
+                  <p className="text-xs text-gray-600 mt-3 lowercase">
+                    openai:{" "}
+                    <span className="text-black font-medium">
+                      {readiness.data.signals.openai.ok ? "ok" : "unavailable"}
+                    </span>
+                    {Number.isFinite(readiness.data.signals.openai.latency_ms) ? (
+                      <>
+                        {" · "}latency{" "}
+                        <span className="text-black font-medium">
+                          {Math.round(readiness.data.signals.openai.latency_ms!)}ms
+                        </span>
+                      </>
+                    ) : null}
+                    {readiness.data.signals.openai.error ? (
+                      <>
+                        {" · "}error{" "}
+                        <span className="text-black font-medium">
+                          {readiness.data.signals.openai.error}
+                        </span>
+                      </>
+                    ) : null}
+                  </p>
+                )}
+
+                {isQueueSlow && readiness.data?.checks?.service_bus === "connected" && (
+                  <p className="text-xs text-gray-700 mt-3 lowercase">
+                    queue is reachable, but this job is still queued. this usually means the worker trigger isn't consuming messages (trigger sync/cold start/restarts).
+                  </p>
+                )}
+              </>
+            )}
           </div>
         )}
 

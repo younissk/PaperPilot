@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import time
 import uuid
 from typing import Any
 
@@ -42,6 +44,41 @@ def test_service_bus_connection() -> bool:
     except Exception as exc:
         logger.warning("Service Bus connection test failed: %s", exc)
         return False
+
+
+def test_openai_connection(*, timeout_sec: float = 5.0) -> tuple[bool, float | None, str | None]:
+    """Best-effort OpenAI connectivity check.
+
+    Returns (ok, latency_ms, error_message).
+    """
+    api_key = os.environ.get("OPENAI_API_KEY") or ""
+    if not api_key or api_key.startswith("@Microsoft.KeyVault"):
+        return False, None, "OPENAI_API_KEY not available at runtime"
+
+    # Use a very lightweight request; this does not generate tokens.
+    import urllib.request
+    import urllib.error
+
+    req = urllib.request.Request(
+        "https://api.openai.com/v1/models",
+        method="GET",
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+    )
+
+    start = time.time()
+    try:
+        with urllib.request.urlopen(req, timeout=timeout_sec) as resp:
+            status = getattr(resp, "status", None)
+            if status and 200 <= status < 300:
+                return True, (time.time() - start) * 1000.0, None
+            return False, (time.time() - start) * 1000.0, f"OpenAI returned status {status}"
+    except urllib.error.HTTPError as exc:
+        return False, (time.time() - start) * 1000.0, f"OpenAI HTTPError {exc.code}"
+    except Exception as exc:
+        return False, (time.time() - start) * 1000.0, str(exc)
 
 
 EVENT_LEVELS: dict[str, str] = {
