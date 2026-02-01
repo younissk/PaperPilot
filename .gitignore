@@ -1,0 +1,189 @@
+# =============================================================================
+# Python
+# =============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+/lib/
+/lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+.conda/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+pytest_cache/
+junit.xml
+*-results.xml
+staging-env.txt
+prod-env.txt
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Ruff
+.ruff_cache/
+
+# pytype
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# UV lock file (optional - uncomment if you don't want to track)
+# uv.lock
+
+# =============================================================================
+# Azure Functions
+# =============================================================================
+# Local settings (contains secrets)
+azure-functions/local.settings.json
+
+# IaC exports (can contain sensitive configuration)
+infra/_export/
+
+# Azure Functions local storage
+azure-functions/.python_packages/
+azure-functions/__azurite_db*__.json
+azure-functions/__blobstorage__/
+azure-functions/__queuestorage__/
+
+# =============================================================================
+# Node.js / Frontend
+# =============================================================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Build output
+frontend/dist/
+frontend/build/
+
+# TypeScript
+*.tsbuildinfo
+
+# Vite
+frontend/.vite/
+
+# =============================================================================
+# IDE / Editor
+# =============================================================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.sublime-workspace
+*.sublime-project
+
+# JetBrains
+*.iml
+.idea/
+
+# =============================================================================
+# OS
+# =============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# =============================================================================
+# Environment / Secrets
+# =============================================================================
+.env
+.env.local
+.env.*.local
+.env.development
+.env.test
+.env.production
+*.pem
+*.key
+credentials.json
+secrets.json
+.secrets/
+
+# =============================================================================
+# Logs
+# =============================================================================
+logs/
+*.log
+log/
+
+# =============================================================================
+# Misc
+# =============================================================================
+# Results directory policy:
+# - Existing committed results are historical examples (still tracked)
+# - New generated outputs should NOT be committed
+# - See results/README.md for details
+#
+# Note: Git ignores only apply to untracked files. The already-committed
+# results are intentionally kept in the repo as examples.
+results/*
+# But keep the README
+!results/README.md
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# macOS
+.AppleDouble
+.LSOverride
+
+# Documentation build
+docs/_build/
+site/

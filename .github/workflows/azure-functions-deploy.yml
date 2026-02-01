@@ -1,0 +1,117 @@
+# GitHub Actions workflow for deploying PaperNavigator Azure Functions
+# Docs: https://learn.microsoft.com/en-us/azure/azure-functions/functions-how-to-github-actions
+
+name: Deploy Azure Functions
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'azure-functions/**'
+      - 'papernavigator/**'
+      - '.github/workflows/azure-functions-deploy.yml'
+  workflow_dispatch:  # Allow manual trigger
+
+concurrency:
+  group: paperpilot-prod
+  cancel-in-progress: false
+
+env:
+  AZURE_FUNCTIONAPP_NAME: 'paperpilot-api'
+  AZURE_RESOURCE_GROUP: 'PaperPilot'
+  AZURE_STORAGE_ACCOUNT: 'paperpilot91b3'
+  AZURE_KEYVAULT_NAME: 'paperpilot-kv-prod'
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  # ============================================================================
+  # Build and Deploy (combined for simplicity)
+  # ============================================================================
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: 'production'
+      url: https://${{ env.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        working-directory: azure-functions
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Vendor PaperNavigator package
+        run: |
+          rm -rf azure-functions/papernavigator
+          cp -R papernavigator azure-functions/papernavigator
+
+      - name: Lint with ruff (optional)
+        working-directory: azure-functions
+        continue-on-error: true
+        run: |
+          pip install ruff
+          ruff check function_app.py || true
+
+      # Package dependencies for Azure (critical for Consumption plan)
+      # Since GitHub Actions runs on Linux, pip will download Linux-compatible wheels
+      - name: Package dependencies
+        working-directory: azure-functions
+        run: |
+          pip install --target=".python_packages/lib/site-packages" -r requirements.txt
+          # Verify pydantic-core was installed correctly
+          ls -la .python_packages/lib/site-packages/pydantic_core/ || echo "pydantic_core not found"
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set AzureWebJobsStorage for deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          RG="${AZURE_RESOURCE_GROUP}"
+          STORAGE="${AZURE_STORAGE_ACCOUNT}"
+          FUNC_APP="${AZURE_FUNCTIONAPP_NAME}"
+          CONN="$(az storage account show-connection-string -g "${RG}" -n "${STORAGE}" --query connectionString -o tsv)"
+          if [ -z "${CONN}" ]; then
+            echo "Failed to resolve AzureWebJobsStorage connection string" >&2
+            exit 1
+          fi
+          echo "::add-mask::${CONN}"
+          az functionapp config appsettings set -g "${RG}" -n "${FUNC_APP}" --settings "AzureWebJobsStorage=${CONN}" 1>/dev/null
+
+      - name: Deploy to Azure Functions
+        uses: Azure/functions-action@v1
+        with:
+          app-name: paperpilot-api
+          package: ./azure-functions
+          scm-do-build-during-deployment: false
+          enable-oryx-build: false
+
+      - name: Restore AzureWebJobsStorage Key Vault reference
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          RG="${AZURE_RESOURCE_GROUP}"
+          FUNC_APP="${AZURE_FUNCTIONAPP_NAME}"
+          KV_NAME="${AZURE_KEYVAULT_NAME}"
+          KV_URI="https://${KV_NAME}.vault.azure.net"
+          az functionapp config appsettings set -g "${RG}" -n "${FUNC_APP}" --settings \
+            "AzureWebJobsStorage=@Microsoft.KeyVault(SecretUri=${KV_URI}/secrets/AZURE-WEBJOBS-STORAGE)" 1>/dev/null
+
+      - name: Verify deployment
+        run: |
+          echo "Deployed to: https://${{ env.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net"
+          sleep 15
+          curl -sf "https://${{ env.AZURE_FUNCTIONAPP_NAME }}.azurewebsites.net/api/health" && echo "Health check passed!" || echo "Health check pending (may take a minute to warm up)..."

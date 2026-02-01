@@ -1,0 +1,86 @@
+# Pre-commit hooks for PaperNavigator backend
+# Install: pre-commit install
+# Run manually: pre-commit run --all-files
+# See https://pre-commit.com for more information
+
+default_language_version:
+  python: python3.13
+
+repos:
+  # ==========================================================================
+  # General hooks
+  # ==========================================================================
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+        args: [--unsafe]
+      - id: check-json
+      - id: check-toml
+      - id: end-of-file-fixer
+        exclude: ^(frontend/|results/)
+      - id: trailing-whitespace
+        exclude: ^(frontend/|results/)
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      - id: check-merge-conflict
+      - id: detect-private-key
+
+  # ==========================================================================
+  # Python formatting with Ruff (fast, replaces black + isort)
+  # ==========================================================================
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.6
+    hooks:
+      # Formatter (replaces black)
+      - id: ruff-format
+        name: ruff format
+        files: ^(papernavigator|azure-functions|tests)/
+        types: [python]
+      # Linter (replaces flake8, isort, etc.)
+      - id: ruff
+        name: ruff check
+        args: [--fix, --exit-non-zero-on-fix]
+        files: ^(papernavigator|azure-functions|tests)/
+        types: [python]
+
+  # ==========================================================================
+  # Type checking with Pyright
+  # ==========================================================================
+  - repo: local
+    hooks:
+      - id: pyright
+        name: pyright type check
+        entry: uv run pyright
+        language: system
+        files: ^(papernavigator|azure-functions)/
+        types: [python]
+        pass_filenames: false
+        # Only run on staged Python files, but check the whole project
+        # This ensures imports are resolved correctly
+
+  # ==========================================================================
+  # Optional: Fast unit test subset (disabled by default)
+  # Uncomment to run a quick smoke test on commit
+  # ==========================================================================
+  # - repo: local
+  #   hooks:
+  #     - id: pytest-fast
+  #       name: pytest fast unit tests
+  #       entry: uv run pytest tests/unit/ -x -q --tb=short
+  #       language: system
+  #       pass_filenames: false
+  #       always_run: true
+
+# ==========================================================================
+# CI configuration
+# ==========================================================================
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit hooks
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: [pyright]  # Skip pyright in CI (run separately with full env)
+  submodules: false

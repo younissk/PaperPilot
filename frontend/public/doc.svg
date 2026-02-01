@@ -1,0 +1,7 @@
+<svg width="360" height="460" viewBox="0 0 360 460" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M340 130H230V20" stroke="black" stroke-width="20" stroke-miterlimit="10" stroke-linecap="round"/>
+<path d="M350 450H10V10H230L350 130V450Z" stroke="black" stroke-width="20" stroke-miterlimit="10" stroke-linecap="round"/>
+<path d="M280 200H80V220H280V200Z" fill="black"/>
+<path d="M280 320H80V340H280V320Z" fill="black"/>
+<path d="M240 260H80V280H240V260Z" fill="black"/>
+</svg>

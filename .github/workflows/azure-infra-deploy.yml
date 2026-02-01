@@ -1,0 +1,66 @@
+# Deploy Azure infrastructure (Bicep) for PaperPilot
+name: Deploy Azure Infra
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'infra/**'
+      - '.github/workflows/azure-infra-deploy.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: paperpilot-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy-infra:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy Bicep (Resource Group)
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            set -euo pipefail
+            az bicep install
+            az bicep version
+            az deployment group create \
+              -g PaperPilot \
+              -f infra/main.bicep \
+              -p infra/params/prod.bicepparam
+
+      # ----------------------------------------------------------------------
+      # Post-deploy wiring (no secret values in git):
+      # - App settings become Key Vault references.
+      #   (Done via CLI to avoid ARM circular dependency when merging existing settings.)
+      # ----------------------------------------------------------------------
+      - name: Set Function App settings to Key Vault references
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            set -euo pipefail
+
+            RG="PaperPilot"
+            FUNC_APP="paperpilot-api"
+            KV_NAME="paperpilot-kv-prod"
+            KV_URI="https://${KV_NAME}.vault.azure.net"
+
+            az functionapp config appsettings set -g "${RG}" -n "${FUNC_APP}" --settings \
+              "OPENAI_API_KEY=@Microsoft.KeyVault(SecretUri=${KV_URI}/secrets/OPENAI-API-KEY)" \
+              "AZURE_COSMOS_KEY=@Microsoft.KeyVault(SecretUri=${KV_URI}/secrets/AZURE-COSMOS-KEY)" \
+              "AZURE_SERVICE_BUS_CONNECTION_STRING=@Microsoft.KeyVault(SecretUri=${KV_URI}/secrets/AZURE-SERVICE-BUS-CONNECTION-STRING)" \
+              "AzureWebJobsStorage=@Microsoft.KeyVault(SecretUri=${KV_URI}/secrets/AZURE-WEBJOBS-STORAGE)" 1>/dev/null
