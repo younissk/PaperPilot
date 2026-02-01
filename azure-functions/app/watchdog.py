@@ -123,6 +123,122 @@ def stale_job_watchdog(timer: func.TimerRequest) -> None:
         )
 
 
+def _parse_job_updated_at(job: dict) -> datetime | None:
+    updated_at = _parse_iso(job.get("updated_at"))
+    if updated_at:
+        return updated_at
+    return _parse_iso(job.get("created_at"))
+
+
+@bp.timer_trigger(
+    schedule="0 */1 * * * *",
+    arg_name="timer",
+    run_on_startup=False,
+    use_monitor=True,
+)
+def running_job_rescue_watchdog(timer: func.TimerRequest) -> None:
+    """Re-queue running jobs that stopped emitting progress updates.
+
+    This is a "soft" rescue. It does not fail the job; it marks the current stage as queued
+    and re-enqueues a message so the worker can retry idempotently.
+    """
+    rescue_minutes = int(os.getenv("JOB_RUNNING_RESCUE_MINUTES", "8"))
+    # Do not try to rescue jobs that are already considered stale enough to be failed.
+    fail_minutes = int(os.getenv("JOB_STALE_MINUTES", "30"))
+
+    try:
+        container = get_jobs_container()
+    except Exception as exc:
+        logger.error("running_rescue_failed_to_get_container: %s", exc)
+        return
+
+    try:
+        items = list(
+            container.query_items(
+                query="SELECT * FROM c WHERE c.status = @status",
+                parameters=[{"name": "@status", "value": "running"}],
+                enable_cross_partition_query=True,
+            )
+        )
+    except Exception as exc:
+        logger.error("running_rescue_query_failed: %s", exc)
+        return
+
+    now = datetime.now(UTC)
+
+    for job in items:
+        job_id = job.get("job_id") or job.get("id")
+        if not job_id:
+            continue
+
+        updated_dt = _parse_job_updated_at(job)
+        if not updated_dt:
+            continue
+
+        minutes = int((now - updated_dt).total_seconds() // 60)
+        if minutes < rescue_minutes:
+            continue
+        if minutes >= fail_minutes:
+            # Let stale_job_watchdog handle failures.
+            continue
+
+        progress = job.get("progress") or {}
+        phase = (progress.get("phase") or "").lower()
+        step_name = (progress.get("step_name") or "").lower()
+        message = (progress.get("message") or "").lower()
+
+        # If it already looks queued, queued_job_watchdog will handle rescue.
+        if "queued" in step_name or "queued" in message:
+            continue
+
+        # Only rescue known pipeline stages.
+        if phase not in {"search", "ranking", "report"}:
+            continue
+
+        payload = job.get("payload") or {}
+        next_payload = dict(payload)
+        next_payload["stage"] = phase
+
+        events = job.get("events", []) or []
+        events = append_event(
+            events,
+            "progress",
+            phase,
+            f"Rescue watchdog queued {phase} stage (no updates for {minutes}m)",
+            reason="running_rescue_watchdog",
+            stale_minutes=minutes,
+        )
+        update_job_progress(
+            job_id,
+            "running",
+            phase,
+            0,
+            f"Queued {phase} stage",
+            step_name="Queued",
+            events=events,
+        )
+
+        try:
+            enqueue_job(job_id, "pipeline", next_payload)
+        except Exception as exc:
+            logger.exception("running_rescue_enqueue_failed for job %s", job_id)
+            events = append_event(
+                events,
+                "phase_warning",
+                phase,
+                f"Rescue watchdog failed to enqueue {phase}: {exc}",
+                level="warning",
+                error=str(exc),
+            )
+            update_job_progress(
+                job_id,
+                "running",
+                phase,
+                0,
+                f"Rescue enqueue failed: {exc}",
+                events=events,
+            )
+
 @bp.timer_trigger(
     schedule="*/10 * * * * *",
     arg_name="timer",
@@ -144,12 +260,23 @@ def queued_job_watchdog(timer: func.TimerRequest) -> None:
     try:
         now = datetime.now(UTC)
         cutoff = (now - timedelta(seconds=max_queued_seconds)).isoformat()
-        # Only pull the oldest candidate to keep this watchdog lightweight.
+        # Pull only jobs that are queued OR are running but stuck on a "Queued" marker.
+        # This avoids starvation by long-running jobs, which can have older updated_at values.
         items = list(
             container.query_items(
                 query=(
-                    "SELECT TOP 1 * FROM c "
-                    "WHERE (c.status = @queued OR c.status = @running) "
+                    "SELECT TOP 5 * FROM c "
+                    "WHERE ("
+                    "  c.status = @queued "
+                    "  OR ("
+                    "    c.status = @running "
+                    "    AND IS_DEFINED(c.progress) "
+                    "    AND ("
+                    "      (IS_DEFINED(c.progress.step_name) AND CONTAINS(LOWER(c.progress.step_name), 'queued')) "
+                    "      OR (IS_DEFINED(c.progress.message) AND CONTAINS(LOWER(c.progress.message), 'queued')) "
+                    "    )"
+                    "  )"
+                    ") "
                     "AND IS_DEFINED(c.updated_at) AND c.updated_at <= @cutoff "
                     "ORDER BY c.updated_at ASC"
                 ),
@@ -202,6 +329,17 @@ def queued_job_watchdog(timer: func.TimerRequest) -> None:
 
         try:
             load_openai_api_key()
+            logger.info(
+                "queued_watchdog_rescue",
+                extra={
+                    "custom_dimensions": {
+                        "job_id": job_id,
+                        "stage": stage,
+                        "queued_seconds": queued_seconds,
+                        "status": status,
+                    }
+                },
+            )
             events = append_event(
                 events,
                 "progress",

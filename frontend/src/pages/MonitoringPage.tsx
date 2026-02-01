@@ -196,7 +196,119 @@ export default function MonitoringPage() {
             <StatusBadge state={monitorState} />
           </div>
 
-          <div className="grid gap-6 md:grid-cols-3">
+          {/* Cost Cards Row */}
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* LLM Costs Card */}
+            <div className="bg-white border-2 border-black p-6" style={brutalShadow}>
+              <div className="stack stack-sm">
+                <h2 className="text-base font-bold text-black lowercase">
+                  llm costs (last {windowDays} days)
+                </h2>
+                {costs.isLoading ? (
+                  <div className="flex items-center gap-2 text-gray-600 lowercase">
+                    <DocLoader size="sm" />
+                    <span>loading…</span>
+                  </div>
+                ) : costs.error ? (
+                  <div className="text-sm text-black">
+                    {costs.error instanceof Error
+                      ? costs.error.message
+                      : "failed to load cost signals"}
+                  </div>
+                ) : (
+                  <>
+                    <div className="stack stack-sm">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600 lowercase">est. cost (total)</span>
+                        <span className="font-medium text-black">
+                          {formatUsd(costs.data?.openai.estimated_cost_usd_total)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600 lowercase">est. cost / pipeline</span>
+                        <span className="font-medium text-black">
+                          {formatUsd(costs.data?.openai.avg_estimated_cost_usd_per_pipeline)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600 lowercase">tokens (total)</span>
+                        <span className="font-medium text-black">
+                          {formatInt(costs.data?.openai.total_tokens_total)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600 lowercase">avg tokens / pipeline</span>
+                        <span className="font-medium text-black">
+                          {formatInt(costs.data?.openai.avg_total_tokens_per_pipeline)}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-2 lowercase">
+                      openai costs are estimated from token usage, not billing.
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Infrastructure Costs Card */}
+            <div className="bg-white border-2 border-black p-6" style={brutalShadow}>
+              <div className="stack stack-sm">
+                <h2 className="text-base font-bold text-black lowercase">
+                  infrastructure costs (last {windowDays} days)
+                </h2>
+                {costs.isLoading ? (
+                  <div className="flex items-center gap-2 text-gray-600 lowercase">
+                    <DocLoader size="sm" />
+                    <span>loading…</span>
+                  </div>
+                ) : costs.error ? (
+                  <div className="text-sm text-black">
+                    {costs.error instanceof Error
+                      ? costs.error.message
+                      : "failed to load cost signals"}
+                  </div>
+                ) : (
+                  <>
+                    <div className="stack stack-sm">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600 lowercase">bytes uploaded (total)</span>
+                        <span className="font-medium text-black">
+                          {formatBytes(costs.data?.cost_proxies.bytes_uploaded_total)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600 lowercase">avg bytes / pipeline</span>
+                        <span className="font-medium text-black">
+                          {formatBytes(
+                            costs.data?.cost_proxies.avg_bytes_uploaded_per_pipeline,
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600 lowercase">artifacts (total)</span>
+                        <span className="font-medium text-black">
+                          {costs.data?.cost_proxies.artifact_count_total ?? 0}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600 lowercase">avg artifacts / pipeline</span>
+                        <span className="font-medium text-black">
+                          {formatNumber(costs.data?.cost_proxies.avg_artifacts_per_pipeline)}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-2 lowercase">
+                      storage and artifact counts from azure blob/cosmos.
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Reports & Pipeline Grid */}
+          <div className="grid gap-6 md:grid-cols-2">
             {/* Reports Card */}
             <div className="bg-white border-2 border-black p-6" style={brutalShadow}>
               <div className="stack stack-sm">
@@ -300,85 +412,6 @@ export default function MonitoringPage() {
                         )}
                       </div>
                     </div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Cost Signals Card */}
-            <div className="bg-white border-2 border-black p-6" style={brutalShadow}>
-              <div className="stack stack-sm">
-                <h2 className="text-base font-bold text-black lowercase">
-                  cost signals
-                </h2>
-                {costs.isLoading ? (
-                  <div className="flex items-center gap-2 text-gray-600 lowercase">
-                    <DocLoader size="sm" />
-                    <span>loading…</span>
-                  </div>
-                ) : costs.error ? (
-                  <div className="text-sm text-black">
-                    {costs.error instanceof Error
-                      ? costs.error.message
-                      : "failed to load cost signals"}
-                  </div>
-                ) : (
-                  <>
-                    <div className="stack stack-sm">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600 lowercase">openai est. cost (total)</span>
-                        <span className="font-medium text-black">
-                          {formatUsd(costs.data?.openai.estimated_cost_usd_total)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600 lowercase">openai est. cost / pipeline</span>
-                        <span className="font-medium text-black">
-                          {formatUsd(costs.data?.openai.avg_estimated_cost_usd_per_pipeline)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600 lowercase">openai tokens (total)</span>
-                        <span className="font-medium text-black">
-                          {formatInt(costs.data?.openai.total_tokens_total)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600 lowercase">avg openai tokens / pipeline</span>
-                        <span className="font-medium text-black">
-                          {formatInt(costs.data?.openai.avg_total_tokens_per_pipeline)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600 lowercase">bytes uploaded (total)</span>
-                        <span className="font-medium text-black">
-                          {formatBytes(costs.data?.cost_proxies.bytes_uploaded_total)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600 lowercase">avg bytes / pipeline</span>
-                        <span className="font-medium text-black">
-                          {formatBytes(
-                            costs.data?.cost_proxies.avg_bytes_uploaded_per_pipeline,
-                          )}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600 lowercase">artifacts (total)</span>
-                        <span className="font-medium text-black">
-                          {costs.data?.cost_proxies.artifact_count_total ?? 0}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600 lowercase">avg artifacts / pipeline</span>
-                        <span className="font-medium text-black">
-                          {formatNumber(costs.data?.cost_proxies.avg_artifacts_per_pipeline)}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-600 mt-2 lowercase">
-                      openai costs are estimated from token usage, not billing.
-                    </p>
                   </>
                 )}
               </div>

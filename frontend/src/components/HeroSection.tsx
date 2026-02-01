@@ -96,7 +96,7 @@ export function HeroSection() {
               onChange={(e) => setQuery(e.target.value)}
               className="form-input form-input-lg flex-1 border-2 border-black"
               style={brutalShadow}
-              placeholder="try: effect of chatgpt on students"
+              placeholder="try: effect of chatgpt on students (works best on tech papers)"
               required
             />
             <button
