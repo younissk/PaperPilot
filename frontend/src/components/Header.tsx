@@ -164,7 +164,7 @@ export function Header() {
             }`}
             style={{ transitionDelay: isMenuOpen ? "500ms" : "0ms" }}
           >
-            feedback / complaints
+            feedback
           </a>
         </nav>
 
