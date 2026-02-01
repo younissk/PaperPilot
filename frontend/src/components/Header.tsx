@@ -154,6 +154,18 @@ export function Header() {
           >
             infrastructure
           </a>
+          <a
+            href="https://forms.gle/Nu4sUUeWMSJmCYR28"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setIsMenuOpen(false)}
+            className={`text-5xl font-bold no-underline transition-all duration-300 lowercase text-gray-400 hover:text-gray-900 ${
+              isMenuOpen ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+            }`}
+            style={{ transitionDelay: isMenuOpen ? "500ms" : "0ms" }}
+          >
+            feedback / complaints
+          </a>
         </nav>
 
         {/* Attribution Footer */}
@@ -161,7 +173,7 @@ export function Header() {
           className={`absolute bottom-8 text-sm text-gray-500 transition-all duration-300 ${
             isMenuOpen ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
           }`}
-          style={{ transitionDelay: isMenuOpen ? "500ms" : "0ms" }}
+          style={{ transitionDelay: isMenuOpen ? "600ms" : "0ms" }}
         >
           made with 💻 by{" "}
           <a
