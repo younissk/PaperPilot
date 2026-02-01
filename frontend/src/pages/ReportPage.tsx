@@ -9,6 +9,16 @@ import type { ReportData } from "@/lib/types";
 const brutalShadow = { boxShadow: "3px 3px 0 #F3787A" };
 
 /**
+ * Format event timestamp for display.
+ */
+function formatEventTime(ts?: string): string {
+  if (!ts) return "";
+  const parsed = Date.parse(ts);
+  if (Number.isNaN(parsed)) return "";
+  return new Date(parsed).toLocaleTimeString();
+}
+
+/**
  * Build a citation map from report data.
  * Extracts all paper IDs and assigns sequential numbers.
  */
@@ -115,6 +125,7 @@ export default function ReportPage() {
   const { data: pipelineStatus } = usePipelineStatus(jobId);
 
   const [finalizingSince, setFinalizingSince] = useState<number | null>(null);
+  const [failedLogsExpanded, setFailedLogsExpanded] = useState(false);
 
   const shouldFinalize =
     !!jobId && pipelineStatus?.status === "completed" && !reportData;
@@ -254,35 +265,101 @@ export default function ReportPage() {
   if (!reportData && jobId && pipelineStatus) {
     // Check for pipeline failure
     if (pipelineStatus.status === "failed") {
+      const events = pipelineStatus.events ?? [];
+      const recentEvents = events.slice(-15); // Show more events for debugging
+
       return (
         <>
           <SEO title="Generation Failed" noindex />
           <div className="container container-lg py-12 px-4">
-            <div className="p-4 border-2 border-black border-l-4 border-l-red-500 bg-white">
-              <strong className="lowercase">report generation failed:</strong>{" "}
-              {pipelineStatus.error || "unknown error"}
-            </div>
-            {pipelineStatus.alerts && pipelineStatus.alerts.length > 0 && (
-              <div className="stack stack-sm mt-4">
-                {pipelineStatus.alerts.slice(-3).map((alert, idx) => (
-                  <div
-                    key={`${alert.ts ?? "alert"}-${idx}`}
-                    className={`p-3 border-2 border-black bg-white ${
-                      alert.level === "error" ? "border-l-4 border-l-red-500" : ""
-                    }`}
-                  >
-                    <strong className="lowercase">{alert.level || "warning"}:</strong>{" "}
-                    {alert.message}
-                  </div>
-                ))}
+            <div className="max-w-2xl mx-auto">
+              <div className="p-4 border-2 border-black border-l-4 border-l-red-500 bg-white" style={brutalShadow}>
+                <strong className="lowercase">report generation failed:</strong>{" "}
+                {pipelineStatus.error || "unknown error"}
               </div>
-            )}
-            <Link
-              to="/"
-              className="btn border-2 border-black bg-white text-black hover:bg-gray-50 mt-4 lowercase inline-block"
-            >
-              try again
-            </Link>
+
+              {pipelineStatus.alerts && pipelineStatus.alerts.length > 0 && (
+                <div className="stack stack-sm mt-4">
+                  <h3 className="text-sm font-bold text-black lowercase">alerts</h3>
+                  {pipelineStatus.alerts.map((alert, idx) => (
+                    <div
+                      key={`${alert.ts ?? "alert"}-${idx}`}
+                      className={`p-3 border-2 border-black bg-white ${
+                        alert.level === "error" ? "border-l-4 border-l-red-500" : ""
+                      }`}
+                    >
+                      <div className="flex justify-between items-start gap-2">
+                        <div>
+                          <strong className="lowercase">{alert.level || "warning"}:</strong>{" "}
+                          {alert.message}
+                        </div>
+                        {alert.ts && (
+                          <span className="text-xs text-gray-400 shrink-0">
+                            {formatEventTime(alert.ts)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Persisted Logs Accordion */}
+              {recentEvents.length > 0 && (
+                <div className="mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setFailedLogsExpanded(!failedLogsExpanded)}
+                    className="flex items-center justify-between w-full px-3 py-2 text-xs font-bold text-black border-2 border-black bg-white hover:bg-gray-50 transition-colors lowercase"
+                    style={brutalShadow}
+                  >
+                    <span>recent logs ({recentEvents.length})</span>
+                    <svg
+                      className={`w-4 h-4 transition-transform ${failedLogsExpanded ? "rotate-180" : ""}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  
+                  {failedLogsExpanded && (
+                    <div className="border-2 border-t-0 border-black p-3 bg-white">
+                      <div className="space-y-1 text-xs text-gray-600 font-mono max-h-80 overflow-y-auto">
+                        {recentEvents.map((ev, idx) => (
+                          <div key={`${ev.ts ?? "event"}-${idx}`} className="flex gap-2 flex-wrap sm:flex-nowrap">
+                            <span className="text-gray-400 w-14 shrink-0">
+                              {formatEventTime(ev.ts)}
+                            </span>
+                            <span
+                              className={`font-bold ${
+                                ev.level === "error"
+                                  ? "text-red-600"
+                                  : ev.level === "warning"
+                                    ? "text-black"
+                                    : "text-gray-500"
+                              }`}
+                            >
+                              {ev.level ?? "info"}
+                            </span>
+                            <span className="text-gray-700 break-all">{ev.message}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <Link
+                to="/"
+                className="btn border-2 border-black bg-white text-black hover:bg-gray-50 mt-6 lowercase inline-block"
+                style={brutalShadow}
+              >
+                try again
+              </Link>
+            </div>
           </div>
         </>
       );

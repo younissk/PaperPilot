@@ -51,15 +51,15 @@ export function EloTableDiagram() {
             strokeWidth="2"
           />
           <text
-            x="100"
+            x="30"
             y="27"
-            textAnchor="middle"
+            textAnchor="start"
             className="text-[9px] font-bold fill-white"
           >
             Paper
           </text>
           <text
-            x="200"
+            x="280"
             y="27"
             textAnchor="middle"
             className="text-[9px] font-bold fill-white"
@@ -67,7 +67,7 @@ export function EloTableDiagram() {
             W
           </text>
           <text
-            x="250"
+            x="310"
             y="27"
             textAnchor="middle"
             className="text-[9px] font-bold fill-white"
@@ -75,7 +75,7 @@ export function EloTableDiagram() {
             L
           </text>
           <text
-            x="320"
+            x="345"
             y="27"
             textAnchor="middle"
             className="text-[9px] font-bold fill-white"
@@ -97,15 +97,15 @@ export function EloTableDiagram() {
             style={{ transition: "fill 0.3s ease" }}
           />
           <text
-            x="100"
+            x="30"
             y="53"
-            textAnchor="middle"
+            textAnchor="start"
             className="text-[8px] fill-gray-700"
           >
             Attention Is All You Need
           </text>
           <text
-            x="200"
+            x="280"
             y="53"
             textAnchor="middle"
             className="text-[8px] fill-gray-700"
@@ -113,7 +113,7 @@ export function EloTableDiagram() {
             {eloValues[0].w + (tick >= 1 ? 1 : 0)}
           </text>
           <text
-            x="250"
+            x="310"
             y="53"
             textAnchor="middle"
             className="text-[8px] fill-gray-700"
@@ -121,7 +121,7 @@ export function EloTableDiagram() {
             {eloValues[0].l}
           </text>
           <text
-            x="320"
+            x="345"
             y="53"
             textAnchor="middle"
             className="text-[10px] font-mono font-bold"
@@ -144,15 +144,15 @@ export function EloTableDiagram() {
             style={{ transition: "fill 0.3s ease" }}
           />
           <text
-            x="100"
+            x="30"
             y="81"
-            textAnchor="middle"
+            textAnchor="start"
             className="text-[8px] fill-gray-700"
           >
-            BERT: Pre-training Deep...
+            BERT: Pre-training of Deep Bidirectional...
           </text>
           <text
-            x="200"
+            x="280"
             y="81"
             textAnchor="middle"
             className="text-[8px] fill-gray-700"
@@ -160,7 +160,7 @@ export function EloTableDiagram() {
             {eloValues[1].w}
           </text>
           <text
-            x="250"
+            x="310"
             y="81"
             textAnchor="middle"
             className="text-[8px] fill-gray-700"
@@ -168,7 +168,7 @@ export function EloTableDiagram() {
             {eloValues[1].l + (tick >= 1 ? 1 : 0)}
           </text>
           <text
-            x="320"
+            x="345"
             y="81"
             textAnchor="middle"
             className="text-[10px] font-mono font-bold"
@@ -191,15 +191,15 @@ export function EloTableDiagram() {
             style={{ transition: "fill 0.3s ease" }}
           />
           <text
-            x="100"
+            x="30"
             y="109"
-            textAnchor="middle"
+            textAnchor="start"
             className="text-[8px] fill-gray-700"
           >
             GPT-4 Technical Report
           </text>
           <text
-            x="200"
+            x="280"
             y="109"
             textAnchor="middle"
             className="text-[8px] fill-gray-700"
@@ -207,7 +207,7 @@ export function EloTableDiagram() {
             {eloValues[2].w}
           </text>
           <text
-            x="250"
+            x="310"
             y="109"
             textAnchor="middle"
             className="text-[8px] fill-gray-700"
@@ -215,7 +215,7 @@ export function EloTableDiagram() {
             {eloValues[2].l + (tick >= 2 ? 1 : 0)}
           </text>
           <text
-            x="320"
+            x="345"
             y="109"
             textAnchor="middle"
             className="text-[10px] font-mono font-bold"
@@ -229,7 +229,7 @@ export function EloTableDiagram() {
         {tick > 0 && (
           <g className="animate-fade-in">
             <text
-              x="320"
+              x="345"
               y="125"
               textAnchor="middle"
               className="text-[6px] fill-gray-400"
