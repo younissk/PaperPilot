@@ -7,10 +7,10 @@ const brutalShadow = { boxShadow: "3px 3px 0 #F3787A" };
 const GRAVITY = 0.4;
 const JUMP_VELOCITY = -7;
 const PIPE_WIDTH = 50;
-const PIPE_GAP = 120;
+const PIPE_GAP = 150;
 const PIPE_SPEED = 2.5;
-const DOC_WIDTH = 36;
-const DOC_HEIGHT = 46;
+const DOC_WIDTH = 30;
+const DOC_HEIGHT = 38;
 
 interface Pipe {
   x: number;

@@ -122,7 +122,11 @@ export default function ReportPage() {
   }, [reportData]);
 
   // Poll pipeline status if job is provided
-  const { data: pipelineStatus } = usePipelineStatus(jobId);
+  const {
+    data: pipelineStatus,
+    isLoading: pipelineStatusLoading,
+    error: pipelineStatusError,
+  } = usePipelineStatus(jobId);
 
   const [finalizingSince, setFinalizingSince] = useState<number | null>(null);
   const [failedLogsExpanded, setFailedLogsExpanded] = useState(false);
@@ -255,6 +259,46 @@ export default function ReportPage() {
           <div className="text-center">
             <DocLoader size="lg" className="mx-auto mb-4" />
             <p className="text-gray-600 lowercase">loading report...</p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Buffer state: job exists but pipeline status hasn't loaded yet.
+  // Without this, we can briefly render "report not available" before the first poll returns.
+  if (jobId && !pipelineStatus && (pipelineStatusLoading || !pipelineStatusError)) {
+    return (
+      <>
+        <SEO title="Starting..." noindex />
+        <div className="flex justify-center items-center min-h-[400px]">
+          <div className="text-center max-w-md px-4">
+            <DocLoader size="lg" className="mx-auto mb-4" />
+            <p className="text-gray-600 lowercase">
+              starting your report generation…
+            </p>
+            <p className="text-gray-500 text-sm mt-2 lowercase">
+              connecting to the job queue…
+            </p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  if (jobId && pipelineStatusError && !pipelineStatus) {
+    return (
+      <>
+        <SEO title="Starting..." noindex />
+        <div className="container container-lg py-12 px-4">
+          <div
+            className="p-4 border-2 border-black border-l-4 border-l-red-500 bg-white"
+            style={brutalShadow}
+          >
+            <strong className="lowercase">unable to fetch job status:</strong>{" "}
+            {pipelineStatusError instanceof Error
+              ? pipelineStatusError.message
+              : "unknown error"}
           </div>
         </div>
       </>
