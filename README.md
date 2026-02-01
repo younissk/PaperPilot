@@ -1,10 +1,30 @@
 # PaperNavigator
 
+Click [here](https://papernavigator.com) to try it out.
+
+## Table of Contents
+
+- [About](#about)
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Quick Start](#quick-start)
+- [Project Structure](#project-structure)
+- [Development](#development)
+- [Deployment](#deployment)
+- [Configuration](#configuration)
+- [Infrastructure as Code](#infrastructure-as-code)
+- [API Endpoints](#api-endpoints)
+- [License](#license)
+- [Feedback](#feedback)
+
+## About
+
 paper navigator helps you discover and analyze academic papers through intelligent search, ranking, and automated report generation.
 
 this was built mainly as a portfolio project and is completely free to use (as long as my azure credits last). if you have any feedback, please go to [this form](https://forms.gle/Nu4sUUeWMSJmCYR28).
 
 if you're interested in working with me, you can reach out via [my website](https://younissk.github.io).
+
 
 ## Overview
 
@@ -26,7 +46,7 @@ PaperNavigator helps researchers discover relevant academic papers by:
 5. **ELO Ranking**: Compares papers head-to-head using LLM judgment to create a quality ranking
 6. **Report Generation**: Synthesizes findings into a structured research report
 
-## Architecture (Azure)
+## Architecture
 
 PaperNavigator runs as a serverless backend on Azure:
 
@@ -142,7 +162,7 @@ uv run pyright
 | `JOB_QUEUED_SECONDS` | Seconds before queued-job watchdog runs the pipeline directly (default: 20) | No |
 | `JOB_STALE_MINUTES` | Minutes before stale-job watchdog fails a stuck running job (default: 30) | No |
 
-## Infrastructure as Code (recommended)
+## Infrastructure as Code
 
 The backend Azure infrastructure is being migrated to **Bicep** under `infra/` so the repo becomes the source of truth (PR-reviewed), reducing portal drift.
 
