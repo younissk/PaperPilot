@@ -17,6 +17,7 @@ export { DocumentRain } from "./DocumentRain";
 export { SplashScreen } from "./SplashScreen";
 export { MemoryGame } from "./MemoryGame";
 export { FlappyDocGame } from "./FlappyDocGame";
+export { WhackADocGame } from "./WhackADocGame";
 export { GameLauncher } from "./GameLauncher";
 export { QueryCard, QueryCardSkeleton } from "./QueryCard";
 export { DocLoader } from "./DocLoader";

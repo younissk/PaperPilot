@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { MemoryGame } from "./MemoryGame";
 import { FlappyDocGame } from "./FlappyDocGame";
+import { WhackADocGame } from "./WhackADocGame";
 
 // Brutalist coral shadow styles
 const brutalShadow = { boxShadow: "3px 3px 0 #F3787A" };
 
-type ActiveGame = "menu" | "memory" | "flappy";
+type ActiveGame = "menu" | "memory" | "flappy" | "whack";
 
 interface GameCardProps {
   title: string;
@@ -102,6 +103,44 @@ function FlappyIcon() {
   );
 }
 
+/**
+ * WhackADoc icon - document with target/crosshair
+ */
+function WhackIcon() {
+  return (
+    <div className="relative">
+      <svg
+        width="40"
+        height="52"
+        viewBox="0 0 360 460"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M350 450H10V10H230L350 130V450Z"
+          fill="white"
+          stroke="black"
+          strokeWidth="20"
+          strokeMiterlimit="10"
+          strokeLinecap="round"
+        />
+        <path
+          d="M340 130H230V20"
+          stroke="black"
+          strokeWidth="20"
+          strokeMiterlimit="10"
+          strokeLinecap="round"
+        />
+        {/* Target circle */}
+        <circle cx="180" cy="280" r="80" stroke="#F3787A" strokeWidth="16" fill="none" />
+        <circle cx="180" cy="280" r="40" stroke="#F3787A" strokeWidth="12" fill="none" />
+        {/* Crosshair */}
+        <path d="M180 180V380M80 280H280" stroke="#F3787A" strokeWidth="8" />
+      </svg>
+    </div>
+  );
+}
+
 interface GameLauncherProps {
   onClose: () => void;
 }
@@ -123,6 +162,10 @@ export function GameLauncher({ onClose }: GameLauncherProps) {
 
   if (activeGame === "flappy") {
     return <FlappyDocGame onClose={onClose} onBack={handleBack} />;
+  }
+
+  if (activeGame === "whack") {
+    return <WhackADocGame onClose={onClose} onBack={handleBack} />;
   }
 
   // Render menu
@@ -150,7 +193,7 @@ export function GameLauncher({ onClose }: GameLauncherProps) {
 
         {/* Game grid */}
         <div className="p-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-3">
             <GameCard
               title="memory"
               description="match the papers"
@@ -162,6 +205,12 @@ export function GameLauncher({ onClose }: GameLauncherProps) {
               description="dodge the pipes"
               icon={<FlappyIcon />}
               onClick={() => setActiveGame("flappy")}
+            />
+            <GameCard
+              title="whack-a-doc"
+              description="tap the papers"
+              icon={<WhackIcon />}
+              onClick={() => setActiveGame("whack")}
             />
           </div>
         </div>
